@@ -1,0 +1,12 @@
+name: projetophp2-server
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: projetophp2-server
+    hostname: projetophp2-server
+    ports:
+      - "8080:80"
+    restart: unless-stopped

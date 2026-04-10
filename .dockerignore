@@ -1,0 +1,15 @@
+.git
+.gitignore
+.claude
+.dockerignore
+
+Dockerfile
+compose.yaml
+nginx.conf
+README.md
+
+node_modules
+*.log
+
+.DS_Store
+Thumbs.db

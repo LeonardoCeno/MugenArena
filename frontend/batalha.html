@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Arena Mugen</title>
+  <link rel="stylesheet" href="batalha.css" />
+  <script>
+    globalThis.__twind = {
+      theme: {
+        extend: {
+          colors: {
+            bg:          'var(--bg)',
+            'bg-soft':   'var(--bg-soft)',
+            panel:       'var(--panel)',
+            line:        'var(--line)',
+            'line-soft': 'var(--line-soft)',
+            text:        'var(--text)',
+            muted:       'var(--muted)',
+            accent:      'var(--accent)',
+            'accent-2':  'var(--accent-2)',
+            hp:          'var(--hp)',
+            'hp-danger': 'var(--hp-danger)',
+            energy:      'var(--energy)',
+          },
+        },
+      },
+    }
+  </script>
+  <script src="https://cdn.twind.style" crossorigin></script>
+</head>
+<body>
+  <main class="battle-app">
+    <header class="topbar">
+      <h1> Arena MUGEN </h1>
+      <p id="turn-info">Prepare a partida</p>
+    </header>
+    <div id="black-hole-overlay" class="black-hole-overlay">
+      <canvas id="black-hole-canvas"></canvas>
+    </div>
+
+    <section class="setup-screen" id="setup-panel">
+      <div class="setup-stage">
+        <p class="setup-subtitle">Escolha os lutadores e inicie o duelo</p>
+
+        <div class="setup-arena">
+          <div class="setup-player setup-player--p1">
+            <span class="setup-player-label">JOGADOR 1</span>
+            <input id="p1-name" type="text" value="Jogador 1" maxlength="20" />
+            <input type="hidden" id="p1-class" value="sukuna" />
+            <div class="char-picker" data-for="p1-class"></div>
+          </div>
+
+          <div class="char-preview char-preview--p1">
+            <img class="preview-sprite" id="p1-preview-sprite" alt="Personagem P1" />
+            <span class="preview-name" id="p1-preview-name"></span>
+          </div>
+
+          <div class="setup-vs">
+            <span class="setup-vs-line"></span>
+            <span class="setup-vs-badge">VS</span>
+            <span class="setup-vs-line"></span>
+          </div>
+
+          <div class="char-preview char-preview--p2">
+            <img class="preview-sprite" id="p2-preview-sprite" alt="Personagem P2" />
+            <span class="preview-name" id="p2-preview-name"></span>
+          </div>
+
+          <div class="setup-player setup-player--p2">
+            <span class="setup-player-label">JOGADOR 2</span>
+            <input id="p2-name" type="text" value="Jogador 2" maxlength="20" />
+            <input type="hidden" id="p2-class" value="gojo" />
+            <div class="char-picker" data-for="p2-class"></div>
+          </div>
+        </div>
+
+        <button id="start-btn" class="start-btn">INICIAR BATALHA</button>
+      </div>
+    </section>
+
+    <section class="battle-view is-hidden" id="battle-view">
+      <div class="arena" aria-label="Campo de batalha">
+        <div class="arena-glow"></div>
+
+        <article class="card card-enemy" id="card-enemy">
+        <div class="card-head">
+          <h2 id="enemy-name">-</h2>
+          <span id="enemy-tag">Jogador 2</span>
+        </div>
+
+        <div class="meter">
+          <label>HP</label>
+          <div class="track">
+            <div class="value hp" id="enemy-hp-bar" style="width: 0%"></div>
+          </div>
+          <strong id="enemy-hp-text">0 / 0</strong>
+        </div>
+
+        <div class="meter">
+          <label>ENERGIA</label>
+          <div class="track">
+            <div class="value energy" id="enemy-energy-bar" style="width: 0%"></div>
+          </div>
+          <strong id="enemy-energy-text">0 / 0</strong>
+        </div>
+        </article>
+
+        <article class="card card-player" id="card-player">
+        <div class="card-head">
+          <h2 id="player-name">-</h2>
+          <span id="player-tag">Jogador 1</span>
+        </div>
+
+        <div class="meter">
+          <label>HP</label>
+          <div class="track">
+            <div class="value hp" id="player-hp-bar" style="width: 0%"></div>
+          </div>
+          <strong id="player-hp-text">0 / 0</strong>
+        </div>
+
+        <div class="meter">
+          <label>ENERGIA</label>
+          <div class="track">
+            <div class="value energy" id="player-energy-bar" style="width: 0%"></div>
+          </div>
+          <strong id="player-energy-text">0 / 0</strong>
+        </div>
+        </article>
+
+        <div class="fighter enemy" id="fighter-enemy" data-side="player2" aria-hidden="true">
+          <img class="fighter-img" alt="Personagem do jogador 2" />
+          <span>G</span>
+        </div>
+
+        <div class="fighter player" id="fighter-player" data-side="player1" aria-hidden="true">
+          <img class="fighter-img" alt="Personagem do jogador 1" />
+          <span>S</span>
+        </div>
+
+        <div class="winner-overlay is-hidden" id="winner-overlay" aria-live="polite">
+          <div class="winner-card">
+            <img id="winner-sprite" class="winner-sprite" alt="Vencedor" />
+            <p id="winner-text" class="winner-text">Jogador venceu!</p>
+            <button id="play-again-btn" class="play-again-btn">JOGAR NOVAMENTE</button>
+          </div>
+        </div>
+      </div>
+
+      <section class="hud">
+        <div class="feed" id="combat-feed">
+          <h3>LOG DE COMBATE</h3>
+          <ul id="battle-log"></ul>
+          <div class="skill-preview" id="skill-preview" aria-live="polite">
+            <h4 id="skill-preview-title">Habilidade</h4>
+            <p id="skill-preview-text">Passe o mouse em uma habilidade para ver a descrição.</p>
+          </div>
+        </div>
+
+        <aside class="controls" aria-label="Ações disponíveis">
+          <h3>AÇÕES</h3>
+          <div class="grid-actions" id="action-menu">
+            <button disabled>ATACAR</button>
+            <button disabled>DEFENDER</button>
+            <button disabled>HABILIDADE 1</button>
+            <button disabled>HABILIDADE 2</button>
+          </div>
+        </aside>
+      </section>
+    </section>
+  </main>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
