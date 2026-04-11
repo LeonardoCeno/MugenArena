@@ -159,7 +159,7 @@ class Ulquiorra extends Personagem {
                             'thicknessPx' => 44,
                             'frontOffsetPx' => 90,
                             'startOffsetX' => 0,
-                            'startOffsetY' => 15,
+                            'startOffsetY' => 5,
                             'endOffsetX' => 0,
                             'endOffsetY' => 40,
                             'beamTone' => 'dark',

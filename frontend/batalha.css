@@ -26,7 +26,7 @@
   --card-height: 18cqh;
   --fighter-size: 306px;            /* fallback para browsers sem container queries */
   --hud-height: 165px;
-  --topbar-height: 48px;
+  --topbar-height: 5cqh;
 }
 
 html, body { height: 100%; overflow: hidden; }
@@ -619,14 +619,14 @@ background: linear-gradient(180deg, rgba(57, 64, 95, 0.7), rgba(0, 0, 0, 1));
 .fighter.enemy.dodge-anim { animation-name: dodge-right; }
 .fighter.player.dodge-anim { animation-name: dodge-left; }
 @keyframes dodge-right {
-  0%   { transform: scale(1.35) translateX(0);     transform-origin: center bottom; }
-  35%  { transform: scale(1.35) translateX(52px);  transform-origin: center bottom; }
-  100% { transform: scale(1.35) translateX(0);     transform-origin: center bottom; }
+  0%   { transform: scale(1.25) translateX(0);     transform-origin: center bottom; }
+  35%  { transform: scale(1.25) translateX(52px);  transform-origin: center bottom; }
+  100% { transform: scale(1.25) translateX(0);     transform-origin: center bottom; }
 }
 @keyframes dodge-left {
-  0%   { transform: scale(1.65) translateX(0);    transform-origin: center bottom; }
-  35%  { transform: scale(1.65) translateX(-52px); transform-origin: center bottom; }
-  100% { transform: scale(1.65) translateX(0);    transform-origin: center bottom; }
+  0%   { transform: scale(1.55) translateX(0);    transform-origin: center bottom; }
+  35%  { transform: scale(1.55) translateX(-52px); transform-origin: center bottom; }
+  100% { transform: scale(1.55) translateX(0);    transform-origin: center bottom; }
 }
 .fighter.action-casting {
   box-shadow: none;
@@ -652,8 +652,8 @@ background: linear-gradient(180deg, rgba(57, 64, 95, 0.7), rgba(0, 0, 0, 1));
 /* Tamanho dos fighters relativo à altura da arena (container queries) */
 @supports (width: 1cqh) {
   .fighter {
-    width: clamp(160px, 31cqh, 400px);
-    height: clamp(160px, 31cqh, 400px);
+    width: 29.9cqh;
+    height: 28.9cqh;
   }
 }
 
