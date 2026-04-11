@@ -309,10 +309,10 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		const anguloProjetil = atacanteKey === "p2" ? -overlay.projectileAngleDeg : overlay.projectileAngleDeg;
 		const origemRect = origemEl.getBoundingClientRect();
 		const alvoRect = alvoEl.getBoundingClientRect();
-		const origemX = (origemRect.left + origemRect.width / 2) - arenaRect.left + direcaoFrente * overlay.frontOffsetPx + overlay.startOffsetX;
-		const origemY = (origemRect.top + origemRect.height / 2) - arenaRect.top + overlay.startOffsetY;
-		const alvoX = (alvoRect.left + alvoRect.width / 2) - arenaRect.left + overlay.endOffsetX;
-		const alvoY = (alvoRect.top + alvoRect.height / 2) - arenaRect.top + overlay.endOffsetY;
+		const origemX = (origemRect.left + origemRect.width / 2) - arenaRect.left + direcaoFrente * escalarParaArena(overlay.frontOffsetPx) + escalarParaArena(overlay.startOffsetX);
+		const origemY = (origemRect.top + origemRect.height / 2) - arenaRect.top + escalarParaArena(overlay.startOffsetY);
+		const alvoX = (alvoRect.left + alvoRect.width / 2) - arenaRect.left + escalarParaArena(overlay.endOffsetX);
+		const alvoY = (alvoRect.top + alvoRect.height / 2) - arenaRect.top + escalarParaArena(overlay.endOffsetY);
 		const deltaX = alvoX - origemX;
 		const deltaY = alvoY - origemY;
 
@@ -334,12 +334,17 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		if (overlay.beamTone === "dark") el.classList.add("arena-energy-beam-dark");
 		else if (overlay.beamTone === "pink") el.classList.add("arena-energy-beam-pink");
 		el.setAttribute("aria-hidden", "true");
-		el.style.cssText = `left:${pos.origemX}px;top:${pos.origemY}px;height:${overlay.thicknessPx}px;width:0px;transform:translate(0,-50%) rotate(${pos.anguloAuto}deg);transition:width ${overlay.durationMs}ms ease-out`;
+		el.style.cssText = `left:${pos.origemX}px;top:${pos.origemY}px;height:${escalarParaArena(overlay.thicknessPx)}px;width:0px;transform:translate(0,-50%) rotate(${pos.anguloAuto}deg);transition:width ${overlay.durationMs}ms ease-out`;
 		els.arena.appendChild(el);
 		requestAnimationFrame(() => {
 			el.style.width = `${pos.distancia}px`;
 		});
 		return el;
+	}
+
+	function escalarParaArena(px) {
+		const arenaW = els.arena?.getBoundingClientRect().width ?? 1000;
+		return px * (arenaW / 1000);
 	}
 
 	function criarProjectileEl(overlay, pos) {
@@ -349,7 +354,8 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		el.alt = "";
 		el.setAttribute("aria-hidden", "true");
 		const scaleProjetil = overlay.scale ?? 1;
-		el.style.cssText = `width:${overlay.sizePx}px;left:${pos.origemX}px;top:${pos.origemY}px;transform:translate(-50%,-50%) scaleX(${pos.escalaHorizontal}) scale(${scaleProjetil}) rotate(${pos.anguloProjetil}deg);transition:left ${overlay.durationMs}ms linear,top ${overlay.durationMs}ms linear`;
+		const sizePx = escalarParaArena(overlay.sizePx ?? 260);
+		el.style.cssText = `width:${sizePx}px;left:${pos.origemX}px;top:${pos.origemY}px;transform:translate(-50%,-50%) scaleX(${pos.escalaHorizontal}) scale(${scaleProjetil}) rotate(${pos.anguloProjetil}deg);transition:left ${overlay.durationMs}ms linear,top ${overlay.durationMs}ms linear`;
 		els.arena.appendChild(el);
 		requestAnimationFrame(() => {
 			el.style.left = `${pos.alvoX}px`;
@@ -368,8 +374,8 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		el.setAttribute("aria-hidden", "true");
 		const scale = overlay.scale ?? 1;
 		const sizePx = overlay.sizePx ?? null;
-		el.style.transform = `translate(${overlay.x ?? 0}px,${overlay.y ?? 0}px) scale(${scale})`;
-		if (sizePx != null) el.style.width = `${sizePx}px`;
+		el.style.transform = `translate(${escalarParaArena(overlay.x ?? 0)}px,${escalarParaArena(overlay.y ?? 0)}px) scale(${scale})`;
+		if (sizePx != null) el.style.width = `${escalarParaArena(sizePx)}px`;
 		fighter.appendChild(el);
 		return el;
 	}
