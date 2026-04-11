@@ -92,6 +92,7 @@ class Ulquiorra extends Personagem {
     public function getConfiguracaoVisual(): array {
         return [
             'baseSprite' => './assets/ulquiorra/sprites/REALCIFERBASE.png',
+            'winMessage' => 'Se eu não posso ver, logo isso não existe',
             'winImage' => './assets/ulquiorra/sprites/winulq.png',
             'actions' => [
                 'Ataque' => [
@@ -141,18 +142,20 @@ class Ulquiorra extends Personagem {
                         [
                             'sprite' => './assets/ulquiorra/sprites/ciferfinalform.png',
                             'durationMs' => 1250,
+                            'scale' => 1.5,
                         ],
                         [
                             'sprite' => './assets/ulquiorra/sprites/ciferfinalcero.png',
                             'durationMs' => 1100,
+                            'scale' => 1.5,
                         ],
                     ],
                     'overlays' => [
                         [
                             'mode' => 'beam',
                             'target' => 'opponent',
-                            'startMs' => 2500,
-                            'durationMs' => 650,
+                            'startMs' => 2700,
+                            'durationMs' => 750,
                             'thicknessPx' => 44,
                             'frontOffsetPx' => 90,
                             'startOffsetX' => 0,
@@ -177,43 +180,8 @@ class Ulquiorra extends Personagem {
                             'sprite' => './assets/ulquiorra/sprites/barrage.png',
                             'durationMs' => 150,
                         ],
-                        [
-                            'sprite' => './assets/ulquiorra/sprites/ulqbarrage1.png',
-                            'durationMs' => 150,
-                        ],
-                        [
-                            'sprite' => './assets/ulquiorra/sprites/ulqbarrage2.png',
-                            'durationMs' => 150,
-                        ],
-                        [
-                            'sprite' => './assets/ulquiorra/sprites/barrage.png',
-                            'durationMs' => 150,
-                        ],
-                        [
-                            'sprite' => './assets/ulquiorra/sprites/ulqbarrage1.png',
-                            'durationMs' => 150,
-                        ],
-                        [
-                            'sprite' => './assets/ulquiorra/sprites/ulqbarrage2.png',
-                            'durationMs' => 150,
-                        ],
-                        [
-                            'sprite' => './assets/ulquiorra/sprites/barrage.png',
-                            'durationMs' => 150,
-                        ],
-                        [
-                            'sprite' => './assets/ulquiorra/sprites/ulqbarrage1.png',
-                            'durationMs' => 150,
-                        ],
-                        [
-                            'sprite' => './assets/ulquiorra/sprites/ulqbarrage2.png',
-                            'durationMs' => 150,
-                        ],
-                        [
-                            'sprite' => './assets/ulquiorra/sprites/barrage.png',
-                            'durationMs' => 150,
-                        ],
                     ],
+                    'repeatFrames' => 5,
                 ],
                 'Heal' => [
                     'frames' => [

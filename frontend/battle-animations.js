@@ -121,6 +121,8 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		state.anim = null;
 		state.sprites.p1 = null;
 		state.sprites.p2 = null;
+		state.frameScale.p1 = null;
+		state.frameScale.p2 = null;
 		state.domainImage = null;
 		state.domainCutsActive = false;
 		limparCortesDominioSukuna();
@@ -140,13 +142,21 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 			: server[chaveJogador].visual?.reactions || {};
 
 		const alvo = raiz[nome];
-		const frames = Array.isArray(alvo?.frames) ? alvo.frames : [];
+		let frames = Array.isArray(alvo?.frames) ? alvo.frames : [];
+
+		const repeat = Number(alvo?.repeatFrames);
+		if (repeat > 1) {
+			const base = [...frames];
+			frames = Array.from({ length: repeat }, () => base).flat();
+		}
+
 		return frames
 			.filter((frame) => frame && typeof frame.sprite === "string" && frame.sprite.trim() !== "")
 			.map((frame) => ({
 				sprite: frame.sprite,
 				durationMs: Number(frame.durationMs) > 0 ? Number(frame.durationMs) : 0,
 				cssClass: frame.cssClass || null,
+				scale: frame.scale ?? null,
 			}));
 	}
 
@@ -163,7 +173,18 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		if (!server || !server[chaveJogador]) return [];
 
 		const actionConfig = server[chaveJogador].visual?.actions?.[nomeAcao];
-		const overlays = Array.isArray(actionConfig?.overlays) ? actionConfig.overlays : [];
+		let overlays = Array.isArray(actionConfig?.overlays) ? actionConfig.overlays : [];
+
+		const repeatOverlays = Number(actionConfig?.repeatOverlays);
+		if (repeatOverlays > 1 && overlays.length > 0) {
+			const base = [...overlays];
+			const startDelay = Number(actionConfig?.repeatOverlaysStartMs ?? 0);
+			const minStart = Math.min(...base.map(o => o.startMs ?? 0));
+			const cycleDurationMs = Math.max(...base.map(o => (o.startMs ?? 0) + (o.durationMs ?? 0))) - minStart;
+			overlays = Array.from({ length: repeatOverlays }, (_, i) =>
+				base.map(o => ({ ...o, startMs: startDelay + ((o.startMs ?? 0) - minStart) + i * cycleDurationMs }))
+			).flat();
+		}
 
 		return overlays
 			.filter((overlay) => overlay && (overlay.mode === "beam" || overlay.sprite?.trim()))
@@ -197,10 +218,12 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 
 		for (const frame of frames) {
 			const sprite = frame.sprite;
+			const scale = frame.scale ?? null;
 			events.push({
 				at: tempoAtual,
 				run() {
 					state.sprites[chaveJogador] = sprite;
+					state.frameScale[chaveJogador] = scale;
 					atualizarHUD();
 				},
 			});
@@ -325,7 +348,8 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		el.src = overlay.sprite;
 		el.alt = "";
 		el.setAttribute("aria-hidden", "true");
-		el.style.cssText = `width:${overlay.sizePx}px;left:${pos.origemX}px;top:${pos.origemY}px;transform:translate(-50%,-50%) scaleX(${pos.escalaHorizontal}) rotate(${pos.anguloProjetil}deg);transition:left ${overlay.durationMs}ms linear,top ${overlay.durationMs}ms linear`;
+		const scaleProjetil = overlay.scale ?? 1;
+		el.style.cssText = `width:${overlay.sizePx}px;left:${pos.origemX}px;top:${pos.origemY}px;transform:translate(-50%,-50%) scaleX(${pos.escalaHorizontal}) scale(${scaleProjetil}) rotate(${pos.anguloProjetil}deg);transition:left ${overlay.durationMs}ms linear,top ${overlay.durationMs}ms linear`;
 		els.arena.appendChild(el);
 		requestAnimationFrame(() => {
 			el.style.left = `${pos.alvoX}px`;
@@ -342,7 +366,10 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		el.src = overlay.sprite;
 		el.alt = "";
 		el.setAttribute("aria-hidden", "true");
-		el.style.transform = `translate(${overlay.x}px,${overlay.y}px) scale(${overlay.scale})`;
+		const scale = overlay.scale ?? 1;
+		const sizePx = overlay.sizePx ?? null;
+		el.style.transform = `translate(${overlay.x ?? 0}px,${overlay.y ?? 0}px) scale(${scale})`;
+		if (sizePx != null) el.style.width = `${sizePx}px`;
 		fighter.appendChild(el);
 		return el;
 	}
@@ -425,6 +452,12 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 			atualizarClasseFlipDoFighter(fighterEl);
 			img.onerror = () => fighterEl.classList.remove("has-image", "is-flipped", "action-casting");
 			if (initial) initial.textContent = (nomeClasse || "?").trim().charAt(0).toUpperCase() || "?";
+			const escalaFrame = state.frameScale?.[chaveJogador] ?? personagem?.visual?.spriteScale ?? null;
+			if (escalaFrame != null) {
+				fighterEl.style.setProperty("--fighter-scale", escalaFrame);
+			} else {
+				fighterEl.style.removeProperty("--fighter-scale");
+			}
 			return;
 		}
 
@@ -433,6 +466,13 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 			fighterEl.classList.add("has-image");
 			if (nomeClasse.toLowerCase() === "ubuntu") fighterEl.classList.add("ubuntu-base-smaller");
 			atualizarClasseFlipDoFighter(fighterEl);
+		}
+
+		const escalaFinal = state.frameScale?.[chaveJogador] ?? personagem?.visual?.spriteScale ?? null;
+		if (escalaFinal != null) {
+			fighterEl.style.setProperty("--fighter-scale", escalaFinal);
+		} else {
+			fighterEl.style.removeProperty("--fighter-scale");
 		}
 
 		img.onerror = () => fighterEl.classList.remove("has-image", "is-flipped");

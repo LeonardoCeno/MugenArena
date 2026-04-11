@@ -10,6 +10,7 @@ import { createAnimationController } from "./battle-animations.js";
 		actionPage: 0,
 		anim: null,
 		sprites: { p1: null, p2: null },
+		frameScale: { p1: null, p2: null },
 		domainImage: null,
 		arenaFundo: null,
 		domainCutsActive: false,

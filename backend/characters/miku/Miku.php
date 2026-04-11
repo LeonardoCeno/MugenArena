@@ -75,6 +75,7 @@ class Miku extends Personagem {
     public function getConfiguracaoVisual(): array {
         return [
             'baseSprite' => './assets/miku/sprites/mikubase.png',
+            'winMessage' => 'Miku Miku, you can call me M I K U',
             'winImage' => './assets/miku/sprites/mikuwin.png',
             'actions' => [
                 'Ataque' => [

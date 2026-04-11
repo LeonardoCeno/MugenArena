@@ -87,7 +87,8 @@ export function createUIController({ state, els, onActionSelected }) {
 		const labelVencedor = server.winner === "p1" ? "Jogador 1" : "Jogador 2";
 		const spriteVitoria = vencedor?.visual?.winImage || vencedor?.visual?.baseSprite || "";
 
-		els.winnerText.textContent = `${labelVencedor} (${vencedor.nome}) venceu!`;
+		const winMessage = vencedor?.visual?.winMessage ?? `${labelVencedor} (${vencedor.nome}) venceu!`;
+		els.winnerText.textContent = winMessage;
 		if (spriteVitoria) {
 			els.winnerSprite.src = spriteVitoria;
 			els.winnerSprite.style.display = "block";

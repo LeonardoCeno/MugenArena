@@ -64,6 +64,7 @@ class Profe extends Personagem {
 	public function getConfiguracaoVisual(): array {
 		return [
 			'baseSprite' => './assets/profe/sprites/smurfprofe.png',
+			'winMessage' => 'Claude, farmar aura',
 			'winImage' => './assets/profe/sprites/WINWIN.png',
 			'actions' => [
 				'Ataque' => [

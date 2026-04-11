@@ -75,6 +75,7 @@ class Gojo extends Personagem {
     public function getConfiguracaoVisual(): array {
         return [
             'baseSprite' => './assets/gojo/sprites/GOJOBASEFINAL.png',
+            'winMessage' => 'Nah, id win',
             'winImage' => './assets/gojo/sprites/gojowin.jpg',
             'actions' => [
                 'Ataque' => [
@@ -140,6 +141,15 @@ class Gojo extends Personagem {
                             'startOffsetY' => -20,
                             'endOffsetX' => 0,
                             'endOffsetY' => 50,
+                        ],
+                        [
+                            'target' => 'opponent',
+                            'sprite' => './assets/gojo/sprites/roxocabum.gif',
+                            'startMs' => 2700,
+                            'durationMs' => 950,
+                            'x' => 0,
+                            'y' => 0,
+                            'scale' => 2.2,
                         ],
                     ],
                 ],

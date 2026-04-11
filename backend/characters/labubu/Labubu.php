@@ -54,6 +54,7 @@ class Labubu extends Personagem {
     public function getConfiguracaoVisual(): array {
         return [
             'baseSprite' => './assets/labubu/sprites/LABUBU.png',
+            'winMessage' => 'Seu erro foi falar do meu pistache',
             'winImage' => './assets/labubu/sprites/labubufarm.png',
             'actions' => [
                 'Ataque' => [
@@ -101,6 +102,7 @@ class Labubu extends Personagem {
                             'startOffsetY' => -20,
                             'endOffsetX' => 0,
                             'endOffsetY' => 50,
+                            'scale' => 0.6,
                         ],
                     ],
                 ],

@@ -73,6 +73,7 @@ class Sans extends Personagem {
     public function getConfiguracaoVisual(): array {
         return [
             'baseSprite' => './assets/sans/sprites/SANSBASEFINAL.png',
+            'winMessage' => 'Eeeeeh eeeeh... eeeeeeh',
             'winImage' => './assets/sans/sprites/sansrealista.jpg',
             'dodgeSprite' => './assets/sans/sprites/SANSSKILL1FINAL.png',
             'actions' => [
