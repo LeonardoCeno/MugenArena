@@ -23,6 +23,16 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		fighterEl.classList.toggle("is-flipped", fighterEl.dataset.side === "player2");
 	}
 
+	function mostrarEfeitoStatus(fighter, gifSrc, cssClass) {
+		const el = document.createElement("img");
+		el.src = gifSrc;
+		el.alt = "";
+		el.setAttribute("aria-hidden", "true");
+		el.className = cssClass;
+		fighter.appendChild(el);
+		setTimeout(() => el.remove(), 2000);
+	}
+
 	function mostrarNumeroFlutuante(chaveJogador, valor, tipo = "direct", foiCritico = false) {
 		if (valor <= 0) return;
 
@@ -37,6 +47,9 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		}
 		damageEl.textContent = tipoNormalizado === "heal" ? `+${valor}` : `-${valor}`;
 		fighter.appendChild(damageEl);
+
+		if (tipoNormalizado === "bleed") mostrarEfeitoStatus(fighter, "./assets/efeitos/bleed.gif", "bleed-effect-overlay");
+		if (tipoNormalizado === "burn")  mostrarEfeitoStatus(fighter, "./assets/efeitos/burnburn.gif", "burn-effect-overlay");
 
 		requestAnimationFrame(() => damageEl.classList.add("show"));
 		setTimeout(() => damageEl.remove(), 1250);

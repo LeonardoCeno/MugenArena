@@ -514,6 +514,40 @@ background: linear-gradient(180deg, rgba(57, 64, 95, 0.7), rgba(0, 0, 0, 1));
 .value.hp.danger { background: linear-gradient(90deg, #f6b951, var(--hp-danger)); }
 .value.energy { background: linear-gradient(90deg, #5ca5ff, var(--energy)); }
 
+/* Efeito de bleed sobre o personagem */
+.bleed-effect-overlay {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 55%;
+  height: 55%;
+  object-fit: contain;
+  object-position: center center;
+  z-index: 7;
+  pointer-events: none;
+  animation: bleed-fade 2000ms ease-out forwards;
+}
+@keyframes bleed-fade {
+  0%   { opacity: 0.9; }
+  70%  { opacity: 0.85; }
+  100% { opacity: 0; }
+}
+
+.burn-effect-overlay {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 55%;
+  height: 55%;
+  object-fit: contain;
+  object-position: center center;
+  z-index: 7;
+  pointer-events: none;
+  animation: bleed-fade 2000ms ease-out forwards;
+}
+
 /* Flutuação de dano */
 .damage-float {
   position: absolute;
