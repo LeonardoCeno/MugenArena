@@ -32,7 +32,7 @@ class Sukuna extends Personagem {
 
         $danoBleed = (int) ceil(self::DANO_DESMANTELAR * 0.40);
         if ($danoBleed > 0) {
-            $alvo->aplicarSangramento($danoBleed, 2);
+            $alvo->aplicarSangramento($danoBleed, 1);
         }
 
         $mensagem = $resultado['mensagem'];
@@ -83,7 +83,7 @@ class Sukuna extends Personagem {
 
         $danoBleed = (int) ceil(self::DANO_DOMAIN * 0.50);
         if ($danoBleed > 0) {
-            $alvo->aplicarSangramento($danoBleed, 2);
+            $alvo->aplicarSangramento($danoBleed, 1);
         }
 
         $mensagem = $resultado['mensagem'];

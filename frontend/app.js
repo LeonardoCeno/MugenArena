@@ -1,6 +1,8 @@
 import { createUIController } from "./ui-status.js";
 import { createAnimationController } from "./battle-animations.js";
 
+const FUNDOS_ARENA = ["BEACH 2.png","BEACH NIGHT.png","BEACH.png","CAVE 2.png","CAVE NIGHT.png","CAVE.png","DESERT NIGHT.png","DESERT.png","LAKE NIGHT.png","LAKE.png","MOUNTAIN 2.png","MOUNTAIN NIGHT.png","MOUNTAIN.png","OCEAN NIGHT.png","OCEAN.png","PATH 2.png","PATH NIGHT.png","PATH.png","SNOW NIGHT.png","SNOW.png","TALL GRASS NIGHT.png","TALL GRASS.png","UNDERWATER.png"];
+
 (() => {
 	const API_URL = "../backend/web_api.php";
 // define URL do back e cria o objeto que guarda tudo
@@ -13,9 +15,6 @@ import { createAnimationController } from "./battle-animations.js";
 		frameScale: { p1: null, p2: null },
 		domainImage: null,
 		arenaFundo: null,
-		domainCutsActive: false,
-		domainCutsIntervalId: null,
-		domainCutsTimeouts: [],
 	};
 // pega todos os elementos html e guarda para usar
 	const fighterPlayerEl = document.getElementById("fighter-player");
@@ -83,7 +82,6 @@ import { createAnimationController } from "./battle-animations.js";
 		if (!ui || !animations) return;
 		ui.atualizarHUD({
 			renderFighter: animations.aplicarVisualPersonagem,
-			updateDomainCuts: animations.atualizarEfeitoCortesDominioSukuna,
 		});
 	};
 // envia dos dados pro mano back, verifica se deu erro ou nao e retorna
@@ -205,10 +203,9 @@ import { createAnimationController } from "./battle-animations.js";
     ui.esconderPreviewSkill();
 
     // ========== ANIMAÇÃO DO BURACO NEGRO ==========
-    const fundos = ["BEACH 2.png","BEACH NIGHT.png","BEACH.png","CAVE 2.png","CAVE NIGHT.png","CAVE.png","DESERT NIGHT.png","DESERT.png","LAKE NIGHT.png","LAKE.png","MOUNTAIN 2.png","MOUNTAIN NIGHT.png","MOUNTAIN.png","OCEAN NIGHT.png","OCEAN.png","PATH 2.png","PATH NIGHT.png","PATH.png","SNOW NIGHT.png","SNOW.png","TALL GRASS NIGHT.png","TALL GRASS.png","UNDERWATER.png"];
     await startBlackHoleAnimation({
       onBattleSetup: () => {
-        state.arenaFundo = `./assets/fundosdojogo/${encodeURIComponent(fundos[Math.floor(Math.random() * fundos.length)])}`;
+        state.arenaFundo = `./assets/fundosdojogo/${encodeURIComponent(FUNDOS_ARENA[Math.floor(Math.random() * FUNDOS_ARENA.length)])}`;
         els.battleApp.classList.add("is-playing");
         els.setupPanel.classList.add("is-hidden");
         els.battleView.classList.remove("is-hidden");

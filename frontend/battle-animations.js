@@ -1,9 +1,8 @@
-const SPRITES_CORTES_DOMINIO_SUKUNA = [
-	"./assets/sukuna/sprites/CORTE1.png",
-	"./assets/sukuna/sprites/CORTE2.png",
-	"./assets/sukuna/sprites/cortedomain1.png",
-	"./assets/sukuna/sprites/cortedomain2.png",
-];
+
+const STATUS_EFFECT_VISUALS = {
+	bleed: { gif: "./assets/efeitos/bleed.gif",    cssClass: "bleed-effect-overlay" },
+	burn:  { gif: "./assets/efeitos/burnburn.gif", cssClass: "burn-effect-overlay"  },
+};
 
 export function createAnimationController({ state, els, atualizarHUD }) {
 
@@ -48,8 +47,8 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		damageEl.textContent = tipoNormalizado === "heal" ? `+${valor}` : `-${valor}`;
 		fighter.appendChild(damageEl);
 
-		if (tipoNormalizado === "bleed") mostrarEfeitoStatus(fighter, "./assets/efeitos/bleed.gif", "bleed-effect-overlay");
-		if (tipoNormalizado === "burn")  mostrarEfeitoStatus(fighter, "./assets/efeitos/burnburn.gif", "burn-effect-overlay");
+		const statusVisual = STATUS_EFFECT_VISUALS[tipoNormalizado];
+		if (statusVisual) mostrarEfeitoStatus(fighter, statusVisual.gif, statusVisual.cssClass);
 
 		requestAnimationFrame(() => damageEl.classList.add("show"));
 		setTimeout(() => damageEl.remove(), 1250);
@@ -137,8 +136,6 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		state.frameScale.p1 = null;
 		state.frameScale.p2 = null;
 		state.domainImage = null;
-		state.domainCutsActive = false;
-		limparCortesDominioSukuna();
 		els.arena
 			?.querySelectorAll(".arena-action-overlay, .arena-energy-beam, .fighter-action-overlay")
 			.forEach((el) => el.remove());
@@ -272,28 +269,13 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		if (!domainImage) return [];
 
 		const delay = Number(actionConfig.domainDelayMs) > 0 ? Number(actionConfig.domainDelayMs) : 0;
-		const cutsDelay = Number(actionConfig.domainCutsDelayMs) > 0 ? Number(actionConfig.domainCutsDelayMs) : null;
-		const events = [
-			{
-				at: delay,
-				run() {
-					state.domainImage = domainImage;
-					atualizarHUD();
-				},
+		return [{
+			at: delay,
+			run() {
+				state.domainImage = domainImage;
+				atualizarHUD();
 			},
-		];
-
-		if (cutsDelay !== null) {
-			events.push({
-				at: delay + cutsDelay,
-				run() {
-					state.domainCutsActive = true;
-					atualizarHUD();
-				},
-			});
-		}
-
-		return events;
+		}];
 	}
 
 	function buildAnimation(atacanteKey, acao, defensorKey, defensorEstaDefendendo) {
@@ -416,47 +398,16 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		return criarProjectileEl(overlay, pos);
 	}
 
-	// ── Domain de Sukuna ─────────────────────────────────────────────────
-
-	function obterLayerCortesDominio() {
-		if (!els.arena) return null;
-		let layer = els.arena.querySelector(".domain-cuts-layer");
-		if (!layer) {
-			layer = document.createElement("div");
-			layer.className = "domain-cuts-layer";
-			els.arena.appendChild(layer);
-		}
-		return layer;
-	}
-
-	function limparCortesDominioSukuna() {
-		state.domainCutsTimeouts.forEach((id) => clearTimeout(id));
-		state.domainCutsTimeouts = [];
-
-		if (state.domainCutsIntervalId !== null) {
-			clearInterval(state.domainCutsIntervalId);
-			state.domainCutsIntervalId = null;
-		}
-
-		const layer = els.arena?.querySelector(".domain-cuts-layer");
-		if (layer) layer.innerHTML = "";
-	}
-
-	function atualizarEfeitoCortesDominioSukuna(ativo) {
-		if (!ativo) {
-			limparCortesDominioSukuna();
-			return;
-		}
-		if (state.domainCutsIntervalId !== null) return;
-
-		criarCorteAleatorioDominioSukuna();
-		state.domainCutsIntervalId = setInterval(() => {
-			const quantidade = 1 + Math.floor(Math.random() * 2);
-			for (let i = 0; i < quantidade; i++) criarCorteAleatorioDominioSukuna();
-		}, 30);
-	}
-
 	// ── Renderização de personagens ──────────────────────────────────────
+
+	function aplicarEscalaFighter(fighterEl, chaveJogador, personagem) {
+		const escala = state.frameScale?.[chaveJogador] ?? personagem?.visual?.spriteScale ?? null;
+		if (escala != null) {
+			fighterEl.style.setProperty("--fighter-scale", escala);
+		} else {
+			fighterEl.style.removeProperty("--fighter-scale");
+		}
+	}
 
 	function aplicarVisualPersonagem(chaveJogador, personagem, fighterRefs) {
 		if (!fighterRefs?.root || !fighterRefs.img) return;
@@ -477,12 +428,7 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 			atualizarClasseFlipDoFighter(fighterEl);
 			img.onerror = () => fighterEl.classList.remove("has-image", "is-flipped", "action-casting");
 			if (initial) initial.textContent = (nomeClasse || "?").trim().charAt(0).toUpperCase() || "?";
-			const escalaFrame = state.frameScale?.[chaveJogador] ?? personagem?.visual?.spriteScale ?? null;
-			if (escalaFrame != null) {
-				fighterEl.style.setProperty("--fighter-scale", escalaFrame);
-			} else {
-				fighterEl.style.removeProperty("--fighter-scale");
-			}
+			aplicarEscalaFighter(fighterEl, chaveJogador, personagem);
 			return;
 		}
 
@@ -493,13 +439,7 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 			atualizarClasseFlipDoFighter(fighterEl);
 		}
 
-		const escalaFinal = state.frameScale?.[chaveJogador] ?? personagem?.visual?.spriteScale ?? null;
-		if (escalaFinal != null) {
-			fighterEl.style.setProperty("--fighter-scale", escalaFinal);
-		} else {
-			fighterEl.style.removeProperty("--fighter-scale");
-		}
-
+		aplicarEscalaFighter(fighterEl, chaveJogador, personagem);
 		img.onerror = () => fighterEl.classList.remove("has-image", "is-flipped");
 		if (initial) initial.textContent = (personagem?.classeNome || "?").trim().charAt(0).toUpperCase() || "?";
 	}
@@ -536,7 +476,6 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		runTimeline,
 		cancelAnimation,
 		buildAnimation,
-		atualizarEfeitoCortesDominioSukuna,
 		aplicarVisualPersonagem,
 		animarEsquiva,
 	};

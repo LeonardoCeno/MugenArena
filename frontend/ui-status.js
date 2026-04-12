@@ -7,6 +7,10 @@ export const PLACEHOLDER_ACTIONS_HTML = `
 	<button disabled>HABILIDADE</button>
 `;
 
+function labelJogador(key) {
+	return key === "p1" ? "Jogador 1" : "Jogador 2";
+}
+
 function percentual(atual, maximo) {
 	if (maximo <= 0) return "0%";
 	return `${Math.max(0, Math.min(100, (atual / maximo) * 100))}%`;
@@ -26,7 +30,7 @@ export function createUIController({ state, els, onActionSelected }) {
 		li.textContent = texto;
 		els.log.prepend(li);
 
-		while (els.log.children.length > 8) {
+		if (els.log.children.length > 8) {
 			els.log.removeChild(els.log.lastChild);
 		}
 	}
@@ -84,7 +88,7 @@ export function createUIController({ state, els, onActionSelected }) {
 		}
 
 		const vencedor = server.winner === "p1" ? server.p1 : server.p2;
-		const labelVencedor = server.winner === "p1" ? "Jogador 1" : "Jogador 2";
+		const labelVencedor = labelJogador(server.winner);
 		const spriteVitoria = vencedor?.visual?.winImage || vencedor?.visual?.baseSprite || "";
 
 		const winMessage = vencedor?.visual?.winMessage ?? `${labelVencedor} (${vencedor.nome}) venceu!`;
@@ -99,11 +103,10 @@ export function createUIController({ state, els, onActionSelected }) {
 		els.winnerOverlay.classList.remove("is-hidden");
 	}
 
-	function atualizarHUD({ renderFighter, updateDomainCuts }) {
+	function atualizarHUD({ renderFighter }) {
 		const server = state.serverState;
 		if (!server || !server.started) {
 			setArenaDomain(null);
-			updateDomainCuts(false);
 			els.winnerOverlay.classList.add("is-hidden");
 			return;
 		}
@@ -113,7 +116,6 @@ export function createUIController({ state, els, onActionSelected }) {
 			domainImage = server[server.domainCasterKey]?.visual?.actions?.["Domain"]?.domainImage ?? null;
 		}
 		setArenaDomain(domainImage);
-		updateDomainCuts(state.domainCutsActive);
 
 		atualizarCardStatus(server.p2, els.cards.enemy);
 		atualizarCardStatus(server.p1, els.cards.player);
@@ -121,22 +123,22 @@ export function createUIController({ state, els, onActionSelected }) {
 		renderFighter("p1", server.p1, els.fighters.p1);
 
 		if (server.winner) {
-			els.turnInfo.textContent = `${server.winner === "p1" ? "Jogador 1" : "Jogador 2"} venceu!`;
+			els.turnInfo.textContent = `${labelJogador(server.winner)} venceu!`;
 			mostrarTelaVitoria(server);
 			return;
 		}
 
 		els.winnerOverlay.classList.add("is-hidden");
-		const jogadorDaVez = server.currentKey === "p1" ? "Jogador 1" : "Jogador 2";
-		const nomeDaVez = server.currentKey === "p1" ? server.p1.nome : server.p2.nome;
+		const jogadorDaVez = labelJogador(server.currentKey);
+		const nomeDaVez = server[server.currentKey].nome;
 		els.turnInfo.textContent = `Turno ${server.turno} • ${jogadorDaVez} (${nomeDaVez})`;
 	}
 
 	function setBotoesAcaoHabilitados(habilitado) {
+		const totalAcoes = (state.serverState?.availableActions || []).length;
+		const totalPaginas = Math.max(1, Math.ceil(totalAcoes / ACOES_POR_PAGINA));
 		Array.from(els.menu.querySelectorAll("button")).forEach((btn) => {
 			if (btn.classList.contains("pagination-btn")) {
-				const totalAcoes = (state.serverState?.availableActions || []).length;
-				const totalPaginas = Math.max(1, Math.ceil(totalAcoes / ACOES_POR_PAGINA));
 				btn.disabled = !habilitado || totalPaginas <= 1;
 				return;
 			}
