@@ -440,10 +440,12 @@ justify-content: center;
   display: none;
   order: -1;
   width: 19cqw;
+  height: 10.5cqh;
+  align-self: center;
   background: rgba(14, 18, 34, 0.88);
   border: 1px solid rgba(255, 255, 255, 0.536);
   border-radius: 3px;
-  padding: 12px 6px 12px 12px;
+  padding: 10px 6px 10px 10px;
   backdrop-filter: blur(6px);
   pointer-events: none;
 }
@@ -455,6 +457,7 @@ justify-content: center;
 .skill-preview p {
   margin: 0;
   font-size: 0.95cqw;
+  font-weight: 600;
   color: var(--muted);
   line-height: 1.45;
 }

@@ -65,10 +65,10 @@ class Miku extends Personagem {
 
     public function getDescricoesAcoes(): array {
         return array_merge(parent::getDescricoesAcoes(), [
-            'MAGIC!' => 'Causa ' . self::DANO_MAGIC . ' de dano. Custo: ' . self::CUSTO_MAGIC . ' energia.',
-            'Miku BEEAM' => 'Causa ' . self::DANO_MIKU_BEEAM . ' de dano. Custo: ' . self::CUSTO_MIKU_BEEAM . ' energia.',
-            'MY VOICE' => 'Causa ' . self::DANO_MY_VOICE . ' de dano. Custo: ' . self::CUSTO_MY_VOICE . ' energia.',
-            'mikupower' => 'Regenera ' . self::CURA_MIKUPOWER . ' de vida. Custo: ' . self::CUSTO_MIKUPOWER . ' energia.',
+            'MAGIC!' => 'Conjura projéteis mágicos em sequência contra o inimigo.' . "\n" . 'Dano: ' . self::DANO_MAGIC . "\n" . 'Custo: ' . self::CUSTO_MAGIC,
+            'Miku BEEAM' => 'Dispara um feixe de energia rosa concentrado.' . "\n" . 'Dano: ' . self::DANO_MIKU_BEEAM . "\n" . 'Custo: ' . self::CUSTO_MIKU_BEEAM,
+            'MY VOICE' => 'Solta um grito poderoso que derruba o inimigo.' . "\n" . 'Dano: ' . self::DANO_MY_VOICE . "\n" . 'Custo: ' . self::CUSTO_MY_VOICE,
+            'mikupower' => 'Canaliza o poder da música para recuperar vida.' . "\n" . 'Cura: ' . self::CURA_MIKUPOWER . "\n" . 'Custo: ' . self::CUSTO_MIKUPOWER,
         ]);
     }
 

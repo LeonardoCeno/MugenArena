@@ -55,9 +55,9 @@ class Profe extends Personagem {
 
 	public function getDescricoesAcoes(): array {
 		return array_merge(parent::getDescricoesAcoes(), [
-			'Red bill' => 'Cura ' . self::CURA_RED_BILL . ' de vida. Custo: ' . self::CUSTO_RED_BILL . ' energia.',
-			'Apelação' => 'Causa ' . self::DANO_APELACAO . ' de dano. Custo: ' . self::CUSTO_APELACAO . ' energia.',
-			'VibeCode' => 'Causa ' . self::DANO_VIBECODE . ' de dano. Custo: ' . self::CUSTO_VIBECODE . ' energia.',
+			'Red bill' => 'Toma um Red Bull e recupera energia vital.' . "\n" . 'Cura: ' . self::CURA_RED_BILL . "\n" . 'Custo: ' . self::CUSTO_RED_BILL,
+			'Apelação' => 'Apela à autoridade máxima e dispara no inimigo.' . "\n" . 'Dano: ' . self::DANO_APELACAO . "\n" . 'Custo: ' . self::CUSTO_APELACAO,
+			'VibeCode' => 'Lança ferramentas de desenvolvimento como projéteis.' . "\n" . 'Dano: ' . self::DANO_VIBECODE . "\n" . 'Custo: ' . self::CUSTO_VIBECODE,
 		]);
 	}
 

@@ -46,8 +46,8 @@ class Labubu extends Personagem {
 
     public function getDescricoesAcoes(): array {
         return array_merge(parent::getDescricoesAcoes(), [
-            'MorangodoAmor' => 'Causa ' . self::DANO_MORANGO_DO_AMOR . ' de dano. Custo: ' . self::CUSTO_MORANGO_DO_AMOR . ' energia.',
-            'labuaura' => 'Cura ' . self::CURA_LABUAURA . ' de vida. Custo: ' . self::CUSTO_LABUAURA . ' energia.',
+            'MorangodoAmor' => 'Arremessa um morango carregado de amor contra o inimigo.' . "\n" . 'Dano: ' . self::DANO_MORANGO_DO_AMOR . "\n" . 'Custo: ' . self::CUSTO_MORANGO_DO_AMOR,
+            'labuaura' => 'Envolve-se em uma aura mística para recuperar vida.' . "\n" . 'Cura: ' . self::CURA_LABUAURA . "\n" . 'Custo: ' . self::CUSTO_LABUAURA,
         ]);
     }
 

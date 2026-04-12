@@ -65,10 +65,10 @@ class Gojo extends Personagem {
 
     public function getDescricoesAcoes(): array {
         return array_merge(parent::getDescricoesAcoes(), [
-            'Azul' => 'Causa ' . self::DANO_AZUL . ' de dano. Custo: ' . self::CUSTO_AZUL . ' energia.',
-            'Vazio Roxo' => 'Causa ' . self::DANO_VAZIO_ROXO . ' de dano. Custo: ' . self::CUSTO_VAZIO_ROXO . ' energia.',
-            'Reverse Energy' => 'Cura ' . self::CURA_REVERSE . ' de vida. Custo: ' . self::CUSTO_REVERSE . ' energia.',
-            'Domain' => 'Impede o oponente de fazer qualquer ação durante 2 turnos. Custo: ' . self::CUSTO_INFINITO . ' energia.',
+            'Azul' => 'Cria um ponto de atração que comprime o inimigo.' . "\n" . 'Dano: ' . self::DANO_AZUL . "\n" . 'Custo: ' . self::CUSTO_AZUL,
+            'Vazio Roxo' => 'Combina atração e repulsão em um projétil que apaga tudo.' . "\n" . 'Dano: ' . self::DANO_VAZIO_ROXO . "\n" . 'Custo: ' . self::CUSTO_VAZIO_ROXO,
+            'Reverse Energy' => 'Inverte a energia maldita para curar ferimentos.' . "\n" . 'Cura: ' . self::CURA_REVERSE . "\n" . 'Custo: ' . self::CUSTO_REVERSE,
+            'Domain' => 'Expande o Vazio Infinito, paralisando o inimigo por 2 turnos.' . "\n" . 'Custo: ' . self::CUSTO_INFINITO,
         ]);
     }
 
