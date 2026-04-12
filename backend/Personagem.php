@@ -158,7 +158,7 @@ abstract class Personagem {
     }
 
     protected function sorteouCritico(): bool {
-        return random_int(1, 100) <= 5;
+        return random_int(1, 100) <= 7;
     }
 
     protected function aplicarReducaoDanoDefesa(int $danoReal): int {

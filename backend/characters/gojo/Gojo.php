@@ -146,7 +146,7 @@ class Gojo extends Personagem {
                             'target' => 'opponent',
                             'sprite' => './assets/gojo/sprites/roxocabum.gif',
                             'startMs' => 2400,
-                            'durationMs' => 850,
+                            'durationMs' => 975,
                             'x' => 0,
                             'y' => -40,
                             'scale' => 2.2,

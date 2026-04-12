@@ -336,9 +336,11 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		el.setAttribute("aria-hidden", "true");
 		el.style.cssText = `left:${pos.origemX}px;top:${pos.origemY}px;height:${escalarParaArena(overlay.thicknessPx)}px;width:0px;transform:translate(0,-50%) rotate(${pos.anguloAuto}deg);transition:width ${overlay.durationMs}ms ease-out`;
 		els.arena.appendChild(el);
-		requestAnimationFrame(() => {
-			el.style.width = `${pos.distancia}px`;
-		});
+		// getBoundingClientRect() força reflow síncrono: garante que width:0 está committed
+		// antes de aplicar o valor alvo, criando as duas épocas de estilo que a transição CSS exige.
+		// requestAnimationFrame não é suficiente — pode disparar no mesmo frame e pular a transição.
+		void el.getBoundingClientRect();
+		el.style.width = `${pos.distancia}px`;
 		return el;
 	}
 
@@ -357,10 +359,11 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		const sizePx = escalarParaArena(overlay.sizePx ?? 260);
 		el.style.cssText = `width:${sizePx}px;left:${pos.origemX}px;top:${pos.origemY}px;transform:translate(-50%,-50%) scaleX(${pos.escalaHorizontal}) scale(${scaleProjetil}) rotate(${pos.anguloProjetil}deg);transition:left ${overlay.durationMs}ms linear,top ${overlay.durationMs}ms linear`;
 		els.arena.appendChild(el);
-		requestAnimationFrame(() => {
-			el.style.left = `${pos.alvoX}px`;
-			el.style.top = `${pos.alvoY}px`;
-		});
+		// getBoundingClientRect() força reflow síncrono: garante que left/top iniciais estão committed
+		// antes de aplicar as posições alvo, evitando que o browser pule a transição de movimento.
+		void el.getBoundingClientRect();
+		el.style.left = `${pos.alvoX}px`;
+		el.style.top = `${pos.alvoY}px`;
 		return el;
 	}
 
@@ -374,7 +377,10 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		el.setAttribute("aria-hidden", "true");
 		const scale = overlay.scale ?? 1;
 		const sizePx = overlay.sizePx ?? null;
-		el.style.transform = `translate(${escalarParaArena(overlay.x ?? 0)}px,${escalarParaArena(overlay.y ?? 0)}px) scale(${scale})`;
+		const xPx = escalarParaArena(overlay.x ?? 0);
+		const yPx = escalarParaArena(overlay.y ?? 0);
+		// -50% centraliza o elemento sobre o fighter; x/y aplicam offset adicional
+		el.style.transform = `translate(calc(-50% + ${xPx}px), calc(-50% + ${yPx}px)) scale(${scale})`;
 		if (sizePx != null) el.style.width = `${escalarParaArena(sizePx)}px`;
 		fighter.appendChild(el);
 		return el;
