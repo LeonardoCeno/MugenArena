@@ -134,7 +134,7 @@ body {
 
 /* Painéis dos jogadores */
 .setup-player {
-  flex: 0 1 600px;        /* base 400px, encolhe se necessário */
+  width: 32.5cqw;
   padding: 20px;
   border: 1px solid var(--line);
   display: flex;
@@ -251,7 +251,7 @@ background: linear-gradient(180deg, rgba(57, 64, 95, 0.7), rgba(0, 0, 0, 1));
 }
 .char-option img {
   width: 100%;
-  height: 64px;
+  height: 8.5cqh;
   object-fit: contain;
   object-position: bottom;
 }
@@ -309,13 +309,22 @@ background: linear-gradient(180deg, rgba(57, 64, 95, 0.7), rgba(0, 0, 0, 1));
 
 /* Botão iniciar */
 .start-btn {
-  width: min(500px, 100%);
+  position: absolute;
+  display: flex;
+  align-items: center;
+justify-content: center;
+  bottom: 4%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 25;
+  width: 30cqw;
+  height: 6cqh;
   padding: 14px 24px;
-  background: linear-gradient(135deg, #1c2d48, #162338);
-  color: var(--accent);
+  background: linear-gradient(135deg, #121e2e, #0f1828);
+  color: rgb(203, 211, 255);
   border: 1px solid rgba(126, 214, 198, 0.28);
   border-radius: 12px;
-  font-size: 0.88rem;
+  font-size: 2.2cqh;
   font-weight: 800;
   letter-spacing: 0.2em;
   cursor: pointer;
@@ -323,8 +332,8 @@ background: linear-gradient(180deg, rgba(57, 64, 95, 0.7), rgba(0, 0, 0, 1));
   transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
 }
 .start-btn:hover {
-  background: linear-gradient(135deg, #243a60, #1c2f50);
-  border-color: rgba(126, 214, 198, 0.6);
+  background: linear-gradient(135deg, #132037, #0d182c);
+  border-color: rgba(126, 141, 214, 0.6);
   box-shadow: 0 0 32px rgba(126, 214, 198, 0.14);
 }
 
