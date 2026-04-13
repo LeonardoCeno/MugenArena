@@ -139,13 +139,20 @@ export function createUIController({ state, els, onActionSelected }) {
 		}
 
 		els.winnerOverlay.classList.add("is-hidden");
-		const jogadorDaVez = labelJogador(server.currentKey);
-		const nomeDaVez = server[server.currentKey].nome;
-		els.turnInfo.textContent = `Turno ${server.turno} • ${jogadorDaVez} (${nomeDaVez})`;
+		if (server.currentKey) {
+			const jogadorDaVez = labelJogador(server.currentKey);
+			const nomeDaVez    = server[server.currentKey]?.nome ?? "";
+			const p1Str = server.p1Submeteu ? "✓" : "?";
+			const p2Str = server.p2Submeteu ? "✓" : "?";
+			els.turnInfo.textContent = `Turno ${server.turno} • P1[${p1Str}] P2[${p2Str}] — ${jogadorDaVez} (${nomeDaVez}) escolhe`;
+		} else {
+			els.turnInfo.textContent = `Turno ${server.turno} • Resolvendo...`;
+		}
 	}
 
 	function habilitarBotoes(habilitado) {
-		const totalAcoes = (state.serverState?.availableActions || []).length;
+		const acoes = state.serverState?.availableActions;
+		const totalAcoes = (Array.isArray(acoes) ? acoes : []).length;
 		const totalPaginas = Math.max(1, Math.ceil(totalAcoes / ACOES_POR_PAGINA));
 		Array.from(els.menu.querySelectorAll("button")).forEach((btn) => {
 			if (btn.classList.contains("pagination-btn")) {
@@ -164,8 +171,9 @@ export function createUIController({ state, els, onActionSelected }) {
 		const server = state.serverState;
 		if (!server || !server.started || server.winner) return;
 
-		const energiaAtual = Number(server[server.currentKey]?.energiaAtual ?? 0);
-		const acoes = (server.availableActions || []).map((acao) => ({
+		const energiaAtual = Number(server[server.currentKey ?? "p1"]?.energiaAtual ?? 0);
+		const rawAcoes = Array.isArray(server.availableActions) ? server.availableActions : [];
+		const acoes = rawAcoes.map((acao) => ({
 			...acao,
 			nome: acao.label,
 			nomeSprite: acao.skillName || acao.label,

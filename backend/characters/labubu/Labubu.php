@@ -4,6 +4,7 @@ require_once __DIR__ . '/../../Personagem.php';
 
 class Labubu extends Personagem {
 
+    const VELOCIDADE = 55;
     const CUSTO_MORANGO_DO_AMOR = 600;
     const CUSTO_LABUAURA = 400;
     const DANO_MORANGO_DO_AMOR = 80;
@@ -39,7 +40,7 @@ class Labubu extends Personagem {
 
     public function getHabilidades(): array {
         return [
-            ["nome" => "MorangodoAmor","metodo" => "MorangodoAmor","precisaAlvo" => true,  "energyCost" => self::CUSTO_MORANGO_DO_AMOR],
+            ["nome" => "MorangodoAmor","metodo" => "MorangodoAmor","precisaAlvo" => true,  "energyCost" => self::CUSTO_MORANGO_DO_AMOR, "priority" => true],
             ["nome" => "labuaura",     "metodo" => "labuaura",    "precisaAlvo" => false, "energyCost" => self::CUSTO_LABUAURA]
         ];
     }
@@ -58,6 +59,13 @@ class Labubu extends Personagem {
             'winImage' => './assets/labubu/sprites/labubufarm.png',
             'actions' => [
                 'Ataque' => [
+                    'audio' => [
+                        [
+                            'file' => './assets/audiosgerais/punchs2.mp3',    
+                            'startMs' => 0,
+                            'durationMs' => 1000,
+                        ],
+                    ],
                     'frames' => [
                         [
                             'sprite' => './assets/labubu/sprites/labubo.png',
@@ -78,6 +86,12 @@ class Labubu extends Personagem {
                     ],
                 ],
                 'MorangodoAmor' => [
+                    'audio' => [
+                        [
+                            'file' => './assets/labubu/audios/labubu.mp3',    
+                            'startMs' => 0,
+                        ],
+                    ],
                     'frames' => [
                         [
                             'sprite' => './assets/labubu/sprites/LANCE.png',

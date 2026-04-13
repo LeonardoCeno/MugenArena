@@ -122,6 +122,10 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		els.arena
 			?.querySelectorAll(".arena-action-overlay, .arena-energy-beam, .fighter-action-overlay")
 			.forEach(el => el.remove());
+		document.querySelectorAll(".sukuna-transform-overlay").forEach(el => el.remove());
+		for (const chave of ["p1", "p2"]) {
+			els.fighters[chave]?.root?.classList.remove("sukuna-transforming", "sukuna-transformed");
+		}
 		if (meleeAttackerKey) resetMelee(meleeAttackerKey);
 	}
 
@@ -522,6 +526,59 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		});
 	}
 
+	async function animarTransformacao(chave) {
+		const fighter       = els.fighters[chave]?.root;
+		const transformCfg  = state.serverState?.[chave]?.visual?.transformation ?? {};
+		const spriteTransf  = transformCfg.sprite ?? null;
+		const audioFile     = transformCfg.audio  ?? null;
+
+		// Overlay escuro
+		const overlay = document.createElement("div");
+		overlay.className = "sukuna-transform-overlay";
+		document.body.appendChild(overlay);
+
+		// Audio
+		if (audioFile) {
+			const audio = new Audio(audioFile);
+			audio.volume = 0.75;
+			audio.play().catch(() => {});
+			setTimeout(() => { try { audio.pause(); audio.currentTime = 0; } catch (_) {} }, 3600);
+		}
+
+		// Fase 1: pulso no sprite do fighter
+		if (fighter) fighter.classList.add("sukuna-transforming");
+
+		await wait(200);
+		overlay.classList.add("active"); // escurece a tela
+
+		// Fase 2: troca o sprite para a forma transformada
+		await wait(900);
+		if (spriteTransf) { state.sprites[chave] = spriteTransf; atualizarHUD(); }
+
+		// Fase 3: flash vermelho
+		await wait(300);
+		overlay.classList.add("flash");
+
+		await wait(280);
+		overlay.classList.remove("flash");
+		overlay.classList.add("fade-out"); // tela volta ao normal
+
+		// Fase 4: limpa animação de pulso, aplica idle de transformado
+		await wait(500);
+		if (fighter) {
+			fighter.classList.remove("sukuna-transforming");
+			fighter.classList.add("sukuna-transformed");
+		}
+
+		// Fase 5: solta o sprite temporário (baseSprite já é DOMAINSUKUNA.png via servidor)
+		await wait(600);
+		state.sprites[chave] = null;
+		atualizarHUD();
+
+		await wait(300);
+		overlay.remove();
+	}
+
 	return {
 		feedbackDano,
 		wait,
@@ -532,5 +589,6 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		visualPersonagem,
 		animarEsquiva,
 		animarMorte,
+		animarTransformacao,
 	};
 }

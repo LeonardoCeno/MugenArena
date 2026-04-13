@@ -4,6 +4,7 @@ require_once __DIR__ . '/../../Personagem.php';
 
 class UbuntuKiller extends Personagem {
 
+    const VELOCIDADE = 45;
     const DANO_UBUNTUBUXA = 999;
     const REGENERACAO_PROPRIA = 0;
 
@@ -58,6 +59,7 @@ class UbuntuKiller extends Personagem {
                 'nome' => 'ubuntubuxa',
                 'metodo' => 'ubuntubuxa',
                 'precisaAlvo' => true,
+                'priority' => true,
             ],
         ];
     }

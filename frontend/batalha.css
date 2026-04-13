@@ -946,3 +946,42 @@ justify-content: center;
   height: 100%;
   display: block;
 }
+/* ===== TRANSFORMAÇÃO SUKUNA ===== */
+.sukuna-transform-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 8000;
+  pointer-events: none;
+  background: transparent;
+  transition: background 0.55s ease;
+}
+.sukuna-transform-overlay.active {
+  background: rgba(0, 0, 0, 0.90);
+}
+.sukuna-transform-overlay.flash {
+  background: rgba(180, 0, 0, 0.92);
+  transition: background 0.12s;
+}
+.sukuna-transform-overlay.fade-out {
+  background: transparent;
+  transition: background 0.85s ease-out;
+}
+
+@keyframes sukuna-pulse {
+  0%   { filter: brightness(1)   saturate(1)   drop-shadow(0 0 0px #c00); }
+  40%  { filter: brightness(3.5) saturate(0.1) drop-shadow(0 0 32px #c00); }
+  100% { filter: brightness(6)   saturate(0)   drop-shadow(0 0 64px #ff2200); }
+}
+
+.fighter.sukuna-transforming .fighter-img {
+  animation: sukuna-pulse 1.6s ease-in-out forwards;
+}
+
+@keyframes sukuna-transformed-idle {
+  0%, 100% { filter: brightness(1)   drop-shadow(0 0  8px rgba(200,0,0,0.5)); }
+  50%       { filter: brightness(1.2) drop-shadow(0 0 22px rgba(255,30,0,0.8)); }
+}
+
+.fighter.sukuna-transformed .fighter-img {
+  animation: sukuna-transformed-idle 2.4s ease-in-out infinite;
+}

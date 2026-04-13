@@ -62,23 +62,28 @@ function iniciarPartida(array $input): void {
 }
 
 function executarAcao(array $input): void {
-    $game        = obterPartidaAtiva();
-    $actionType  = (string)($input['actionType'] ?? '');
-    $skillIndex  = isset($input['skillIndex']) ? (int)$input['skillIndex'] : null;
+    $game       = obterPartidaAtiva();
+    $playerKey  = (string)($input['playerKey'] ?? 'p1');
+    $actionType = (string)($input['actionType'] ?? '');
+    $skillIndex = isset($input['skillIndex']) ? (int)$input['skillIndex'] : null;
 
-    $deveRetornarSetup = GameService::retornaAoSetup($game, $actionType, $skillIndex);
-    $mensagem          = GameService::executarTurno($game, $actionType, $skillIndex);
+    $resultado = GameService::submeterAcao($game, $playerKey, $actionType, $skillIndex);
 
-    if ($deveRetornarSetup) {
+    if ($resultado['resetJogo']) {
         unset($_SESSION['game']);
     } else {
         $_SESSION['game'] = $game;
     }
 
+    $mensagem = $resultado['mensagem'];
+
     responder([
-        'ok'      => true,
-        'message' => $mensagem,
-        'state'   => exportarEstadoDaSessao($mensagem),
+        'ok'                  => true,
+        'resolved'            => $resultado['resolved'],
+        'resolucaoOrdem'      => $resultado['resolucaoOrdem'] ?? null,
+        'estadoIntermediario' => $resultado['estadoIntermediario'] ?? null,
+        'message'             => $mensagem,
+        'state'               => exportarEstadoDaSessao($mensagem),
     ]);
 }
 

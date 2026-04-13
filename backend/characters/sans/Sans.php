@@ -4,6 +4,7 @@ require_once __DIR__ . '/../../Personagem.php';
 
 class Sans extends Personagem {
 
+    const VELOCIDADE = 100;
     const CUSTO_BLUESOUL = 150;
     const DANO_BLUESOUL = 90;
     const CUSTO_COMECOU = 120;
@@ -99,7 +100,8 @@ class Sans extends Personagem {
                 "nome" => "BADTIME",
                 "metodo" => "badtime",
                 "precisaAlvo" => true,
-                "energyCost" => self::CUSTO_BADTIME
+                "energyCost" => self::CUSTO_BADTIME,
+                "priority" => true,
             ],
             [
                 "nome" => "eh eh",

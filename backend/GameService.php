@@ -31,10 +31,8 @@ class GameService {
 
     private static function domainVazio(): array {
         return [
-            'turnsRemaining'         => 0,
-            'casterKey'              => null,
-            'targetKey'              => null,
-            'extraCasterTurnPending' => false,
+            'turnsRemaining' => 0,
+            'casterKey'      => null,
         ];
     }
 
@@ -80,8 +78,8 @@ class GameService {
         ];
     }
 
-    private static function aplicarParalisia(array &$game, string $currentKey, int $turnosToSkip, bool $activatesDomain): void {
-        $targetKey = self::chaveOposta($currentKey);
+    private static function aplicarParalisia(array &$game, string $casterKey, int $turnosToSkip, bool $activatesDomain): void {
+        $targetKey = self::chaveOposta($casterKey);
 
         if ($turnosToSkip > 0) {
             $game['skipTurns'][$targetKey] = $turnosToSkip;
@@ -89,196 +87,66 @@ class GameService {
 
         if ($activatesDomain) {
             $game['domain'] = [
-                'turnsRemaining'         => $turnosToSkip + 1,
-                'casterKey'              => $currentKey,
-                'targetKey'              => $targetKey,
-                'extraCasterTurnPending' => true,
+                'turnsRemaining' => $turnosToSkip,
+                'casterKey'      => $casterKey,
             ];
         }
     }
 
-    private static function consumirTurnoExtra(array &$game, string $currentKey): void {
-        $domainTurns   = (int)($game['domain']['turnsRemaining'] ?? 0);
-        $domainCaster  = (string)($game['domain']['casterKey'] ?? '');
-        $domainTarget  = (string)($game['domain']['targetKey'] ?? '');
-        $extraPendente = (bool)($game['domain']['extraCasterTurnPending'] ?? false);
+    // ── Ordem de turno (sistema de prioridade + velocidade) ──────────────
 
-        if (!$extraPendente || $domainTurns <= 0 || $domainCaster !== $currentKey) {
-            return;
-        }
+    private static function acaoTemPrioridade(Personagem $p, array $acao): bool {
+        $tipo = $acao['actionType'];
 
-        if ($domainTarget === '' || ((int)($game['skipTurns'][$domainTarget] ?? 0)) > 0) {
-            return;
-        }
+        if ($tipo === 'skip') return false;
+        if ($tipo === 'defend') return true;
 
-        $game['domain']['extraCasterTurnPending'] = false;
-        self::decrementarDomain($game);
-    }
-
-    private static function avancarTurno(array &$game, string $currentKey): void {
-        $game['turno']      = ((int)$game['turno']) + 1;
-        $game['currentKey'] = self::chaveOposta($currentKey);
-
-        $game[$game['currentKey']]->iniciarTurno();
-    }
-
-    private static function processarTurnosPulados(array &$game): ?string {
-        $mensagens       = [];
-        $limiteSeguranca = 0;
-
-        while (self::determinarVencedor($game) === null && $limiteSeguranca < 4) {
-            $currentKey = self::validarChave((string)($game['currentKey'] ?? 'p1'));
-            $skipAtual  = (int)($game['skipTurns'][$currentKey] ?? 0);
-
-            if ($skipAtual <= 0) {
-                break;
+        if ($tipo === 'skill') {
+            $skillIndex  = $acao['skillIndex'] ?? null;
+            $habilidades = $p->getHabilidades();
+            if ($skillIndex !== null && isset($habilidades[$skillIndex])) {
+                return (bool)($habilidades[$skillIndex]['priority'] ?? false);
             }
+        }
 
-            $jogadorPulando = self::jogadorPorChave($game, $currentKey);
-            $game['skipTurns'][$currentKey] = $skipAtual - 1;
+        return false;
+    }
 
-            if ((string)($game['domain']['targetKey'] ?? '') === $currentKey && (int)($game['domain']['turnsRemaining'] ?? 0) > 0) {
-                self::decrementarDomain($game);
+    /**
+     * Retorna true se p1 age antes de p2.
+     * Regras: prioridade > velocidade > aleatório.
+     */
+    private static function determinarOrdem(Personagem $p1, array $a1, Personagem $p2, array $a2): bool {
+        $p1Prio = self::acaoTemPrioridade($p1, $a1);
+        $p2Prio = self::acaoTemPrioridade($p2, $a2);
+
+        if ($p1Prio && !$p2Prio) return true;
+        if ($p2Prio && !$p1Prio) return false;
+
+        if ($p1->getVelocidade() > $p2->getVelocidade()) return true;
+        if ($p2->getVelocidade() > $p1->getVelocidade()) return false;
+
+        return random_int(0, 1) === 1;
+    }
+
+    // ── Auto-skip ────────────────────────────────────────────────────────
+
+    /**
+     * Preenche automaticamente a ação de jogadores paralisados com 'skip'.
+     * Retorna true se algum skip foi preenchido.
+     */
+    private static function preencherAcoesSkip(array &$game): bool {
+        $preencheu = false;
+        foreach (['p1', 'p2'] as $key) {
+            if ((int)($game['skipTurns'][$key] ?? 0) > 0 && $game['pendingActions'][$key] === null) {
+                $game['pendingActions'][$key] = ['actionType' => 'skip', 'skillIndex' => null];
+                $preencheu = true;
             }
-
-            $mensagens[] = $jogadorPulando->getNome() . ' teve o turno pulado por Domain.';
-            self::avancarTurno($game, $currentKey);
-            $limiteSeguranca++;
         }
-
-        return count($mensagens) > 0 ? implode(' ', $mensagens) : null;
+        return $preencheu;
     }
 
-    // ── Setup ────────────────────────────────────────────────────────────
-
-    public static function mapaDeClasses(): array {
-        return [
-            'sukuna'       => Sukuna::class,
-            'gojo'         => Gojo::class,
-            'sans'         => Sans::class,
-            'ulquiorra'    => Ulquiorra::class,
-            'miku'         => Miku::class,
-            'labubu'       => Labubu::class,
-            'ubuntu'       => Ubuntu::class,
-            'ubuntukiller' => UbuntuKiller::class,
-            'profe'        => Profe::class,
-        ];
-    }
-
-    public static function catalogoDePersonagens(): array {
-        $catalogo = [];
-        foreach (self::mapaDeClasses() as $key => $className) {
-            $personagem = new $className('_');
-            $visual = $personagem->getConfiguracaoVisual();
-            $catalogo[] = [
-                'key'          => $key,
-                'label'        => $personagem->getClasseNome(),
-                'selectSprite' => $visual['selectSprite'] ?? $visual['baseSprite'] ?? null,
-            ];
-        }
-        return $catalogo;
-    }
-
-    public static function criarPersonagem(string $classKey, string $nome): Personagem {
-        $normalizedKey = strtolower(trim($classKey));
-        $className = self::mapaDeClasses()[$normalizedKey] ?? null;
-
-        if ($className === null) {
-            throw new EntradaInvalidaException();
-        }
-
-        $nome = trim($nome);
-        if ($nome === '') {
-            $nome = 'Jogador';
-        }
-
-        return new $className($nome);
-    }
-
-    public static function criarEstadoDeJogo(Personagem $p1, Personagem $p2): array {
-        return [
-            'p1'         => $p1,
-            'p2'         => $p2,
-            'turno'      => 1,
-            'currentKey' => 'p1',
-            'skipTurns'  => ['p1' => 0, 'p2' => 0],
-            'domain'     => self::domainVazio(),
-        ];
-    }
-
-    // ── API de jogo ──────────────────────────────────────────────────────
-
-    public static function determinarVencedor(array $game): ?string {
-        if (!$game['p1']->estaVivo()) return 'p2';
-        if (!$game['p2']->estaVivo()) return 'p1';
-        return null;
-    }
-
-    public static function jogadoresDoTurno(array $game): array {
-        $currentKey  = self::validarChave((string)($game['currentKey'] ?? 'p1'));
-        $opponentKey = self::chaveOposta($currentKey);
-
-        return [
-            $currentKey,
-            self::jogadorPorChave($game, $currentKey),
-            self::jogadorPorChave($game, $opponentKey),
-        ];
-    }
-
-    public static function acoesDisponiveis(Personagem $current): array {
-        $descricoes = $current->getDescricoesAcoes();
-        $actions    = [];
-
-        if (!$current->usaSomenteHabilidades()) {
-            $actions[] = [
-                'type'            => 'attack',
-                'label'           => 'ATACAR',
-                'skillName'       => 'Ataque',
-                'description'     => (string)($descricoes['Ataque'] ?? ''),
-                'targetsOpponent' => true,
-                'energyCost'      => 0,
-                'disabled'        => false,
-                'melee'           => true,
-            ];
-            $actions[] = [
-                'type'            => 'defend',
-                'label'           => 'DEFENDER',
-                'skillName'       => 'Defesa',
-                'description'     => (string)($descricoes['Defesa'] ?? ''),
-                'targetsOpponent' => false,
-                'energyCost'      => 0,
-                'disabled'        => false,
-            ];
-        }
-
-        foreach ($current->getHabilidades() as $index => $habilidade) {
-            $custoEnergia = (int)($habilidade['energyCost'] ?? 0);
-            $actions[] = [
-                'type'            => 'skill',
-                'label'           => strtoupper((string)$habilidade['nome']),
-                'skillName'       => (string)$habilidade['nome'],
-                'description'     => (string)($descricoes[(string)$habilidade['nome']] ?? ''),
-                'skillIndex'      => $index,
-                'targetsOpponent' => (bool)$habilidade['precisaAlvo'],
-                'energyCost'      => $custoEnergia,
-                'disabled'        => $current->getEnergiaAtual() < $custoEnergia,
-                'melee'           => (bool)($habilidade['melee'] ?? false),
-            ];
-        }
-
-        return $actions;
-    }
-
-    public static function retornaAoSetup(array $game, string $actionType, ?int $skillIndex = null): bool {
-        if ($actionType !== 'skill') {
-            return false;
-        }
-
-        [, $current] = self::jogadoresDoTurno($game);
-        $metodo = self::metodoSkill($current, $skillIndex);
-
-        return $metodo !== null && $current->retornaAoSetup($metodo);
-    }
+    // ── Execução de uma ação individual ─────────────────────────────────
 
     public static function executarAcao(Personagem $current, Personagem $opponent, string $actionType, ?int $skillIndex = null, ?array $habilidade = null): string {
         if ($actionType === 'attack') {
@@ -307,26 +175,34 @@ class GameService {
         throw new EntradaInvalidaException();
     }
 
-    public static function executarTurno(array &$game, string $actionType, ?int $skillIndex = null): string {
-        [$currentKey, $current, $opponent] = self::jogadoresDoTurno($game);
-        $habilidadeAtual = null;
+    /**
+     * Executa uma ação pendente de um jogador e aplica efeitos de paralisia/domínio.
+     * Retorna a mensagem resultante.
+     */
+    private static function executarAcaoPendente(array &$game, string $playerKey): string {
+        $acao       = $game['pendingActions'][$playerKey];
+        $player     = $game[$playerKey];
+        $opponentKey = self::chaveOposta($playerKey);
+        $opponent   = $game[$opponentKey];
 
-        if ($actionType === 'skill' && $skillIndex !== null) {
-            $habilidades = $current->getHabilidades();
-            if (!isset($habilidades[$skillIndex])) {
-                throw new EntradaInvalidaException();
+        if ($acao['actionType'] === 'skip') {
+            $game['skipTurns'][$playerKey] = max(0, (int)($game['skipTurns'][$playerKey] ?? 0) - 1);
+
+            if ((int)($game['domain']['turnsRemaining'] ?? 0) > 0 && $game['domain']['casterKey'] !== $playerKey) {
+                self::decrementarDomain($game);
             }
 
-            $habilidadeAtual = $habilidades[$skillIndex];
-            $custo           = (int)($habilidadeAtual['energyCost'] ?? 0);
-
-            if ($custo > 0 && $current->getEnergiaAtual() < $custo) {
-                throw new EntradaInvalidaException();
-            }
+            return $player->getNome() . ' está paralisado e perdeu o turno.';
         }
 
-        $efeitos = self::efeitosDaSkill($habilidadeAtual);
-        $mensagem = self::executarAcao($current, $opponent, $actionType, $skillIndex, $habilidadeAtual);
+        $habilidadeAtual = null;
+        if ($acao['actionType'] === 'skill' && $acao['skillIndex'] !== null) {
+            $habilidades     = $player->getHabilidades();
+            $habilidadeAtual = $habilidades[$acao['skillIndex']] ?? null;
+        }
+
+        $efeitos  = self::efeitosDaSkill($habilidadeAtual);
+        $mensagem = self::executarAcao($player, $opponent, $acao['actionType'], $acao['skillIndex'] ?? null, $habilidadeAtual);
 
         $turnosParalisados = $efeitos['skipTurns'];
         if ($efeitos['skipTurnsChance'] > 0 && random_int(1, 100) <= $efeitos['skipTurnsChance']) {
@@ -334,58 +210,374 @@ class GameService {
         }
 
         if ($turnosParalisados > 0 || $efeitos['activatesDomain']) {
-            self::aplicarParalisia($game, $currentKey, $turnosParalisados, $efeitos['activatesDomain']);
-        }
-
-        self::consumirTurnoExtra($game, $currentKey);
-        $current->processarEfeitosContinuosFimTurno();
-
-        if (self::determinarVencedor($game) === null) {
-            self::avancarTurno($game, $currentKey);
-
-            $mensagemTurnosPulados = self::processarTurnosPulados($game);
-            if ($mensagemTurnosPulados !== null) {
-                $mensagem .= " $mensagemTurnosPulados";
-            }
+            self::aplicarParalisia($game, $playerKey, $turnosParalisados, $efeitos['activatesDomain']);
         }
 
         return $mensagem;
     }
 
-    // ── Export ───────────────────────────────────────────────────────────
+    // ── Resolução do turno simultâneo ────────────────────────────────────
 
-    public static function exportarPersonagem(Personagem $character, string $label): array {
+    /**
+     * Executa as duas ações pendentes em ordem (prioridade + velocidade),
+     * processa efeitos contínuos, avança o turno.
+     * Retorna ['mensagem' => string, 'resetJogo' => bool].
+     */
+    private static function executarTurnoSimultaneo(array &$game): array {
+        $a1 = $game['pendingActions']['p1'];
+        $a2 = $game['pendingActions']['p2'];
+
+        $p1First        = self::determinarOrdem($game['p1'], $a1, $game['p2'], $a2);
+        $firstKey       = $p1First ? 'p1' : 'p2';
+        $secondKey      = $p1First ? 'p2' : 'p1';
+        $resolucaoOrdem = [$firstKey, $secondKey];
+
+        $mensagens          = [];
+        $resetJogo          = false;
+        $estadoIntermediario = null;
+
+        // Primeiro a agir
+        $msg1 = self::executarAcaoPendente($game, $firstKey);
+        $mensagens[] = $msg1;
+
+        // Checa reset (Ubuntu sudo apt install)
+        if (self::deveResetarJogo($game[$firstKey], $game['pendingActions'][$firstKey])) {
+            $resetJogo = true;
+        }
+
+        // Segundo só age se o jogo não acabou
+        if (self::determinarVencedor($game) === null) {
+            // Snapshot do estado após o 1º ataque (antes do 2º)
+            $estadoIntermediario = self::exportarEstado($game);
+
+            $msg2 = self::executarAcaoPendente($game, $secondKey);
+            $mensagens[] = $msg2;
+
+            if (self::deveResetarJogo($game[$secondKey], $game['pendingActions'][$secondKey])) {
+                $resetJogo = true;
+            }
+        }
+
+        // Efeitos contínuos (sangramento/queimadura) ao fim do turno
+        if ($game['p1']->estaVivo()) {
+            $game['p1']->processarEfeitosContinuosFimTurno();
+        }
+        if ($game['p2']->estaVivo()) {
+            $game['p2']->processarEfeitosContinuosFimTurno();
+        }
+
+        // Avança turno e regenera energia
+        $game['turno']++;
+        $game['pendingActions'] = ['p1' => null, 'p2' => null];
+
+        $game['p1']->iniciarTurno();
+        $game['p2']->iniciarTurno();
+
         return [
-            'label'        => $label,
-            'nome'         => $character->getNome(),
-            'classe'       => $character->getClasse(),
-            'classeNome'   => $character->getClasseNome(),
-            'vidaAtual'    => $character->getVidaAtual(),
-            'vidaMaxima'   => $character->getVidaMaxima(),
-            'energiaAtual' => $character->getEnergiaAtual(),
-            'energiaMaxima'=> $character->getEnergiaMaxima(),
-            'ultimoTipoDano' => $character->getUltimoTipoDano(),
-            'defendendo'   => $character->estaDefendendo(),
-            'bleedTurnos'  => $character->getSangramentoTurnos(),
-            'burnTurnos'   => $character->getQueimaduraTurnos(),
-            'visual'       => $character->getConfiguracaoVisual(),
+            'mensagem'           => implode(' ', array_filter($mensagens)),
+            'resetJogo'          => $resetJogo,
+            'resolucaoOrdem'     => $resolucaoOrdem,
+            'estadoIntermediario' => $estadoIntermediario,
         ];
     }
 
+    private static function deveResetarJogo(Personagem $player, array $acao): bool {
+        if ($acao['actionType'] !== 'skill') return false;
+        $metodo = self::metodoSkill($player, $acao['skillIndex'] ?? null);
+        return $metodo !== null && $player->retornaAoSetup($metodo);
+    }
+
+    /**
+     * Resolve a rodada completa (incluindo turnos auto-skip encadeados).
+     * Retorna ['mensagem' => string, 'resetJogo' => bool].
+     */
+    private static function resolverRodada(array &$game): array {
+        $mensagens = [];
+        $resetJogo = false;
+
+        $resultado           = self::executarTurnoSimultaneo($game);
+        $mensagens[]         = $resultado['mensagem'];
+        $resolucaoOrdem      = $resultado['resolucaoOrdem'];
+        $estadoIntermediario = $resultado['estadoIntermediario'];
+        if ($resultado['resetJogo']) {
+            $resetJogo = true;
+        }
+
+        // Se ambos ficaram paralisados após o turno, resolve automaticamente
+        $seguranca = 0;
+        while (self::determinarVencedor($game) === null && $seguranca < 6) {
+            self::preencherAcoesSkip($game);
+
+            if ($game['pendingActions']['p1'] === null || $game['pendingActions']['p2'] === null) {
+                break;
+            }
+
+            $resultado = self::executarTurnoSimultaneo($game);
+            $mensagens[] = $resultado['mensagem'];
+            if ($resultado['resetJogo']) {
+                $resetJogo = true;
+            }
+            $seguranca++;
+        }
+
+        return [
+            'mensagem'           => implode(' ', array_filter($mensagens)),
+            'resetJogo'          => $resetJogo,
+            'resolucaoOrdem'     => $resolucaoOrdem,
+            'estadoIntermediario' => $estadoIntermediario,
+        ];
+    }
+
+    // ── Setup ────────────────────────────────────────────────────────────
+
+    public static function mapaDeClasses(): array {
+        return [
+            'sukuna'       => Sukuna::class,
+            'gojo'         => Gojo::class,
+            'sans'         => Sans::class,
+            'ulquiorra'    => Ulquiorra::class,
+            'miku'         => Miku::class,
+            'labubu'       => Labubu::class,
+            'ubuntu'       => Ubuntu::class,
+            'ubuntukiller' => UbuntuKiller::class,
+            'profe'        => Profe::class,
+        ];
+    }
+
+    public static function catalogoDePersonagens(): array {
+        $catalogo = [];
+        foreach (self::mapaDeClasses() as $key => $className) {
+            $personagem = new $className('_');
+            $visual = $personagem->getConfiguracaoVisual();
+            $catalogo[] = [
+                'key'          => $key,
+                'label'        => $personagem->getClasseNome(),
+                'velocidade'   => $personagem->getVelocidade(),
+                'selectSprite' => $visual['selectSprite'] ?? $visual['baseSprite'] ?? null,
+            ];
+        }
+        return $catalogo;
+    }
+
+    public static function criarPersonagem(string $classKey, string $nome): Personagem {
+        $normalizedKey = strtolower(trim($classKey));
+        $className = self::mapaDeClasses()[$normalizedKey] ?? null;
+
+        if ($className === null) {
+            throw new EntradaInvalidaException();
+        }
+
+        $nome = trim($nome);
+        if ($nome === '') {
+            $nome = 'Jogador';
+        }
+
+        return new $className($nome);
+    }
+
+    public static function criarEstadoDeJogo(Personagem $p1, Personagem $p2): array {
+        $game = [
+            'p1'             => $p1,
+            'p2'             => $p2,
+            'turno'          => 1,
+            'skipTurns'      => ['p1' => 0, 'p2' => 0],
+            'pendingActions' => ['p1' => null, 'p2' => null],
+            'domain'         => self::domainVazio(),
+        ];
+
+        // Auto-fill skip se algum começar paralisado (improvável, mas seguro)
+        self::preencherAcoesSkip($game);
+
+        return $game;
+    }
+
+    // ── API pública de jogo ──────────────────────────────────────────────
+
+    public static function determinarVencedor(array $game): ?string {
+        if (!$game['p1']->estaVivo()) return 'p2';
+        if (!$game['p2']->estaVivo()) return 'p1';
+        return null;
+    }
+
+    /**
+     * Submete a ação de um jogador para o turno atual.
+     * Quando ambos submetem, o turno é resolvido automaticamente.
+     *
+     * Retorna:
+     *   ['resolved' => false, 'mensagem' => null,    'resetJogo' => false] — aguardando o outro
+     *   ['resolved' => true,  'mensagem' => string,  'resetJogo' => bool]  — turno resolvido
+     */
+    public static function submeterAcao(array &$game, string $playerKey, string $actionType, ?int $skillIndex = null): array {
+        $playerKey = self::validarChave($playerKey);
+
+        if (self::determinarVencedor($game) !== null) {
+            throw new EntradaInvalidaException();
+        }
+
+        // Já submeteu neste turno
+        if ($game['pendingActions'][$playerKey] !== null) {
+            throw new EntradaInvalidaException();
+        }
+
+        $player = $game[$playerKey];
+
+        // Valida skill
+        if ($actionType === 'skill') {
+            $habilidades = $player->getHabilidades();
+            if ($skillIndex === null || !isset($habilidades[$skillIndex])) {
+                throw new EntradaInvalidaException();
+            }
+            $custo = (int)($habilidades[$skillIndex]['energyCost'] ?? 0);
+            if ($custo > 0 && $player->getEnergiaAtual() < $custo) {
+                throw new EntradaInvalidaException();
+            }
+        }
+
+        $game['pendingActions'][$playerKey] = [
+            'actionType' => $actionType,
+            'skillIndex' => $skillIndex,
+        ];
+
+        // Preenche skip do oponente se necessário
+        self::preencherAcoesSkip($game);
+
+        // Se ambos prontos, resolve
+        if ($game['pendingActions']['p1'] !== null && $game['pendingActions']['p2'] !== null) {
+            $resultado = self::resolverRodada($game);
+            return [
+                'resolved'           => true,
+                'mensagem'           => $resultado['mensagem'],
+                'resetJogo'          => $resultado['resetJogo'],
+                'resolucaoOrdem'     => $resultado['resolucaoOrdem'],
+                'estadoIntermediario' => $resultado['estadoIntermediario'],
+            ];
+        }
+
+        return ['resolved' => false, 'mensagem' => null, 'resetJogo' => false];
+    }
+
+    public static function acoesDisponiveis(Personagem $current, bool $jaSubmeteu = false): array {
+        if ($jaSubmeteu) {
+            return [];
+        }
+
+        $descricoes = $current->getDescricoesAcoes();
+        $actions    = [];
+
+        if (!$current->usaSomenteHabilidades()) {
+            $actions[] = [
+                'type'            => 'attack',
+                'label'           => 'ATACAR',
+                'skillName'       => 'Ataque',
+                'description'     => (string)($descricoes['Ataque'] ?? ''),
+                'targetsOpponent' => true,
+                'energyCost'      => 0,
+                'disabled'        => false,
+                'melee'           => true,
+                'priority'        => false,
+            ];
+            $actions[] = [
+                'type'            => 'defend',
+                'label'           => 'DEFENDER',
+                'skillName'       => 'Defesa',
+                'description'     => (string)($descricoes['Defesa'] ?? ''),
+                'targetsOpponent' => false,
+                'energyCost'      => 0,
+                'disabled'        => false,
+                'priority'        => true,
+            ];
+        }
+
+        foreach ($current->getHabilidades() as $index => $habilidade) {
+            $custoEnergia = (int)($habilidade['energyCost'] ?? 0);
+            $actions[] = [
+                'type'            => 'skill',
+                'label'           => strtoupper((string)$habilidade['nome']),
+                'skillName'       => (string)$habilidade['nome'],
+                'description'     => (string)($descricoes[(string)$habilidade['nome']] ?? ''),
+                'skillIndex'      => $index,
+                'targetsOpponent' => (bool)$habilidade['precisaAlvo'],
+                'energyCost'      => $custoEnergia,
+                'disabled'        => $current->getEnergiaAtual() < $custoEnergia,
+                'melee'           => (bool)($habilidade['melee'] ?? false),
+                'priority'        => (bool)($habilidade['priority'] ?? false),
+            ];
+        }
+
+        return $actions;
+    }
+
+    public static function retornaAoSetup(array $game, string $playerKey, string $actionType, ?int $skillIndex = null): bool {
+        if ($actionType !== 'skill') {
+            return false;
+        }
+
+        $player = self::jogadorPorChave($game, $playerKey);
+        $metodo = self::metodoSkill($player, $skillIndex);
+
+        return $metodo !== null && $player->retornaAoSetup($metodo);
+    }
+
+    // ── Export ───────────────────────────────────────────────────────────
+
+    public static function exportarPersonagem(Personagem $character, string $label): array {
+        return array_merge([
+            'label'          => $label,
+            'nome'           => $character->getNome(),
+            'classe'         => $character->getClasse(),
+            'classeNome'     => $character->getClasseNome(),
+            'velocidade'     => $character->getVelocidade(),
+            'vidaAtual'      => $character->getVidaAtual(),
+            'vidaMaxima'     => $character->getVidaMaxima(),
+            'energiaAtual'   => $character->getEnergiaAtual(),
+            'energiaMaxima'  => $character->getEnergiaMaxima(),
+            'ultimoTipoDano' => $character->getUltimoTipoDano(),
+            'defendendo'     => $character->estaDefendendo(),
+            'bleedTurnos'    => $character->getSangramentoTurnos(),
+            'burnTurnos'     => $character->getQueimaduraTurnos(),
+            'visual'         => $character->getConfiguracaoVisual(),
+        ], $character->getEstadoExtra());
+    }
+
     public static function exportarEstado(array $game, ?string $mensagem = null): array {
-        [$currentKey, $current] = self::jogadoresDoTurno($game);
-        $vencedor = self::determinarVencedor($game);
+        $vencedor   = self::determinarVencedor($game);
+        $waitingFor = [];
+
+        foreach (['p1', 'p2'] as $key) {
+            if ($game['pendingActions'][$key] === null) {
+                $waitingFor[] = $key;
+            }
+        }
+
+        $p1Submeteu = $game['pendingActions']['p1'] !== null;
+        $p2Submeteu = $game['pendingActions']['p2'] !== null;
+
+        // currentKey = quem ainda precisa escolher (compat com frontend)
+        $currentKey = count($waitingFor) > 0 ? $waitingFor[0] : null;
+
+        // availableActions flat = ações do jogador atual (compat com frontend)
+        $availableActionsFlat = [];
+        if (!$vencedor && $currentKey !== null) {
+            $availableActionsFlat = self::acoesDisponiveis($game[$currentKey], false);
+        }
 
         return [
             'started'              => true,
             'turno'                => (int)$game['turno'],
             'currentKey'           => $currentKey,
             'winner'               => $vencedor,
+            'waitingFor'           => $waitingFor,
+            'p1Submeteu'           => $p1Submeteu,
+            'p2Submeteu'           => $p2Submeteu,
             'domainTurnsRemaining' => (int)($game['domain']['turnsRemaining'] ?? 0),
             'domainCasterKey'      => $game['domain']['casterKey'] ?? null,
             'p1'                   => self::exportarPersonagem($game['p1'], 'Jogador 1'),
             'p2'                   => self::exportarPersonagem($game['p2'], 'Jogador 2'),
-            'availableActions'     => $vencedor ? [] : self::acoesDisponiveis($current),
+            'availableActions'     => $availableActionsFlat,
+            'availableActionsPorJogador' => $vencedor ? [] : [
+                'p1' => self::acoesDisponiveis($game['p1'], $p1Submeteu),
+                'p2' => self::acoesDisponiveis($game['p2'], $p2Submeteu),
+            ],
             'message'              => $mensagem,
         ];
     }

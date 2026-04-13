@@ -26,6 +26,7 @@ const NIVEL_VOLUME_BGM_PADRAO = 3;
 		frameScale: { p1: null, p2: null },
 		domainImage: null,
 		arenaFundo: null,
+		acaoPendente: null, // { playerKey, acao } — guarda ação do 1º jogador até o turno resolver
 	};
 
 	const fighterPlayerEl = document.getElementById("fighter-player");
@@ -191,6 +192,23 @@ const NIVEL_VOLUME_BGM_PADRAO = 3;
 		animations.feedbackDano(estadoAnterior, novoEstado);
 	}
 
+	async function verificarEAnimarTransformacao(estadoAnterior, estadoNovo) {
+		if (!estadoAnterior?.started || !estadoNovo?.started) return;
+		for (const chave of ["p1", "p2"]) {
+			if (!estadoAnterior[chave]?.transformado && estadoNovo[chave]?.transformado) {
+				await animations.animarTransformacao(chave);
+			}
+		}
+	}
+
+	async function tocarAnimacao(atacanteKey, acao, defensorKey, defensorEstaDefendendo) {
+		const timeline      = animations.montarAnimacao(atacanteKey, acao, defensorKey, defensorEstaDefendendo);
+		const animacaoAtiva = animations.rodarTimeline(timeline);
+		state.anim          = animacaoAtiva;
+		await animations.wait(animacaoAtiva.duration);
+		animations.cancelarAnimacao();
+	}
+
 	async function processarAcao(acao) {
 		if (state.resolvendoAcao || !state.serverState?.started || state.serverState.winner) return;
 
@@ -198,44 +216,95 @@ const NIVEL_VOLUME_BGM_PADRAO = 3;
 		state.resolvendoAcao = true;
 		ui.habilitarBotoes(false);
 
-		const atacanteKey          = state.serverState.currentKey;
-		const defensorKey          = oposto(atacanteKey);
-		const defensorEstaDefendendo = state.serverState[defensorKey]?.defendendo === true;
-		const errorSplash          = state.serverState[atacanteKey]?.visual?.errorSplash ?? null;
+		const atacanteKey = state.serverState.currentKey;
+		const errorSplash = state.serverState[atacanteKey]?.visual?.errorSplash ?? null;
 
 		animations.cancelarAnimacao();
 
 		try {
 			const resposta = await chamarApi("action", {
+				playerKey:  atacanteKey,
 				actionType: acao.type,
 				skillIndex: typeof acao.skillIndex === "number" ? acao.skillIndex : null,
 			});
 
-			const mensagem = resposta.message || "Ação executada.";
+			const mensagem = resposta.message || null;
 
 			if (resposta.state?.started === false) {
 				if (errorSplash) await animations.mostrarSplashErroInsano(errorSplash, 3000);
 				resetarParaSetup();
-				ui.adicionarLog(mensagem);
+				if (mensagem) ui.adicionarLog(mensagem);
 				return;
 			}
 
-			const animacaoAtiva = animations.rodarTimeline(
-				animations.montarAnimacao(atacanteKey, acao, defensorKey, defensorEstaDefendendo)
-			);
-			state.anim = animacaoAtiva;
+			// Turno ainda não resolvido — 1º jogador escolheu, aguarda o 2º
+			if (!resposta.resolved) {
+				state.acaoPendente = { playerKey: atacanteKey, acao };
+				if (resposta.state) atualizarEstado(resposta.state, false);
+				atualizarHUD();
+				const proximo = resposta.state?.currentKey;
+				const nomeProximo = proximo ? (proximo === "p1" ? "Jogador 1" : "Jogador 2") : "outro jogador";
+				ui.adicionarLog(`Aguardando ${nomeProximo} escolher...`);
+				return;
+			}
 
-			await animations.wait(animacaoAtiva.duration);
-			animations.cancelarAnimacao();
+			// Turno resolvido — toca as duas animações em ordem de execução
+			const ordem    = resposta.resolucaoOrdem ?? [atacanteKey, oposto(atacanteKey)];
+			const acoesMap = { [atacanteKey]: acao };
+			if (state.acaoPendente) {
+				acoesMap[state.acaoPendente.playerKey] = state.acaoPendente.acao;
+			}
+			state.acaoPendente = null;
 
-			if (resposta.state) {
-				atualizarEstado(resposta.state, true);
-				if (mensagem.includes("desviou!") && acao.targetsOpponent) {
-					animations.animarEsquiva(defensorKey);
+			// Estados intermediário e final para aplicar dano em tempo real
+			const estadoIntermediario = resposta.estadoIntermediario ?? null;
+			const estadoFinal         = resposta.state ?? null;
+
+			// Filtra apenas ataques que têm animação (ignora skip)
+			const ordemAnimada = ordem.filter(k => acoesMap[k] && acoesMap[k].type !== "skip");
+
+			for (let i = 0; i < ordemAnimada.length; i++) {
+				const keyAtacante        = ordemAnimada[i];
+				const acaoAtacante       = acoesMap[keyAtacante];
+				const keyDefensor        = oposto(keyAtacante);
+				const defensorDefendendo = acoesMap[keyDefensor]?.type === "defend";
+
+				await tocarAnimacao(keyAtacante, acaoAtacante, keyDefensor, defensorDefendendo);
+
+				// Aplica dano ao vivo após cada animação
+				const isUltimo      = i === ordemAnimada.length - 1;
+				const estadoAplicar = (!isUltimo && estadoIntermediario) ? estadoIntermediario : estadoFinal;
+				if (estadoAplicar) {
+					const estadoAntesDaAtualizacao = state.serverState;
+					atualizarEstado(estadoAplicar, true);
+					atualizarHUD();
+					await verificarEAnimarTransformacao(estadoAntesDaAtualizacao, estadoAplicar);
+				}
+
+				// 2 segundos entre ataques
+				if (!isUltimo) {
+					await new Promise(r => setTimeout(r, 2000));
 				}
 			}
 
-			ui.adicionarLog(mensagem);
+			// Garante estado final aplicado caso nenhuma animação tenha tocado
+			if (ordemAnimada.length === 0 && estadoFinal) {
+				const estadoAntesDaAtualizacao = state.serverState;
+				atualizarEstado(estadoFinal, true);
+				await verificarEAnimarTransformacao(estadoAntesDaAtualizacao, estadoFinal);
+			}
+
+			if (mensagem) {
+				ui.adicionarLog(mensagem);
+				if (mensagem.includes("desviou!")) {
+					for (const key of ["p1", "p2"]) {
+						const nomeJogador = resposta.state?.[key]?.nome ?? state.serverState?.[key]?.nome ?? "";
+						if (nomeJogador && mensagem.includes(`${nomeJogador} desviou`)) {
+							animations.animarEsquiva(key);
+						}
+					}
+				}
+			}
 
 			if (resposta.state?.winner) {
 				await animations.animarMorte(oposto(resposta.state.winner));
@@ -243,6 +312,7 @@ const NIVEL_VOLUME_BGM_PADRAO = 3;
 
 			atualizarHUD();
 		} catch (erro) {
+			state.acaoPendente = null;
 			animations.cancelarAnimacao();
 			atualizarHUD();
 			ui.adicionarLog(`Erro ao executar ação: ${erro.message || "falha desconhecida."}`);

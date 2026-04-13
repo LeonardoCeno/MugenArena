@@ -4,6 +4,7 @@ require_once __DIR__ . '/../../Personagem.php';
 
 class Ubuntu extends Personagem {
 
+	const VELOCIDADE = 30;
 	const DANO_ERRO = 9999;
 	private bool $terminalAberto = false;
 
@@ -12,7 +13,7 @@ class Ubuntu extends Personagem {
 	}
 
 	public static function getDescricao(): string {
-		return 'UBUNTU (personagem especial, habilidades: abrir terminal e sudo apt install)';
+		return 'UBUNTU (personagem especial, habilidades: abrir terminal e ls)';
 	}
 
 	public function abrirTerminal(): string {
@@ -22,9 +23,9 @@ class Ubuntu extends Personagem {
 	}
 
 	public function erro(Personagem $alvo): string {
-		$resultado = $this->executarAtaqueDireto($alvo, 'sudo apt install', self::DANO_ERRO);
+		$resultado = $this->executarAtaqueDireto($alvo, 'ls', self::DANO_ERRO);
 
-		return $resultado['mensagem'] . ' O jogo foi encerrado por sudo apt install.';
+		return $resultado['mensagem'] . ' O jogo foi encerrado. Permissão NEGADA.';
 	}
 
 	public function usarHabilidadeEspecial(Personagem $alvo): string {
@@ -56,7 +57,7 @@ class Ubuntu extends Personagem {
 
 		return [
 			[
-				'nome' => 'sudo apt install',
+				'nome' => 'ls',
 				'metodo' => 'erro',
 				'precisaAlvo' => true,
 			],
@@ -65,8 +66,8 @@ class Ubuntu extends Personagem {
 
 	public function getDescricoesAcoes(): array {
 		return array_merge(parent::getDescricoesAcoes(), [
-			'abrir terminal' => 'Prepara o terminal para liberar a habilidade sudo apt install no próximo turno.',
-			'sudo apt install' => '##@$$@#@$$@#@$$#@$#@%#$(&*@&#¨@&*%#&*@%&*%@&%#&*@.',
+			'abrir terminal' => 'Prepara o terminal para liberar a habilidade ls no próximo turno.',
+			'ls' => '##@$$@#@$$@#@$$#@$#@%#$(&*@&#¨@&*%#&*@%&*%@&%#&*@.',
 		]);
 	}
 
@@ -80,15 +81,15 @@ class Ubuntu extends Personagem {
 					'frames' => [
 						[
 							'sprite' => './assets/ubuntu/sprites/ubuntuMALIGNO.png',
-							'durationMs' => 500,
+							'durationMs' => 1000,
 						],
 					],
 				],
-				'sudo apt install' => [
+				'ls' => [
 					'frames' => [
 						[
 							'sprite' => './assets/ubuntu/sprites/ubuntuMALIGNO.png',
-							'durationMs' => 700,
+							'durationMs' => 1000,
 						],
 					],
 				],

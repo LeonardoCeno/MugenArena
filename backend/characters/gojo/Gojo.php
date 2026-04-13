@@ -4,6 +4,7 @@ require_once __DIR__ . '/../../Personagem.php';
 
 class Gojo extends Personagem {
 
+    const VELOCIDADE = 90;
     const CUSTO_INFINITO = 300;
     const CUSTO_REVERSE = 200;
     const CUSTO_VAZIO_ROXO = 200;
@@ -59,7 +60,7 @@ class Gojo extends Personagem {
             ["nome" => "Azul",          "metodo" => "azul",          "precisaAlvo" => true,  "energyCost" => self::CUSTO_AZUL],
             ["nome" => "Vazio Roxo",    "metodo" => "vazioRoxo",     "precisaAlvo" => true,  "energyCost" => self::CUSTO_VAZIO_ROXO],
             ["nome" => "Reverse Energy","metodo" => "reverseEnergy", "precisaAlvo" => false, "energyCost" => self::CUSTO_REVERSE],
-            ["nome" => "Domain",        "metodo" => "infinityVoid",  "precisaAlvo" => false, "energyCost" => self::CUSTO_INFINITO, "skipTurns" => 2, "activatesDomain" => true]
+            ["nome" => "Domain",        "metodo" => "infinityVoid",  "precisaAlvo" => false, "energyCost" => self::CUSTO_INFINITO, "skipTurns" => 2, "activatesDomain" => true, "priority" => true]
         ];
     }
 
@@ -100,6 +101,13 @@ class Gojo extends Personagem {
                     ],
                 ],
                 'Azul' => [
+                    'audio' => [
+                        [ 
+                            'file' => './assets/gojo/audios/Azul.mp3',
+                            'startMs' => 0,
+                            
+                        ],
+                    ],
                     'frames' => [
                         [
                             'sprite' => './assets/gojo/sprites/gojoazulfinalreal.png',

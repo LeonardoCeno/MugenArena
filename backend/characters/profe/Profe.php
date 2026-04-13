@@ -15,6 +15,8 @@ class Profe extends Personagem {
 	const DANO_VIBECODE = 70;
 	const REGENERACAO_PROPRIA = 35;
 
+	const VELOCIDADE = 60;
+
 	public function __construct(string $nome) {
 		parent::__construct($nome, 267, 24, 500);
 	}
@@ -60,7 +62,7 @@ class Profe extends Personagem {
 			["nome" => "Red bill", "metodo" => "redBill", "precisaAlvo" => false, "energyCost" => self::CUSTO_RED_BILL],
 			["nome" => "Apelação", "metodo" => "apelacao", "precisaAlvo" => true,  "energyCost" => self::CUSTO_APELACAO],
 			["nome" => "VibeCode", "metodo" => "vibeCode", "precisaAlvo" => true,  "energyCost" => self::CUSTO_VIBECODE],
-			["nome" => "DOOCKER",  "metodo" => "MyWorld",  "precisaAlvo" => true,  "energyCost" => self::CUSTO_MYWORLD, "skipTurns" => 1, "activatesDomain" => true]
+			["nome" => "DOOCKER",  "metodo" => "MyWorld",  "precisaAlvo" => true,  "energyCost" => self::CUSTO_MYWORLD, "skipTurns" => 1, "activatesDomain" => true, "priority" => true]
 		];
 	}
 

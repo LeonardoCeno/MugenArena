@@ -20,6 +20,7 @@ abstract class Personagem {
     protected ?string $proximoTipoDanoRecebido = null;
 
     const REGENERACAO_ENERGIA = 10;
+    const VELOCIDADE = 50;
 
     public function __construct(string $nome, int $vida, int $ataque, int $energia) {
         $this->nome = $nome;
@@ -62,6 +63,10 @@ abstract class Personagem {
 
     public function estaVivo(): bool {
         return $this->vidaAtual > 0;
+    }
+
+    public function getVelocidade(): int {
+        return static::VELOCIDADE;
     }
 
     // ── Turno ────────────────────────────────────────────────────────────
@@ -270,7 +275,7 @@ abstract class Personagem {
     public function getDescricoesAcoes(): array {
         return [
             'Ataque' => "Causa {$this->ataque} de dano base.",
-            'Defesa' => 'Reduz em 50% o dano recebido até o próximo turno.',
+            'Defesa' => 'Reduz em 50% o dano recebido até o próximo turno. [PRIORIDADE: age antes de ataques normais]',
         ];
     }
 
@@ -302,6 +307,10 @@ abstract class Personagem {
 
     public function retornaAoSetup(string $metodo): bool {
         return false;
+    }
+
+    public function getEstadoExtra(): array {
+        return [];
     }
 
     // ── Abstratos ────────────────────────────────────────────────────────

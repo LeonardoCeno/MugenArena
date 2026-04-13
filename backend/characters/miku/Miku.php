@@ -4,6 +4,7 @@ require_once __DIR__ . '/../../Personagem.php';
 
 class Miku extends Personagem {
 
+    const VELOCIDADE = 75;
     const CUSTO_MIKUPOWER = 100;
     const CUSTO_MY_VOICE = 90;
     const CUSTO_MIKU_BEEAM = 120;
@@ -57,7 +58,7 @@ class Miku extends Personagem {
     public function getHabilidades(): array {
         return [
             ["nome" => "MAGIC!",    "metodo" => "magic",      "precisaAlvo" => true,  "energyCost" => self::CUSTO_MAGIC],
-            ["nome" => "Miku BEEAM","metodo" => "mikuBeeam",  "precisaAlvo" => true,  "energyCost" => self::CUSTO_MIKU_BEEAM],
+            ["nome" => "Miku BEEAM","metodo" => "mikuBeeam",  "precisaAlvo" => true,  "energyCost" => self::CUSTO_MIKU_BEEAM, "priority" => true],
             ["nome" => "MY VOICE",  "metodo" => "myVoice",    "precisaAlvo" => true,  "energyCost" => self::CUSTO_MY_VOICE],
             ["nome" => "mikupower", "metodo" => "mikupower",  "precisaAlvo" => false, "energyCost" => self::CUSTO_MIKUPOWER]
         ];
