@@ -5,7 +5,7 @@ const FUNDOS_ARENA = ["BEACH 2.png","BEACH NIGHT.png","BEACH.png","CAVE 2.png","
 
 (() => {
 	const API_URL = "../backend/web_api.php";
-// define URL do back e cria o objeto que guarda tudo
+
 	const state = {
 		serverState: null,
 		resolvendoAcao: false,
@@ -16,62 +16,62 @@ const FUNDOS_ARENA = ["BEACH 2.png","BEACH NIGHT.png","BEACH.png","CAVE 2.png","
 		domainImage: null,
 		arenaFundo: null,
 	};
-// pega todos os elementos html e guarda para usar
+
 	const fighterPlayerEl = document.getElementById("fighter-player");
-	const fighterEnemyEl = document.getElementById("fighter-enemy");
+	const fighterEnemyEl  = document.getElementById("fighter-enemy");
 
 	const els = {
-		turnInfo: document.getElementById("turn-info"),
-		log: document.getElementById("battle-log"),
-		combatFeed: document.getElementById("combat-feed"),
-		skillPreview: document.getElementById("skill-preview"),
-		skillPreviewTitle: document.getElementById("skill-preview-title"),
+		turnInfo:         document.getElementById("turn-info"),
+		log:              document.getElementById("battle-log"),
+		combatFeed:       document.getElementById("combat-feed"),
+		skillPreview:     document.getElementById("skill-preview"),
+		skillPreviewTitle:document.getElementById("skill-preview-title"),
 		skillPreviewText: document.getElementById("skill-preview-text"),
-		menu: document.getElementById("action-menu"),
-		arena: document.querySelector(".arena"),
-		battleApp: document.querySelector(".battle-app"),
-		setupPanel: document.getElementById("setup-panel"),
-		battleView: document.getElementById("battle-view"),
-		startBtn: document.getElementById("start-btn"),
-		p1Name: document.getElementById("p1-name"),
-		p2Name: document.getElementById("p2-name"),
-		p1Class: document.getElementById("p1-class"),
-		p2Class: document.getElementById("p2-class"),
-		winnerOverlay: document.getElementById("winner-overlay"),
-		winnerSprite: document.getElementById("winner-sprite"),
-		winnerText: document.getElementById("winner-text"),
-		playAgainBtn: document.getElementById("play-again-btn"),
+		menu:             document.getElementById("action-menu"),
+		arena:            document.querySelector(".arena"),
+		battleApp:        document.querySelector(".battle-app"),
+		setupPanel:       document.getElementById("setup-panel"),
+		battleView:       document.getElementById("battle-view"),
+		startBtn:         document.getElementById("start-btn"),
+		p1Name:           document.getElementById("p1-name"),
+		p2Name:           document.getElementById("p2-name"),
+		p1Class:          document.getElementById("p1-class"),
+		p2Class:          document.getElementById("p2-class"),
+		winnerOverlay:    document.getElementById("winner-overlay"),
+		winnerSprite:     document.getElementById("winner-sprite"),
+		winnerText:       document.getElementById("winner-text"),
+		playAgainBtn:     document.getElementById("play-again-btn"),
 		cards: {
 			enemy: {
-				root: document.getElementById("card-enemy"),
-				name: document.getElementById("enemy-name"),
-				tag: document.getElementById("enemy-tag"),
-				hpText: document.getElementById("enemy-hp-text"),
-				energyText: document.getElementById("enemy-energy-text"),
-				hpBar: document.getElementById("enemy-hp-bar"),
-				energyBar: document.getElementById("enemy-energy-bar"),
+				root:        document.getElementById("card-enemy"),
+				name:        document.getElementById("enemy-name"),
+				tag:         document.getElementById("enemy-tag"),
+				hpText:      document.getElementById("enemy-hp-text"),
+				energyText:  document.getElementById("enemy-energy-text"),
+				hpBar:       document.getElementById("enemy-hp-bar"),
+				energyBar:   document.getElementById("enemy-energy-bar"),
 				statusIcons: document.getElementById("enemy-status-icons"),
 			},
 			player: {
-				root: document.getElementById("card-player"),
-				name: document.getElementById("player-name"),
-				tag: document.getElementById("player-tag"),
-				hpText: document.getElementById("player-hp-text"),
-				energyText: document.getElementById("player-energy-text"),
-				hpBar: document.getElementById("player-hp-bar"),
-				energyBar: document.getElementById("player-energy-bar"),
+				root:        document.getElementById("card-player"),
+				name:        document.getElementById("player-name"),
+				tag:         document.getElementById("player-tag"),
+				hpText:      document.getElementById("player-hp-text"),
+				energyText:  document.getElementById("player-energy-text"),
+				hpBar:       document.getElementById("player-hp-bar"),
+				energyBar:   document.getElementById("player-energy-bar"),
 				statusIcons: document.getElementById("player-status-icons"),
 			},
 		},
 		fighters: {
 			p1: {
-				root: fighterPlayerEl,
-				img: fighterPlayerEl?.querySelector(".fighter-img") || null,
+				root:    fighterPlayerEl,
+				img:     fighterPlayerEl?.querySelector(".fighter-img") || null,
 				initial: fighterPlayerEl?.querySelector("span") || null,
 			},
 			p2: {
-				root: fighterEnemyEl,
-				img: fighterEnemyEl?.querySelector(".fighter-img") || null,
+				root:    fighterEnemyEl,
+				img:     fighterEnemyEl?.querySelector(".fighter-img") || null,
 				initial: fighterEnemyEl?.querySelector("span") || null,
 			},
 		},
@@ -80,13 +80,13 @@ const FUNDOS_ARENA = ["BEACH 2.png","BEACH NIGHT.png","BEACH.png","CAVE 2.png","
 	let ui = null;
 	let animations = null;
 
+	function oposto(chave) { return chave === "p1" ? "p2" : "p1"; }
+
 	const atualizarHUD = () => {
 		if (!ui || !animations) return;
-		ui.atualizarHUD({
-			renderFighter: animations.aplicarVisualPersonagem,
-		});
+		ui.atualizarHUD({ renderFighter: animations.visualPersonagem });
 	};
-// envia dos dados pro mano back, verifica se deu erro ou nao e retorna
+
 	async function chamarApi(action, payload = {}) {
 		const response = await fetch(API_URL, {
 			method: "POST",
@@ -97,10 +97,8 @@ const FUNDOS_ARENA = ["BEACH 2.png","BEACH NIGHT.png","BEACH.png","CAVE 2.png","
 		if (!response.ok) {
 			let mensagemErro = `Falha na API (${response.status}).`;
 			try {
-				const corpoErro = await response.json();
-				if (corpoErro && corpoErro.message) {
-					mensagemErro = corpoErro.message;
-				}
+				const corpo = await response.json();
+				if (corpo?.message) mensagemErro = corpo.message;
 			} catch (_) {}
 			throw new Error(mensagemErro);
 		}
@@ -108,28 +106,28 @@ const FUNDOS_ARENA = ["BEACH 2.png","BEACH NIGHT.png","BEACH.png","CAVE 2.png","
 		return response.json();
 	}
 
-	function aplicarNovoEstado(novoEstado, mostrarDano = false) {
+	function atualizarEstado(novoEstado, mostrarDano = false) {
 		const estadoAnterior = state.serverState;
 		state.serverState = novoEstado;
 
 		if (!mostrarDano || !estadoAnterior?.started || !novoEstado?.started) return;
-		animations.aplicarFeedbackDeDano(estadoAnterior, novoEstado);
+		animations.feedbackDano(estadoAnterior, novoEstado);
 	}
-// aqui que executa a animation
-	async function processarAcaoComAnimacao(acao) {
+
+	async function processarAcao(acao) {
 		if (state.resolvendoAcao || !state.serverState?.started || state.serverState.winner) return;
-//preparaçao pra animation
-		ui.esconderPreviewSkill();
+
+		ui.esconderPreview();
 		state.resolvendoAcao = true;
-		ui.setBotoesAcaoHabilitados(false);
+		ui.habilitarBotoes(false);
 
-		const atacanteKey = state.serverState.currentKey;
-		const defensorKey = atacanteKey === "p1" ? "p2" : "p1";
+		const atacanteKey          = state.serverState.currentKey;
+		const defensorKey          = oposto(atacanteKey);
 		const defensorEstaDefendendo = state.serverState[defensorKey]?.defendendo === true;
-		const errorSplash = state.serverState[atacanteKey]?.visual?.errorSplash ?? null;
+		const errorSplash          = state.serverState[atacanteKey]?.visual?.errorSplash ?? null;
 
-		animations.cancelAnimation();
-//envia pro back
+		animations.cancelarAnimacao();
+
 		try {
 			const resposta = await chamarApi("action", {
 				actionType: acao.type,
@@ -145,16 +143,16 @@ const FUNDOS_ARENA = ["BEACH 2.png","BEACH NIGHT.png","BEACH.png","CAVE 2.png","
 				return;
 			}
 
-			const animacaoAtiva = animations.runTimeline(
-				animations.buildAnimation(atacanteKey, acao, defensorKey, defensorEstaDefendendo)
+			const animacaoAtiva = animations.rodarTimeline(
+				animations.montarAnimacao(atacanteKey, acao, defensorKey, defensorEstaDefendendo)
 			);
 			state.anim = animacaoAtiva;
 
 			await animations.wait(animacaoAtiva.duration);
-			animations.cancelAnimation();
+			animations.cancelarAnimacao();
 
 			if (resposta.state) {
-				aplicarNovoEstado(resposta.state, true);
+				atualizarEstado(resposta.state, true);
 				if (mensagem.includes("desviou!") && acao.targetsOpponent) {
 					animations.animarEsquiva(defensorKey);
 				}
@@ -163,91 +161,87 @@ const FUNDOS_ARENA = ["BEACH 2.png","BEACH NIGHT.png","BEACH.png","CAVE 2.png","
 			ui.adicionarLog(mensagem);
 
 			if (resposta.state?.winner) {
-				const perdedorKey = resposta.state.winner === "p1" ? "p2" : "p1";
-				await animations.animarMorte(perdedorKey);
+				await animations.animarMorte(oposto(resposta.state.winner));
 			}
 
 			atualizarHUD();
 		} catch (erro) {
-			animations.cancelAnimation();
+			animations.cancelarAnimacao();
 			atualizarHUD();
 			ui.adicionarLog(`Erro ao executar ação: ${erro.message || "falha desconhecida."}`);
 		} finally {
 			state.actionPage = 0;
-			ui.montarAcoes();         // cria botões com resolvendoAcao ainda true → nascem disabled
+			ui.montarAcoes();
 			state.resolvendoAcao = false;
-			ui.setBotoesAcaoHabilitados(true);
+			ui.habilitarBotoes(true);
 		}
 	}
 
 	function resetarParaSetup() {
-		ui.resetarParaSetup(animations.cancelAnimation);
+		ui.resetarParaSetup(animations.cancelarAnimacao);
 	}
-//inicia a partida
+
+	function resetarOverlayBH() {
+		const overlay = document.getElementById('black-hole-overlay');
+		if (overlay) overlay.style.display = 'none';
+		['.topbar', '.setup-screen'].forEach(sel => {
+			const el = document.querySelector(sel);
+			if (el) { el.style.transition = 'none'; el.style.transform = ''; el.style.opacity = ''; el.style.willChange = ''; }
+		});
+	}
+
 	async function iniciar() {
-  if (window.location.protocol === "file:") {
-    ui.adicionarLog("Abra pelo servidor PHP: http://127.0.0.1:8080/batalha.html");
-    return;
-  }
+		if (window.location.protocol === "file:") {
+			ui.adicionarLog("Abra pelo servidor PHP: http://127.0.0.1:8080/batalha.html");
+			return;
+		}
 
-  els.startBtn.disabled = true;
-  try {
-    const resposta = await chamarApi("start", {
-      p1Name: els.p1Name.value.trim() || "Jogador 1",
-      p1Class: els.p1Class.value,
-      p2Name: els.p2Name.value.trim() || "Jogador 2",
-      p2Class: els.p2Class.value,
-    });
+		els.startBtn.disabled = true;
+		try {
+			const resposta = await chamarApi("start", {
+				p1Name:  els.p1Name.value.trim()  || "Jogador 1",
+				p1Class: els.p1Class.value,
+				p2Name:  els.p2Name.value.trim()  || "Jogador 2",
+				p2Class: els.p2Class.value,
+			});
 
-    if (!resposta.ok) {
-      ui.adicionarLog(resposta.message || "Não foi possível iniciar a partida.");
-      return;
-    }
+			if (!resposta.ok) {
+				ui.adicionarLog(resposta.message || "Não foi possível iniciar a partida.");
+				return;
+			}
 
-    aplicarNovoEstado(resposta.state, false);
-    state.resolvendoAcao = false;
-    state.actionPage = 0;
-    animations.cancelAnimation();
-    ui.esconderPreviewSkill();
+			atualizarEstado(resposta.state, false);
+			state.resolvendoAcao = false;
+			state.actionPage = 0;
+			animations.cancelarAnimacao();
+			ui.esconderPreview();
 
-    // ========== ANIMAÇÃO DO BURACO NEGRO ==========
-    await startBlackHoleAnimation({
-      onBattleSetup: () => {
-        state.arenaFundo = `./assets/fundosdojogo/${encodeURIComponent(FUNDOS_ARENA[Math.floor(Math.random() * FUNDOS_ARENA.length)])}`;
-        els.battleApp.classList.add("is-playing");
-        els.setupPanel.classList.add("is-hidden");
-        els.battleView.classList.remove("is-hidden");
-        els.log.innerHTML = "";
-        atualizarHUD();
-        ui.montarAcoes();
-      }
-    });
+			await startBlackHoleAnimation({
+				onBattleSetup: () => {
+					state.arenaFundo = `./assets/fundosdojogo/${encodeURIComponent(FUNDOS_ARENA[Math.floor(Math.random() * FUNDOS_ARENA.length)])}`;
+					els.battleApp.classList.add("is-playing");
+					els.setupPanel.classList.add("is-hidden");
+					els.battleView.classList.remove("is-hidden");
+					els.log.innerHTML = "";
+					atualizarHUD();
+					ui.montarAcoes();
+				}
+			});
 
-    ui.adicionarLog(`Partida iniciada: ${state.serverState.p1.classeNome} vs ${state.serverState.p2.classeNome}.`);
-  } catch (erro) {
-    ui.adicionarLog(`Erro ao iniciar: ${erro.message || "falha de conexão com a API."}`);
-    ui.adicionarLog("Confirme se o servidor está rodando em http://127.0.0.1:8080");
+			ui.adicionarLog(`Partida iniciada: ${state.serverState.p1.classeNome} vs ${state.serverState.p2.classeNome}.`);
+		} catch (erro) {
+			ui.adicionarLog(`Erro ao iniciar: ${erro.message || "falha de conexão com a API."}`);
+			ui.adicionarLog("Confirme se o servidor está rodando em http://127.0.0.1:8080");
+			resetarOverlayBH();
+		} finally {
+			els.startBtn.disabled = false;
+		}
+	}
 
-    // Força reset visual caso a animação tenha sido iniciada parcialmente
-    const overlay = document.getElementById('black-hole-overlay');
-    if (overlay) overlay.style.display = 'none';
-    ['.topbar', '.setup-screen'].forEach(sel => {
-      const el = document.querySelector(sel);
-      if (el) { el.style.transition = 'none'; el.style.transform = ''; el.style.opacity = ''; el.style.willChange = ''; }
-    });
-  } finally {
-    els.startBtn.disabled = false;
-  }
-}
-//cria os modulos principais passando dados que precisam
 	animations = createAnimationController({ state, els, atualizarHUD });
-	ui = createUIController({
-		state,
-		els,
-		onActionSelected: processarAcaoComAnimacao,
-	});
-//pagina de seleçao de personagem
-	function atualizarPreviewPersonagem(pickerDataFor, spriteUrl, label) {
+	ui = createUIController({ state, els, onActionSelected: processarAcao });
+
+	function atualizarPreview(pickerDataFor, spriteUrl, label) {
 		const side = pickerDataFor === 'p1-class' ? 'p1' : 'p2';
 		const img  = document.getElementById(`${side}-preview-sprite`);
 		const name = document.getElementById(`${side}-preview-name`);
@@ -261,7 +255,7 @@ const FUNDOS_ARENA = ["BEACH 2.png","BEACH NIGHT.png","BEACH.png","CAVE 2.png","
 		}, 80);
 	}
 
-	function construirSeletoresPersonagem(catalog) {
+	function construirSeletores(catalog) {
 		document.querySelectorAll(".char-picker").forEach((picker) => {
 			const defaultKey = document.getElementById(picker.dataset.for).value;
 			picker.replaceChildren(
@@ -269,9 +263,9 @@ const FUNDOS_ARENA = ["BEACH 2.png","BEACH NIGHT.png","BEACH.png","CAVE 2.png","
 					const btn = document.createElement("button");
 					btn.type = "button";
 					btn.className = "char-option" + (c.key === defaultKey ? " is-selected" : "");
-					btn.dataset.value = c.key;
+					btn.dataset.value  = c.key;
 					btn.dataset.sprite = c.selectSprite ?? '';
-					btn.dataset.label = c.label ?? '';
+					btn.dataset.label  = c.label ?? '';
 					const img = document.createElement("img");
 					img.src = c.selectSprite;
 					img.alt = c.label;
@@ -281,14 +275,13 @@ const FUNDOS_ARENA = ["BEACH 2.png","BEACH NIGHT.png","BEACH.png","CAVE 2.png","
 					return btn;
 				})
 			);
-			// Set initial preview
 			const selected = picker.querySelector(".char-option.is-selected");
-			if (selected) atualizarPreviewPersonagem(picker.dataset.for, selected.dataset.sprite, selected.dataset.label);
+			if (selected) atualizarPreview(picker.dataset.for, selected.dataset.sprite, selected.dataset.label);
 		});
 	}
-//aqui ele pede a lista e constroi os botoes
+
 	chamarApi("catalog")
-		.then((data) => construirSeletoresPersonagem(data.catalog ?? []))
+		.then((data) => construirSeletores(data.catalog ?? []))
 		.catch((erro) => ui.adicionarLog(`Erro ao carregar personagens: ${erro.message}`));
 
 	els.setupPanel.addEventListener("click", (e) => {
@@ -298,7 +291,7 @@ const FUNDOS_ARENA = ["BEACH 2.png","BEACH NIGHT.png","BEACH.png","CAVE 2.png","
 		picker.querySelectorAll(".char-option").forEach((b) => b.classList.remove("is-selected"));
 		opt.classList.add("is-selected");
 		document.getElementById(picker.dataset.for).value = opt.dataset.value;
-		atualizarPreviewPersonagem(picker.dataset.for, opt.dataset.sprite, opt.dataset.label);
+		atualizarPreview(picker.dataset.for, opt.dataset.sprite, opt.dataset.label);
 	});
 
 	els.startBtn.addEventListener("click", iniciar);
@@ -306,7 +299,6 @@ const FUNDOS_ARENA = ["BEACH 2.png","BEACH NIGHT.png","BEACH.png","CAVE 2.png","
 	ui.adicionarLog("Configure os jogadores e clique em INICIAR BATALHA.");
 })();
 /**
- *
  * @param {{ onBattleSetup?: () => void }} opts
  * @returns {Promise<void>}
  */
@@ -316,7 +308,6 @@ function startBlackHoleAnimation({ onBattleSetup } = {}) {
     const canvas  = document.getElementById('black-hole-canvas');
     if (!overlay || !canvas) { resolve(); return; }
 
-    // — Canvas setup —
     const W  = window.innerWidth;
     const H  = window.innerHeight;
     canvas.width  = W;
@@ -324,12 +315,11 @@ function startBlackHoleAnimation({ onBattleSetup } = {}) {
     const ctx = canvas.getContext('2d');
     const cx  = W / 2;
     const cy  = H / 2;
-    const diagR = Math.hypot(cx, cy) + 40; // radius that covers full screen
+    const diagR = Math.hypot(cx, cy) + 40;
 
-    // — Accretion-disk particle system —
     const pts = Array.from({ length: 480 }, () => ({
       angle:    Math.random() * Math.PI * 2,
-      orbMult:  1.1  + Math.random() * 2.8,   // orbit = bhRadius * orbMult
+      orbMult:  1.1  + Math.random() * 2.8,
       speed:   (0.35 + Math.random() * 1.55) * (Math.random() < 0.5 ? 1 : -1),
       size:     0.5  + Math.random() * 3.2,
       hue:      200  + Math.random() * 40,
@@ -337,7 +327,6 @@ function startBlackHoleAnimation({ onBattleSetup } = {}) {
       alpha:    0.28 + Math.random() * 0.72,
     }));
 
-    // — Suck-in targets —
     const topbar      = document.querySelector('.topbar');
     const setupScreen = document.querySelector('.setup-screen');
     const suckTargets = [topbar, setupScreen].filter(Boolean);
@@ -348,7 +337,6 @@ function startBlackHoleAnimation({ onBattleSetup } = {}) {
       const dy   = cy - (rect.top  + rect.height / 2);
       const dur  = 1.5 + i * 0.12;
       el.style.willChange = 'transform, opacity';
-      // Double rAF so the browser paints the element before starting transition
       requestAnimationFrame(() => requestAnimationFrame(() => {
         el.style.transition = `transform ${dur}s cubic-bezier(0.48,0,0.82,0.18), opacity ${dur - 0.12}s ease`;
         el.style.transform  = `translate(${dx}px,${dy}px) scale(0.01) rotate(1260deg)`;
@@ -356,30 +344,24 @@ function startBlackHoleAnimation({ onBattleSetup } = {}) {
       }));
     });
 
-    // — Phase constants —
-    const PHASE1 = 1800;  // black hole expands to cover screen
-    const PHASE2 = 2200;  // portal opens, battle revealed
+    const PHASE1 = 1800;
+    const PHASE2 = 2200;
 
     let phase = 1;
     let t0    = null;
     let raf;
     let battleSetupDone = false;
 
-    // — Easing helpers —
     const easeInQuad  = t => t * t;
     const easeOut3    = t => 1 - Math.pow(1 - t, 3);
     const easeOut5    = t => 1 - Math.pow(1 - t, 5);
 
-    // ─── Draw helpers ────────────────────────────────────────────────────────
-
     function drawBlackHole(bhR, progress, time) {
-      // Fill full screen once hole is large enough (avoids gaps at corners)
       if (bhR > diagR * 0.55) {
         ctx.fillStyle = '#000';
         ctx.fillRect(0, 0, W, H);
       }
 
-      // Outer nebula / gravitational glow
       const glowR = Math.min(bhR * 4.8, W * 1.6);
       const ng    = ctx.createRadialGradient(cx, cy, bhR * 0.5, cx, cy, glowR);
       ng.addColorStop(0,    `rgba(200,220,255,${0.72 * progress})`);
@@ -391,7 +373,6 @@ function startBlackHoleAnimation({ onBattleSetup } = {}) {
       ctx.arc(cx, cy, glowR, 0, Math.PI * 2);
       ctx.fill();
 
-      // Accretion disk rings (flattened to simulate tilted disk)
       ctx.save();
       ctx.translate(cx, cy);
       ctx.scale(1, 0.27);
@@ -408,7 +389,6 @@ function startBlackHoleAnimation({ onBattleSetup } = {}) {
       }
       ctx.restore();
 
-      // Orbital particles
       const pProg = Math.min(1, progress * 2.5);
       pts.forEach(p => {
         const r = bhR * p.orbMult;
@@ -421,7 +401,6 @@ function startBlackHoleAnimation({ onBattleSetup } = {}) {
         ctx.fill();
       });
 
-      // Photon ring (bright thin halo just outside event horizon)
       const pr = ctx.createRadialGradient(cx, cy, bhR * 0.84, cx, cy, bhR * 1.72);
       pr.addColorStop(0,    `rgba(255,250,250,${progress})`);
       pr.addColorStop(0.20, `rgba(255,250,250 ,${0.88 * progress})`);
@@ -432,7 +411,6 @@ function startBlackHoleAnimation({ onBattleSetup } = {}) {
       ctx.arc(cx, cy, bhR * 1.72, 0, Math.PI * 2);
       ctx.fill();
 
-      // Gravitational-wave ripples (only at the very start)
       if (time - t0 < 1000 && t0 !== null) {
         const rt = (time - t0) / 1000;
         [0, 0.25, 0.55].forEach(offset => {
@@ -448,7 +426,6 @@ function startBlackHoleAnimation({ onBattleSetup } = {}) {
         });
       }
 
-      // Event horizon — solid black core
       ctx.fillStyle = '#000';
       ctx.beginPath();
       ctx.arc(cx, cy, bhR, 0, Math.PI * 2);
@@ -456,21 +433,18 @@ function startBlackHoleAnimation({ onBattleSetup } = {}) {
     }
 
     function drawReveal(openR, t) {
-      // Glowing iris rim that fades as portal expands
       const rimW    = (1 - easeOut3(t)) * 145 + 8;
       const rimAlpha = Math.max(0, 1 - t * 1.15);
       if (openR > 0 && rimAlpha > 0.01) {
-        // Black gradient fading with the rim
         const blackG = ctx.createRadialGradient(cx, cy, 0, cx, cy, openR + rimW);
-        blackG.addColorStop(0, `rgba(0,0,0,${rimAlpha})`);
+        blackG.addColorStop(0,   `rgba(0,0,0,${rimAlpha})`);
         blackG.addColorStop(0.7, `rgba(0,0,0,${rimAlpha * 0.2})`);
-        blackG.addColorStop(1, 'rgba(0,0,0,0)');
+        blackG.addColorStop(1,   'rgba(0,0,0,0)');
         ctx.fillStyle = blackG;
         ctx.beginPath();
         ctx.arc(cx, cy, openR + rimW, 0, Math.PI * 2);
         ctx.fill();
 
-        // Blue glowing rim
         const rg = ctx.createRadialGradient(cx, cy, Math.max(0, openR * 0.80), cx, cy, openR + rimW);
         rg.addColorStop(0,    `rgba(230,245,255,${rimAlpha})`);
         rg.addColorStop(0.22, `rgba(160,210,255,${rimAlpha * 0.85})`);
@@ -482,16 +456,13 @@ function startBlackHoleAnimation({ onBattleSetup } = {}) {
         ctx.fill();
       }
 
-      // Cut the portal hole (destination-out makes canvas transparent,
-      // revealing whatever DOM element is rendered behind the overlay)
+      // destination-out torna o canvas transparente, revelando o DOM atrás do overlay
       ctx.globalCompositeOperation = 'destination-out';
       ctx.beginPath();
       ctx.arc(cx, cy, openR, 0, Math.PI * 2);
       ctx.fill();
       ctx.globalCompositeOperation = 'source-over';
     }
-
-    // ─── Animation loop ───────────────────────────────────────────────────────
 
     overlay.style.display = 'block';
 
@@ -502,7 +473,6 @@ function startBlackHoleAnimation({ onBattleSetup } = {}) {
 
       if (phase === 1) {
         const t   = Math.min(elapsed / PHASE1, 1);
-        // Quadratic ease-in: starts visible immediately (offset 8px), then rapidly expands
         const bhR = 4 + easeInQuad(t) * (diagR - 4);
         drawBlackHole(bhR, Math.min(1, t * 2.2), ts);
 
@@ -510,16 +480,13 @@ function startBlackHoleAnimation({ onBattleSetup } = {}) {
           phase = 2;
           t0    = ts;
 
-          // — Battle setup happens here, while canvas fully covers the screen —
           if (!battleSetupDone) {
             battleSetupDone = true;
-            // Reset suck targets instantly (canvas hides the jump)
             suckTargets.forEach(el => {
               el.style.transition = 'none';
               el.style.transform  = '';
               el.style.opacity    = '';
               el.style.willChange = '';
-              // Re-enable transitions after browser processes the reset
               requestAnimationFrame(() => requestAnimationFrame(() => {
                 el.style.transition = '';
               }));

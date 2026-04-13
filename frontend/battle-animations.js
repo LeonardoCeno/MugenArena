@@ -1,4 +1,6 @@
 
+const TIPOS_FLUTUANTES = new Set(["bleed", "burn", "heal"]);
+
 const STATUS_EFFECT_VISUALS = {
 	bleed: { gif: "./assets/efeitos/bleed.gif",    cssClass: "bleed-effect-overlay" },
 	burn:  { gif: "./assets/efeitos/burnburn.gif", cssClass: "burn-effect-overlay"  },
@@ -10,21 +12,12 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 
 	// ── Helpers visuais ──────────────────────────────────────────────────
 
-	function normalizarTipoFlutuante(tipo) {
-		if (tipo === "bleed" || tipo === "burn" || tipo === "heal") return tipo;
-		return "direct";
-	}
-
-	function obterFighterRootPorChave(chaveJogador) {
-		return chaveJogador === "p1" ? els.fighters.p1.root : els.fighters.p2.root;
-	}
-
-	function atualizarClasseFlipDoFighter(fighterEl) {
+	function flipFighter(fighterEl) {
 		if (!fighterEl) return;
 		fighterEl.classList.toggle("is-flipped", fighterEl.dataset.side === "player2");
 	}
 
-	function mostrarEfeitoStatus(fighter, gifSrc, cssClass) {
+	function mostrarEfeito(fighter, gifSrc, cssClass) {
 		const el = document.createElement("img");
 		el.src = gifSrc;
 		el.alt = "";
@@ -34,103 +27,91 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		setTimeout(() => el.remove(), 2000);
 	}
 
-	function mostrarNumeroFlutuante(chaveJogador, valor, tipo = "direct", foiCritico = false) {
+	function numFlutuante(chave, valor, tipo = "direct", foiCritico = false) {
 		if (valor <= 0) return;
-
-		const fighter = obterFighterRootPorChave(chaveJogador);
+		const fighter = els.fighters[chave]?.root;
 		if (!fighter) return;
 
-		const damageEl = document.createElement("div");
-		const tipoNormalizado = normalizarTipoFlutuante(tipo);
-		damageEl.className = `damage-float damage-${tipoNormalizado}`;
-		if (foiCritico && tipoNormalizado !== "heal") {
-			damageEl.classList.add("damage-float-critical");
-		}
-		damageEl.textContent = tipoNormalizado === "heal" ? `+${valor}` : `-${valor}`;
-		fighter.appendChild(damageEl);
+		const t = TIPOS_FLUTUANTES.has(tipo) ? tipo : "direct";
+		const el = document.createElement("div");
+		el.className = `damage-float damage-${t}`;
+		if (foiCritico && t !== "heal") el.classList.add("damage-float-critical");
+		el.textContent = t === "heal" ? `+${valor}` : `-${valor}`;
+		fighter.appendChild(el);
 
-		const statusVisual = STATUS_EFFECT_VISUALS[tipoNormalizado];
-		if (statusVisual) mostrarEfeitoStatus(fighter, statusVisual.gif, statusVisual.cssClass);
+		const visual = STATUS_EFFECT_VISUALS[t];
+		if (visual) mostrarEfeito(fighter, visual.gif, visual.cssClass);
 
-		requestAnimationFrame(() => damageEl.classList.add("show"));
-		setTimeout(() => damageEl.remove(), 1250);
+		requestAnimationFrame(() => el.classList.add("show"));
+		setTimeout(() => el.remove(), 1250);
 	}
 
 	// ── Feedback de dano ─────────────────────────────────────────────────
 
-	function aplicarFeedbackDeDano(estadoAnterior, novoEstado) {
-		if (!estadoAnterior?.started || !novoEstado?.started) return;
+	function feedbackDano(anterior, novo) {
+		if (!anterior?.started || !novo?.started) return;
 
-		const danoP1 = Math.max(0, (estadoAnterior.p1?.vidaAtual ?? 0) - (novoEstado.p1?.vidaAtual ?? 0));
-		const danoP2 = Math.max(0, (estadoAnterior.p2?.vidaAtual ?? 0) - (novoEstado.p2?.vidaAtual ?? 0));
-		const curaP1 = Math.max(0, (novoEstado.p1?.vidaAtual ?? 0) - (estadoAnterior.p1?.vidaAtual ?? 0));
-		const curaP2 = Math.max(0, (novoEstado.p2?.vidaAtual ?? 0) - (estadoAnterior.p2?.vidaAtual ?? 0));
-		const tipoDanoP1 = novoEstado.p1?.ultimoTipoDano || "direct";
-		const tipoDanoP2 = novoEstado.p2?.ultimoTipoDano || "direct";
-		const mensagemAcao = (novoEstado?.message || "").toString();
-		const teveCritico = mensagemAcao.includes("Acerto crítico!");
-		const nomeP1 = (novoEstado?.p1?.nome || "").toString();
-		const nomeP2 = (novoEstado?.p2?.nome || "").toString();
-
-		let criticoP1 = false;
-		let criticoP2 = false;
+		const danoP1 = Math.max(0, (anterior.p1?.vidaAtual ?? 0) - (novo.p1?.vidaAtual ?? 0));
+		const danoP2 = Math.max(0, (anterior.p2?.vidaAtual ?? 0) - (novo.p2?.vidaAtual ?? 0));
+		const curaP1 = Math.max(0, (novo.p1?.vidaAtual ?? 0) - (anterior.p1?.vidaAtual ?? 0));
+		const curaP2 = Math.max(0, (novo.p2?.vidaAtual ?? 0) - (anterior.p2?.vidaAtual ?? 0));
+		const tipoDanoP1 = novo.p1?.ultimoTipoDano || "direct";
+		const tipoDanoP2 = novo.p2?.ultimoTipoDano || "direct";
+		const msg = String(novo?.message || "");
+		const teveCritico = msg.includes("Acerto crítico!");
+		const nomeP1 = String(novo?.p1?.nome || "");
+		const nomeP2 = String(novo?.p2?.nome || "");
+		let criticoP1 = false, criticoP2 = false;
 
 		if (teveCritico) {
-			if (nomeP1 && mensagemAcao.includes(`em ${nomeP1}`) && danoP1 > 0) criticoP1 = true;
-			if (nomeP2 && mensagemAcao.includes(`em ${nomeP2}`) && danoP2 > 0) criticoP2 = true;
+			if (nomeP1 && msg.includes(`em ${nomeP1}`) && danoP1 > 0) criticoP1 = true;
+			if (nomeP2 && msg.includes(`em ${nomeP2}`) && danoP2 > 0) criticoP2 = true;
 			if (!criticoP1 && !criticoP2) {
 				if (danoP1 > 0 && danoP2 <= 0) criticoP1 = true;
 				else if (danoP2 > 0 && danoP1 <= 0) criticoP2 = true;
 			}
 		}
 
-		mostrarNumeroFlutuante("p1", danoP1, tipoDanoP1, criticoP1);
-		mostrarNumeroFlutuante("p2", danoP2, tipoDanoP2, criticoP2);
-		mostrarNumeroFlutuante("p1", curaP1, "heal");
-		mostrarNumeroFlutuante("p2", curaP2, "heal");
+		numFlutuante("p1", danoP1, tipoDanoP1, criticoP1);
+		numFlutuante("p2", danoP2, tipoDanoP2, criticoP2);
+		numFlutuante("p1", curaP1, "heal");
+		numFlutuante("p2", curaP2, "heal");
 	}
 
 	// ── Utilitários ──────────────────────────────────────────────────────
 
 	function wait(ms) {
 		if (ms <= 0) return Promise.resolve();
-		return new Promise((resolve) => setTimeout(resolve, ms));
+		return new Promise(r => setTimeout(r, ms));
 	}
 
 	function mostrarSplashErroInsano(src, duracaoMs = 3000) {
-		return new Promise((resolve) => {
+		return new Promise(resolve => {
 			const overlay = document.createElement("div");
 			overlay.style.cssText = "position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center";
-
 			const img = document.createElement("img");
 			img.src = src;
 			img.alt = "ERRO INSANO";
 			img.style.cssText = "max-width:95vw;max-height:95vh;width:auto;height:auto";
-
 			overlay.appendChild(img);
 			document.body.appendChild(overlay);
-			setTimeout(() => {
-				overlay.remove();
-				resolve();
-			}, duracaoMs);
+			setTimeout(() => { overlay.remove(); resolve(); }, duracaoMs);
 		});
 	}
 
 	// ── Timeline ─────────────────────────────────────────────────────────
 
-	function runTimeline(events) {
+	function rodarTimeline(events) {
 		if (!events.length) return { duration: 0, cancel() {} };
 		const handles = events.map(({ at, run }) => setTimeout(run, at));
-		const duration = events.reduce((max, event) => Math.max(max, event.at), 0);
+		const duration = events.reduce((max, e) => Math.max(max, e.at), 0);
 		return {
 			duration,
-			cancel() {
-				handles.forEach(clearTimeout);
-			},
+			cancel() { handles.forEach(clearTimeout); },
 		};
 	}
 
-	function cancelAnimation() {
+	function cancelarAnimacao() {
 		state.anim?.cancel();
 		state.anim = null;
 		state.sprites.p1 = null;
@@ -140,206 +121,179 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		state.domainImage = null;
 		els.arena
 			?.querySelectorAll(".arena-action-overlay, .arena-energy-beam, .fighter-action-overlay")
-			.forEach((el) => el.remove());
-		if (meleeAttackerKey) resetMeleePosition(meleeAttackerKey);
+			.forEach(el => el.remove());
+		if (meleeAttackerKey) resetMelee(meleeAttackerKey);
 	}
 
-	// ── Leitura de dados de animação ─────────────────────────────────────
+	// ── Leitura de config de animação ────────────────────────────────────
 
-	function obterFramesAnimacao(chaveJogador, caminho, nome) {
-		const server = state.serverState;
-		if (!server || !server[chaveJogador]) return [];
-
-		const raiz = caminho === "actions"
-			? server[chaveJogador].visual?.actions || {}
-			: server[chaveJogador].visual?.reactions || {};
-
-		const alvo = raiz[nome];
-		let frames = Array.isArray(alvo?.frames) ? alvo.frames : [];
-
-		const repeat = Number(alvo?.repeatFrames);
+	function framesDeConfig(config) {
+		let frames = Array.isArray(config?.frames) ? config.frames : [];
+		const repeat = Number(config?.repeatFrames);
 		if (repeat > 1) {
 			const base = [...frames];
 			frames = Array.from({ length: repeat }, () => base).flat();
 		}
-
 		return frames
-			.filter((frame) => frame && typeof frame.sprite === "string" && frame.sprite.trim() !== "")
-			.map((frame) => ({
-				sprite: frame.sprite,
-				durationMs: Number(frame.durationMs) > 0 ? Number(frame.durationMs) : 0,
-				cssClass: frame.cssClass || null,
-				scale: frame.scale ?? null,
+			.filter(f => f && typeof f.sprite === "string" && f.sprite.trim() !== "")
+			.map(f => ({
+				sprite: f.sprite,
+				durationMs: Number(f.durationMs) > 0 ? Number(f.durationMs) : 0,
+				cssClass: f.cssClass || null,
+				scale: f.scale ?? null,
 			}));
 	}
 
-	function obterFramesAnimacaoAcao(chaveJogador, nomeAcao) {
-		return obterFramesAnimacao(chaveJogador, "actions", nomeAcao);
-	}
+	function overlaysDeConfig(config) {
+		let overlays = Array.isArray(config?.overlays) ? config.overlays : [];
+		const repeat = Number(config?.repeatOverlays);
 
-	function obterFramesReacaoDefesa(chaveJogador) {
-		return obterFramesAnimacao(chaveJogador, "reactions", "defendingHit");
-	}
-
-	function obterAudiosAnimacaoAcao(chaveJogador, nomeAcao) {
-		const actionConfig = state.serverState?.[chaveJogador]?.visual?.actions?.[nomeAcao];
-		return (Array.isArray(actionConfig?.audio) ? actionConfig.audio : [])
-			.filter(a => a?.file)
-			.map(a => ({ file: a.file, startMs: a.startMs ?? 0, durationMs: a.durationMs ?? null }));
-	}
-
-	function obterOverlaysAnimacaoAcao(chaveJogador, nomeAcao) {
-		const server = state.serverState;
-		if (!server || !server[chaveJogador]) return [];
-
-		const actionConfig = server[chaveJogador].visual?.actions?.[nomeAcao];
-		let overlays = Array.isArray(actionConfig?.overlays) ? actionConfig.overlays : [];
-
-		const repeatOverlays = Number(actionConfig?.repeatOverlays);
-		if (repeatOverlays > 1 && overlays.length > 0) {
+		if (repeat > 1 && overlays.length > 0) {
 			const base = [...overlays];
-			const startDelay = Number(actionConfig?.repeatOverlaysStartMs ?? 0);
-			const minStart = Math.min(...base.map(o => o.startMs ?? 0));
-			const cycleDurationMs = Math.max(...base.map(o => (o.startMs ?? 0) + (o.durationMs ?? 0))) - minStart;
-			overlays = Array.from({ length: repeatOverlays }, (_, i) =>
-				base.map(o => ({ ...o, startMs: startDelay + ((o.startMs ?? 0) - minStart) + i * cycleDurationMs }))
+			const startDelay = Number(config?.repeatOverlaysStartMs ?? 0);
+			let minStart = Infinity, maxEnd = -Infinity;
+			for (const o of base) {
+				const s = o.startMs ?? 0;
+				const e = s + (o.durationMs ?? 0);
+				if (s < minStart) minStart = s;
+				if (e > maxEnd) maxEnd = e;
+			}
+			const cycleDuration = maxEnd - minStart;
+			overlays = Array.from({ length: repeat }, (_, i) =>
+				base.map(o => ({ ...o, startMs: startDelay + ((o.startMs ?? 0) - minStart) + i * cycleDuration }))
 			).flat();
 		}
 
 		return overlays
-			.filter((overlay) => overlay && (overlay.mode === "beam" || overlay.sprite?.trim()))
-			.map((overlay) => ({
-				mode: overlay.mode ?? "attached",
-				beamTone: overlay.beamTone ?? "normal",
-				target: overlay.target ?? "opponent",
-				sprite: overlay.sprite ?? "",
-				startMs: overlay.startMs ?? 0,
-				durationMs: overlay.durationMs ?? 0,
-				x: overlay.x ?? 0,
-				y: overlay.y ?? 0,
-				scale: overlay.scale ?? 1,
-				sizePx: overlay.sizePx ?? 260,
-				frontOffsetPx: overlay.frontOffsetPx ?? 0,
-				projectileAngleDeg: overlay.projectileAngleDeg ?? 0,
-				thicknessPx: overlay.thicknessPx ?? 26,
-				startOffsetX: overlay.startOffsetX ?? 0,
-				startOffsetY: overlay.startOffsetY ?? 0,
-				endOffsetX: overlay.endOffsetX ?? 0,
-				endOffsetY: overlay.endOffsetY ?? 0,
+			.filter(o => o && (o.mode === "beam" || o.sprite?.trim()))
+			.map(o => ({
+				mode: o.mode ?? "attached",
+				beamTone: o.beamTone ?? "normal",
+				target: o.target ?? "opponent",
+				sprite: o.sprite ?? "",
+				startMs: o.startMs ?? 0,
+				durationMs: o.durationMs ?? 0,
+				x: o.x ?? 0,
+				y: o.y ?? 0,
+				scale: o.scale ?? 1,
+				sizePx: o.sizePx ?? 260,
+				frontOffsetPx: o.frontOffsetPx ?? 0,
+				projectileAngleDeg: o.projectileAngleDeg ?? 0,
+				thicknessPx: o.thicknessPx ?? 26,
+				startOffsetX: o.startOffsetX ?? 0,
+				startOffsetY: o.startOffsetY ?? 0,
+				endOffsetX: o.endOffsetX ?? 0,
+				endOffsetY: o.endOffsetY ?? 0,
 			}));
 	}
 
 	// ── Construtores de eventos ──────────────────────────────────────────
 
-	function buildFrameEvents(chaveJogador, frames) {
-		if (!frames.length) return [];
+	function eventosFrames(chave, frames) {
+		if (!frames.length) return { events: [], duration: 0 };
 		const events = [];
-		let tempoAtual = 0;
+		let t = 0;
 
 		for (const frame of frames) {
 			const sprite = frame.sprite;
-			const scale = frame.scale ?? null;
+			const scale  = frame.scale ?? null;
 			events.push({
-				at: tempoAtual,
+				at: t,
 				run() {
-					state.sprites[chaveJogador] = sprite;
-					state.frameScale[chaveJogador] = scale;
+					state.sprites[chave]    = sprite;
+					state.frameScale[chave] = scale;
 					atualizarHUD();
 				},
 			});
-			tempoAtual += frame.durationMs;
+			t += frame.durationMs;
 		}
 
-		events.push({ at: tempoAtual, run() {} });
-		return events;
+		return { events, duration: t };
 	}
 
-	function buildOverlayEvents(overlay, atacanteKey) {
+	function eventosOverlay(overlay, atacanteKey) {
 		let el = null;
 		return [
 			{
 				at: overlay.startMs,
-				run() {
-					el = criarOverlayEl(overlay, atacanteKey);
-				},
+				run() { el = criarOverlay(overlay, atacanteKey); },
 			},
 			{
 				at: overlay.startMs + overlay.durationMs,
-				run() {
-					el?.remove();
-					el = null;
-				},
+				run() { el?.remove(); el = null; },
 			},
 		];
 	}
 
-	function buildDomainEvents(atacanteKey, nomeAcao) {
-		const actionConfig = state.serverState?.[atacanteKey]?.visual?.actions?.[nomeAcao] ?? {};
-		const domainImage = actionConfig.domainImage ?? null;
+	function eventosDomain(config) {
+		const domainImage = config?.domainImage ?? null;
 		if (!domainImage) return [];
-
-		const delay = Number(actionConfig.domainDelayMs) > 0 ? Number(actionConfig.domainDelayMs) : 0;
+		const delay = Number(config?.domainDelayMs) > 0 ? Number(config.domainDelayMs) : 0;
 		return [{
 			at: delay,
-			run() {
-				state.domainImage = domainImage;
-				atualizarHUD();
-			},
+			run() { state.domainImage = domainImage; atualizarHUD(); },
 		}];
 	}
 
-	// ── Melee dash ───────────────────────────────────────────────────────
-	// Ajuste fino de altura por atacante (px positivo = mais para baixo)
-	const MELEE_Y_OFFSET = {
-		p1:  0,   // P1 atacando P2
-		p2:  0,   // P2 atacando P1
-	};
-	// Distância horizontal do inimigo (px positivo = mais afastado do inimigo)
-	// P1 ataca da esquerda → valor positivo afasta para a esquerda
-	// P2 ataca da direita  → valor positivo afasta para a direita
-	const MELEE_X_GAP = {
-		p1: -30,
-		p2: -5,
-	};
+	function eventosAudio(config) {
+		const audios = Array.isArray(config?.audio) ? config.audio : [];
+		return audios
+			.filter(a => a?.file)
+			.map(a => {
+				const file      = a.file;
+				const startMs   = a.startMs ?? 0;
+				const durationMs = a.durationMs ?? null;
+				return {
+					at: startMs,
+					run() {
+						const audio = new Audio(file);
+						audio.currentTime = 0;
+						audio.play().catch(() => {});
+						if (durationMs != null) {
+							setTimeout(() => { audio.pause(); audio.currentTime = 0; }, durationMs);
+						}
+					},
+				};
+			});
+	}
 
-	function calcularOffsetMelee(atacanteKey, defensorKey) {
+	// ── Melee dash ───────────────────────────────────────────────────────
+
+	// Ajuste fino de altura por atacante (px positivo = mais para baixo)
+	const MELEE_Y_OFFSET = { p1: 0, p2: 0 };
+	// Distância horizontal do inimigo (px positivo = mais afastado)
+	const MELEE_X_GAP    = { p1: -30, p2: -5 };
+
+	function offsetMelee(atacanteKey, defensorKey) {
 		const atacanteEl = els.fighters[atacanteKey]?.root;
 		const defensorEl = els.fighters[defensorKey]?.root;
 		if (!atacanteEl || !defensorEl) return null;
 
 		const aRect = atacanteEl.getBoundingClientRect();
 		const dRect = defensorEl.getBoundingClientRect();
-
 		const aCx = aRect.left + aRect.width  / 2;
 		const dCx = dRect.left + dRect.width  / 2;
 		const direcao = aCx < dCx ? 1 : -1;
 
-		// Alinha os centros e recua metade da largura do atacante + gap manual
 		const offsetX = (dCx - aCx) - direcao * (aRect.width / 2 + MELEE_X_GAP[atacanteKey]);
-		const dCy = dRect.top + dRect.height / 2;
-		const aCy = aRect.top + aRect.height / 2;
-
-		// Quando o scale muda (transform-origin: center bottom), o bottom fica fixo
-		// e o centro visual desloca (aRect.height - novaAltura) / 2.
-		// Compensamos esse desvio para que o atacante apareça onde esperamos visualmente.
+		// Compensação de transform-origin: center bottom ao mudar de scale
 		const scaleRatio = dRect.height / aRect.height;
-		const compensacaoScaleY = (aRect.height / 2) * (1 - scaleRatio);
+		const compY = (aRect.height / 2) * (1 - scaleRatio);
+		const offsetY = ((dRect.top + dRect.height / 2) - (aRect.top + aRect.height / 2)) - compY + MELEE_Y_OFFSET[atacanteKey];
 
-		const offsetY = (dCy - aCy) - compensacaoScaleY + MELEE_Y_OFFSET[atacanteKey];
-
-		return { offsetX, offsetY };
+		return { offsetX, offsetY, dRect };
 	}
 
-	function aplicarMeleePosition(atacanteKey, defensorKey) {
+	function aplicarMelee(atacanteKey, defensorKey) {
 		const atacanteEl = els.fighters[atacanteKey]?.root;
 		const defensorEl = els.fighters[defensorKey]?.root;
 		if (!atacanteEl || !defensorEl) return;
-		const result = calcularOffsetMelee(atacanteKey, defensorKey);
+
+		const result = offsetMelee(atacanteKey, defensorKey);
 		if (!result) return;
 
-		// Scale real do defensor (já considera media queries e transform)
-		const defensorScale = defensorEl.getBoundingClientRect().width / (defensorEl.offsetWidth || 1);
-
+		// dRect já lido em offsetMelee — reutilizamos para evitar terceiro getBoundingClientRect
+		const defensorScale = result.dRect.width / (defensorEl.offsetWidth || 1);
 		meleeAttackerKey = atacanteKey;
 		atacanteEl.style.transition = "none";
 		atacanteEl.style.setProperty("--melee-offset-x", `${result.offsetX}px`);
@@ -348,7 +302,7 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		atacanteEl.style.zIndex = "10";
 	}
 
-	function resetMeleePosition(chave) {
+	function resetMelee(chave) {
 		const el = els.fighters[chave]?.root;
 		if (!el) return;
 		el.style.transition = "none";
@@ -360,59 +314,37 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		meleeAttackerKey = null;
 	}
 
-	function buildMeleeEvents(atacanteKey, defensorKey, frameDuration) {
+	function eventosMelee(atacanteKey, defensorKey, frameDuration) {
 		return [
-			{
-				at: 0,
-				run() { aplicarMeleePosition(atacanteKey, defensorKey); },
-			},
-			{
-				at: frameDuration,
-				run() { resetMeleePosition(atacanteKey); },
-			},
+			{ at: 0,             run() { aplicarMelee(atacanteKey, defensorKey); } },
+			{ at: frameDuration, run() { resetMelee(atacanteKey); } },
 		];
 	}
 
-	function buildAudioEvents(chaveJogador, nomeAcao) {
-		return obterAudiosAnimacaoAcao(chaveJogador, nomeAcao).flatMap(a => {
-			const audio = new Audio(a.file);
-			audio.preload = "auto";
-			const events = [{
-				at: a.startMs,
-				run() { audio.currentTime = 0; audio.play().catch(() => {}); },
-			}];
-			if (a.durationMs != null) {
-				events.push({
-					at: a.startMs + a.durationMs,
-					run() { audio.pause(); audio.currentTime = 0; },
-				});
-			}
-			return events;
-		});
-	}
+	// ── Montagem de animação ─────────────────────────────────────────────
 
-	function buildAnimation(atacanteKey, acao, defensorKey, defensorEstaDefendendo) {
-		const nomeAcao = acao.nomeSprite || acao.nome;
-		const events = [];
-		const frameEvents = buildFrameEvents(atacanteKey, obterFramesAnimacaoAcao(atacanteKey, nomeAcao));
-		events.push(...frameEvents);
+	function montarAnimacao(atacanteKey, acao, defensorKey, defensorEstaDefendendo) {
+		const nomeAcao     = acao.nomeSprite || acao.nome;
+		const actionConfig = state.serverState?.[atacanteKey]?.visual?.actions?.[nomeAcao] ?? {};
+		const events       = [];
+
+		const { events: frameEvts, duration: frameDuration } = eventosFrames(atacanteKey, framesDeConfig(actionConfig));
+		events.push(...frameEvts);
 
 		if (acao.targetsOpponent && defensorEstaDefendendo) {
-			events.push(...buildFrameEvents(defensorKey, obterFramesReacaoDefesa(defensorKey)));
+			const defConfig = state.serverState?.[defensorKey]?.visual?.reactions?.["defendingHit"] ?? {};
+			events.push(...eventosFrames(defensorKey, framesDeConfig(defConfig)).events);
 		}
 
-		for (const overlay of obterOverlaysAnimacaoAcao(atacanteKey, nomeAcao)) {
-			events.push(...buildOverlayEvents(overlay, atacanteKey));
+		for (const overlay of overlaysDeConfig(actionConfig)) {
+			events.push(...eventosOverlay(overlay, atacanteKey));
 		}
 
-		events.push(...buildDomainEvents(atacanteKey, nomeAcao));
-		events.push(...buildAudioEvents(atacanteKey, nomeAcao));
+		events.push(...eventosDomain(actionConfig));
+		events.push(...eventosAudio(actionConfig));
 
 		if (acao.melee) {
-			const frameDuration = frameEvents.length
-				? frameEvents[frameEvents.length - 1].at
-				: 0;
-			events.push(...buildMeleeEvents(atacanteKey, defensorKey, frameDuration));
+			events.push(...eventosMelee(atacanteKey, defensorKey, frameDuration));
 		}
 
 		return events;
@@ -420,71 +352,69 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 
 	// ── Criação de elementos de overlay ─────────────────────────────────
 
-	function calcularPosicoes(overlay, atacanteKey, origemEl, alvoEl, arenaRect) {
-		const direcaoFrente = atacanteKey === "p1" ? 1 : -1;
+	function escala(px, arenaW) {
+		return px * ((arenaW ?? els.arena?.getBoundingClientRect().width ?? 1000) / 1000);
+	}
+
+	function posicoes(overlay, atacanteKey, origemEl, alvoEl, arenaRect) {
+		const direcaoFrente    = atacanteKey === "p1" ? 1 : -1;
 		const escalaHorizontal = atacanteKey === "p2" ? -1 : 1;
-		const anguloProjetil = atacanteKey === "p2" ? -overlay.projectileAngleDeg : overlay.projectileAngleDeg;
-		const origemRect = origemEl.getBoundingClientRect();
-		const alvoRect = alvoEl.getBoundingClientRect();
-		const origemX = (origemRect.left + origemRect.width / 2) - arenaRect.left + direcaoFrente * escalarParaArena(overlay.frontOffsetPx) + escalarParaArena(overlay.startOffsetX);
-		const origemY = (origemRect.top + origemRect.height / 2) - arenaRect.top + escalarParaArena(overlay.startOffsetY);
-		const alvoX = (alvoRect.left + alvoRect.width / 2) - arenaRect.left + escalarParaArena(overlay.endOffsetX);
-		const alvoY = (alvoRect.top + alvoRect.height / 2) - arenaRect.top + escalarParaArena(overlay.endOffsetY);
+		const anguloProjetil   = atacanteKey === "p2" ? -overlay.projectileAngleDeg : overlay.projectileAngleDeg;
+		const arenaW           = arenaRect.width;
+		const origemRect       = origemEl.getBoundingClientRect();
+		const alvoRect         = alvoEl.getBoundingClientRect();
+
+		const origemX = (origemRect.left + origemRect.width  / 2) - arenaRect.left
+			+ direcaoFrente * escala(overlay.frontOffsetPx, arenaW)
+			+ direcaoFrente * escala(overlay.startOffsetX, arenaW);
+		const origemY = (origemRect.top  + origemRect.height / 2) - arenaRect.top
+			+ escala(overlay.startOffsetY, arenaW);
+		const alvoX = (alvoRect.left + alvoRect.width  / 2) - arenaRect.left + escala(overlay.endOffsetX, arenaW);
+		const alvoY = (alvoRect.top  + alvoRect.height / 2) - arenaRect.top  + escala(overlay.endOffsetY, arenaW);
 		const deltaX = alvoX - origemX;
 		const deltaY = alvoY - origemY;
 
 		return {
-			origemX,
-			origemY,
-			alvoX,
-			alvoY,
-			distancia: Math.sqrt(deltaX * deltaX + deltaY * deltaY),
-			anguloAuto: Math.atan2(deltaY, deltaX) * (180 / Math.PI),
+			origemX, origemY, alvoX, alvoY,
+			distancia:        Math.sqrt(deltaX * deltaX + deltaY * deltaY),
+			anguloAuto:       Math.atan2(deltaY, deltaX) * (180 / Math.PI),
 			anguloProjetil,
 			escalaHorizontal,
+			arenaW,
 		};
 	}
 
-	function criarBeamEl(overlay, pos) {
+	function criarBeam(overlay, pos) {
 		const el = document.createElement("div");
 		el.className = "arena-energy-beam";
-		if (overlay.beamTone === "dark") el.classList.add("arena-energy-beam-dark");
-		else if (overlay.beamTone === "pink") el.classList.add("arena-energy-beam-pink");
+		if (overlay.beamTone === "dark")       el.classList.add("arena-energy-beam-dark");
+		else if (overlay.beamTone === "pink")  el.classList.add("arena-energy-beam-pink");
 		el.setAttribute("aria-hidden", "true");
-		el.style.cssText = `left:${pos.origemX}px;top:${pos.origemY}px;height:${escalarParaArena(overlay.thicknessPx)}px;width:0px;transform:translate(0,-50%) rotate(${pos.anguloAuto}deg);transition:width ${overlay.durationMs}ms ease-out`;
+		el.style.cssText = `left:${pos.origemX}px;top:${pos.origemY}px;height:${escala(overlay.thicknessPx, pos.arenaW)}px;width:0px;transform:translate(0,-50%) rotate(${pos.anguloAuto}deg);transition:width ${overlay.durationMs}ms ease-out`;
 		els.arena.appendChild(el);
-		// getBoundingClientRect() força reflow síncrono: garante que width:0 está committed
-		// antes de aplicar o valor alvo, criando as duas épocas de estilo que a transição CSS exige.
-		// requestAnimationFrame não é suficiente — pode disparar no mesmo frame e pular a transição.
+		// force reflow — garante que width:0 está committed antes de aplicar width alvo para a transição CSS
 		void el.getBoundingClientRect();
 		el.style.width = `${pos.distancia}px`;
 		return el;
 	}
 
-	function escalarParaArena(px) {
-		const arenaW = els.arena?.getBoundingClientRect().width ?? 1000;
-		return px * (arenaW / 1000);
-	}
-
-	function criarProjectileEl(overlay, pos) {
+	function criarProjetil(overlay, pos) {
 		const el = document.createElement("img");
 		el.className = "arena-action-overlay";
 		el.src = overlay.sprite;
 		el.alt = "";
 		el.setAttribute("aria-hidden", "true");
-		const scaleProjetil = overlay.scale ?? 1;
-		const sizePx = escalarParaArena(overlay.sizePx ?? 260);
-		el.style.cssText = `width:${sizePx}px;left:${pos.origemX}px;top:${pos.origemY}px;transform:translate(-50%,-50%) scaleX(${pos.escalaHorizontal}) scale(${scaleProjetil}) rotate(${pos.anguloProjetil}deg);transition:left ${overlay.durationMs}ms linear,top ${overlay.durationMs}ms linear`;
+		const sizePx = escala(overlay.sizePx ?? 260, pos.arenaW);
+		el.style.cssText = `width:${sizePx}px;left:${pos.origemX}px;top:${pos.origemY}px;transform:translate(-50%,-50%) scaleX(${pos.escalaHorizontal}) scale(${overlay.scale ?? 1}) rotate(${pos.anguloProjetil}deg);transition:left ${overlay.durationMs}ms linear,top ${overlay.durationMs}ms linear`;
 		els.arena.appendChild(el);
-		// getBoundingClientRect() força reflow síncrono: garante que left/top iniciais estão committed
-		// antes de aplicar as posições alvo, evitando que o browser pule a transição de movimento.
+		// force reflow — garante que posição inicial está committed antes da transição de movimento
 		void el.getBoundingClientRect();
 		el.style.left = `${pos.alvoX}px`;
-		el.style.top = `${pos.alvoY}px`;
+		el.style.top  = `${pos.alvoY}px`;
 		return el;
 	}
 
-	function criarAttachedEl(overlay, alvoKey) {
+	function criarAttached(overlay, alvoKey) {
 		const fighter = els.fighters[alvoKey]?.root;
 		if (!fighter) return null;
 		const el = document.createElement("img");
@@ -492,91 +422,80 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		el.src = overlay.sprite;
 		el.alt = "";
 		el.setAttribute("aria-hidden", "true");
-		const scale = overlay.scale ?? 1;
-		const sizePx = overlay.sizePx ?? null;
-		const xPx = escalarParaArena(overlay.x ?? 0);
-		const yPx = escalarParaArena(overlay.y ?? 0);
-		// -50% centraliza o elemento sobre o fighter; x/y aplicam offset adicional
-		el.style.transform = `translate(calc(-50% + ${xPx}px), calc(-50% + ${yPx}px)) scale(${scale})`;
-		if (sizePx != null) el.style.width = `${escalarParaArena(sizePx)}px`;
+		// lemos arenaW uma vez e reusamos para todos os escala() abaixo
+		const arenaW  = els.arena?.getBoundingClientRect().width ?? 1000;
+		const direcao = alvoKey === "p2" ? -1 : 1;
+		const xPx     = escala((overlay.x ?? 0) * direcao, arenaW);
+		const yPx     = escala(overlay.y ?? 0, arenaW);
+		el.style.transform = `translate(calc(-50% + ${xPx}px), calc(-50% + ${yPx}px)) scale(${overlay.scale ?? 1})`;
+		if (overlay.sizePx != null) el.style.width = `${escala(overlay.sizePx, arenaW)}px`;
 		fighter.appendChild(el);
 		return el;
 	}
 
-	function criarOverlayEl(overlay, atacanteKey) {
-		const alvoKey = overlay.target === "self" ? atacanteKey : atacanteKey === "p1" ? "p2" : "p1";
+	function criarOverlay(overlay, atacanteKey) {
+		const alvoKey = overlay.target === "self" ? atacanteKey : (atacanteKey === "p1" ? "p2" : "p1");
 
 		if (overlay.mode !== "beam" && overlay.mode !== "projectile") {
-			return criarAttachedEl(overlay, alvoKey);
+			return criarAttached(overlay, alvoKey);
 		}
 
 		const arenaRect = els.arena?.getBoundingClientRect();
-		const origemEl = els.fighters[atacanteKey]?.root;
-		const alvoEl = els.fighters[alvoKey]?.root;
+		const origemEl  = els.fighters[atacanteKey]?.root;
+		const alvoEl    = els.fighters[alvoKey]?.root;
 		if (!arenaRect || !origemEl || !alvoEl) return null;
 
-		const pos = calcularPosicoes(overlay, atacanteKey, origemEl, alvoEl, arenaRect);
-		if (overlay.mode === "beam") return criarBeamEl(overlay, pos);
-		return criarProjectileEl(overlay, pos);
+		const pos = posicoes(overlay, atacanteKey, origemEl, alvoEl, arenaRect);
+		if (overlay.mode === "beam") return criarBeam(overlay, pos);
+		return criarProjetil(overlay, pos);
 	}
 
 	// ── Renderização de personagens ──────────────────────────────────────
 
-	function aplicarEscalaFighter(fighterEl, chaveJogador, personagem) {
-		const escala = state.frameScale?.[chaveJogador] ?? personagem?.visual?.spriteScale ?? null;
-		if (escala != null) {
-			fighterEl.style.setProperty("--fighter-scale", escala);
-		} else {
-			fighterEl.style.removeProperty("--fighter-scale");
-		}
+	function escalaFighter(fighterEl, chave, personagem) {
+		const s = state.frameScale?.[chave] ?? personagem?.visual?.spriteScale ?? null;
+		if (s != null) fighterEl.style.setProperty("--fighter-scale", s);
+		else           fighterEl.style.removeProperty("--fighter-scale");
 	}
 
-	function aplicarVisualPersonagem(chaveJogador, personagem, fighterRefs) {
-		if (!fighterRefs?.root || !fighterRefs.img) return;
+	function visualPersonagem(chave, personagem, refs) {
+		if (!refs?.root || !refs.img) return;
 
-		const spriteTemporario = state.sprites[chaveJogador];
-		const nomeClasse = personagem?.classe || "";
+		const spriteTemp = state.sprites[chave];
+		const nomeClasse = personagem?.classeNome || personagem?.classe || "?";
 		const spriteBase = personagem?.visual?.baseSprite || null;
-		const fighterEl = fighterRefs.root;
-		const img = fighterRefs.img;
-		const initial = fighterRefs.initial;
+		const fighterEl  = refs.root;
+		const img        = refs.img;
+		const initial    = refs.initial;
 
 		fighterEl.classList.remove("has-image", "is-flipped", "action-casting", "true-cero-sized", "true-cero-plus-sized", "ubuntu-base-smaller");
 		img.removeAttribute("src");
 
-		if (spriteTemporario) {
-			img.src = spriteTemporario;
+		if (spriteTemp) {
+			img.src = spriteTemp;
 			fighterEl.classList.add("has-image", "action-casting");
-			atualizarClasseFlipDoFighter(fighterEl);
+			flipFighter(fighterEl);
 			img.onerror = () => fighterEl.classList.remove("has-image", "is-flipped", "action-casting");
-			if (initial) initial.textContent = (nomeClasse || "?").trim().charAt(0).toUpperCase() || "?";
-			aplicarEscalaFighter(fighterEl, chaveJogador, personagem);
-			return;
-		}
-
-		if (spriteBase) {
+		} else if (spriteBase) {
 			img.src = spriteBase;
 			fighterEl.classList.add("has-image");
 			if (nomeClasse.toLowerCase() === "ubuntu") fighterEl.classList.add("ubuntu-base-smaller");
-			atualizarClasseFlipDoFighter(fighterEl);
+			flipFighter(fighterEl);
+			img.onerror = () => fighterEl.classList.remove("has-image", "is-flipped");
 		}
 
-		aplicarEscalaFighter(fighterEl, chaveJogador, personagem);
-		img.onerror = () => fighterEl.classList.remove("has-image", "is-flipped");
-		if (initial) initial.textContent = (personagem?.classeNome || "?").trim().charAt(0).toUpperCase() || "?";
+		if (initial) initial.textContent = nomeClasse.trim().charAt(0).toUpperCase() || "?";
+		escalaFighter(fighterEl, chave, personagem);
 	}
 
-	function animarEsquiva(chaveJogador) {
-		const fighter = obterFighterRootPorChave(chaveJogador);
+	function animarEsquiva(chave) {
+		const fighter = els.fighters[chave]?.root;
 		if (!fighter) return;
 
-		const dodgeSprite = state.serverState?.[chaveJogador]?.visual?.dodgeSprite ?? null;
-		const spriteAnterior = state.sprites[chaveJogador];
+		const dodgeSprite = state.serverState?.[chave]?.visual?.dodgeSprite ?? null;
+		const spriteAnterior = state.sprites[chave];
 
-		if (dodgeSprite) {
-			state.sprites[chaveJogador] = dodgeSprite;
-			atualizarHUD();
-		}
+		if (dodgeSprite) { state.sprites[chave] = dodgeSprite; atualizarHUD(); }
 
 		fighter.classList.remove("dodge-anim");
 		void fighter.offsetWidth;
@@ -584,35 +503,31 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 
 		setTimeout(() => {
 			fighter.classList.remove("dodge-anim");
-			if (dodgeSprite && state.sprites[chaveJogador] === dodgeSprite) {
-				state.sprites[chaveJogador] = spriteAnterior;
+			if (dodgeSprite && state.sprites[chave] === dodgeSprite) {
+				state.sprites[chave] = spriteAnterior;
 				atualizarHUD();
 			}
 		}, 1200);
 	}
 
-	function animarMorte(chaveJogador) {
-		const fighter = obterFighterRootPorChave(chaveJogador);
+	function animarMorte(chave) {
+		const fighter = els.fighters[chave]?.root;
 		if (!fighter) return Promise.resolve();
 		return new Promise(resolve => {
 			fighter.style.transition = "opacity 0.9s ease-out";
 			fighter.style.opacity = "0";
-			setTimeout(() => {
-				fighter.style.transition = "";
-				fighter.style.opacity = "";
-				resolve();
-			}, 1500);
+			setTimeout(() => { fighter.style.transition = ""; fighter.style.opacity = ""; resolve(); }, 1500);
 		});
 	}
 
 	return {
-		aplicarFeedbackDeDano,
+		feedbackDano,
 		wait,
 		mostrarSplashErroInsano,
-		runTimeline,
-		cancelAnimation,
-		buildAnimation,
-		aplicarVisualPersonagem,
+		rodarTimeline,
+		cancelarAnimacao,
+		montarAnimacao,
+		visualPersonagem,
 		animarEsquiva,
 		animarMorte,
 	};

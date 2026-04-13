@@ -17,29 +17,40 @@ class GameService {
 
     // ── Helpers internos ─────────────────────────────────────────────────
 
-    private static function normalizarChaveJogador(?string $key): string {
+    private static function validarChave(?string $key): string {
         return $key === 'p2' ? 'p2' : 'p1';
     }
 
-    private static function obterJogadorPorChave(array $game, string $key): Personagem {
-        $chaveNormalizada = self::normalizarChaveJogador($key);
-        return $chaveNormalizada === 'p1' ? $game['p1'] : $game['p2'];
+    private static function chaveOposta(string $key): string {
+        return $key === 'p1' ? 'p2' : 'p1';
     }
 
-    private static function getDomainVazio(): array {
+    private static function jogadorPorChave(array $game, string $key): Personagem {
+        return self::validarChave($key) === 'p1' ? $game['p1'] : $game['p2'];
+    }
+
+    private static function domainVazio(): array {
         return [
-            'turnsRemaining'       => 0,
-            'casterKey'            => null,
-            'targetKey'            => null,
+            'turnsRemaining'         => 0,
+            'casterKey'              => null,
+            'targetKey'              => null,
             'extraCasterTurnPending' => false,
         ];
     }
 
     private static function resetarDomain(array &$game): void {
-        $game['domain'] = self::getDomainVazio();
+        $game['domain'] = self::domainVazio();
     }
 
-    private static function obterMetodoSkill(Personagem $current, ?int $skillIndex): ?string {
+    private static function decrementarDomain(array &$game): void {
+        $novo = (int)$game['domain']['turnsRemaining'] - 1;
+        $game['domain']['turnsRemaining'] = $novo;
+        if ($novo <= 0) {
+            self::resetarDomain($game);
+        }
+    }
+
+    private static function metodoSkill(Personagem $current, ?int $skillIndex): ?string {
         if ($skillIndex === null) {
             return null;
         }
@@ -53,20 +64,13 @@ class GameService {
         return $metodo !== '' ? $metodo : null;
     }
 
-    private static function getEfeitosVazio(): array {
+    private static function efeitosVazio(): array {
         return ['skipTurns' => 0, 'skipTurnsChance' => 0, 'activatesDomain' => false];
     }
 
-    private static function obterEfeitosSkill(Personagem $current, ?int $skillIndex): array {
-        $vazio = self::getEfeitosVazio();
-
-        if ($skillIndex === null) {
-            return $vazio;
-        }
-
-        $skill = $current->getHabilidades()[$skillIndex] ?? null;
+    private static function efeitosDaSkill(?array $skill): array {
         if ($skill === null) {
-            return $vazio;
+            return self::efeitosVazio();
         }
 
         return [
@@ -76,24 +80,24 @@ class GameService {
         ];
     }
 
-    private static function aplicarEfeitoParalisia(array &$game, string $currentKey, int $turnsToSkip, bool $activatesDomain): void {
-        $targetKey = $currentKey === 'p1' ? 'p2' : 'p1';
+    private static function aplicarParalisia(array &$game, string $currentKey, int $turnosToSkip, bool $activatesDomain): void {
+        $targetKey = self::chaveOposta($currentKey);
 
-        if ($turnsToSkip > 0) {
-            $game['skipTurns'][$targetKey] = $turnsToSkip;
+        if ($turnosToSkip > 0) {
+            $game['skipTurns'][$targetKey] = $turnosToSkip;
         }
 
         if ($activatesDomain) {
             $game['domain'] = [
-                'turnsRemaining'       => $turnsToSkip + 1,
-                'casterKey'            => $currentKey,
-                'targetKey'            => $targetKey,
+                'turnsRemaining'         => $turnosToSkip + 1,
+                'casterKey'              => $currentKey,
+                'targetKey'              => $targetKey,
                 'extraCasterTurnPending' => true,
             ];
         }
     }
 
-    private static function consumirTurnoExtraDoLancador(array &$game, string $currentKey): void {
+    private static function consumirTurnoExtra(array &$game, string $currentKey): void {
         $domainTurns   = (int)($game['domain']['turnsRemaining'] ?? 0);
         $domainCaster  = (string)($game['domain']['casterKey'] ?? '');
         $domainTarget  = (string)($game['domain']['targetKey'] ?? '');
@@ -107,49 +111,38 @@ class GameService {
             return;
         }
 
-        $novoValor = $domainTurns - 1;
-        $game['domain']['turnsRemaining'] = $novoValor;
         $game['domain']['extraCasterTurnPending'] = false;
-
-        if ($novoValor <= 0) {
-            self::resetarDomain($game);
-        }
+        self::decrementarDomain($game);
     }
 
-    private static function avancarParaProximoTurno(array &$game, string $currentKey): void {
+    private static function avancarTurno(array &$game, string $currentKey): void {
         $game['turno']      = ((int)$game['turno']) + 1;
-        $game['currentKey'] = $currentKey === 'p1' ? 'p2' : 'p1';
+        $game['currentKey'] = self::chaveOposta($currentKey);
 
-        [, $nextCurrent] = self::getCurrentAndOpponent($game);
-        $nextCurrent->iniciarTurno();
+        $game[$game['currentKey']]->iniciarTurno();
     }
 
     private static function processarTurnosPulados(array &$game): ?string {
         $mensagens       = [];
         $limiteSeguranca = 0;
 
-        while (self::determineWinner($game) === null && $limiteSeguranca < 4) {
-            $currentKey = self::normalizarChaveJogador((string)($game['currentKey'] ?? 'p1'));
+        while (self::determinarVencedor($game) === null && $limiteSeguranca < 4) {
+            $currentKey = self::validarChave((string)($game['currentKey'] ?? 'p1'));
             $skipAtual  = (int)($game['skipTurns'][$currentKey] ?? 0);
 
             if ($skipAtual <= 0) {
                 break;
             }
 
-            $jogadorPulando = self::obterJogadorPorChave($game, $currentKey);
+            $jogadorPulando = self::jogadorPorChave($game, $currentKey);
             $game['skipTurns'][$currentKey] = $skipAtual - 1;
 
-            $domainTurns = (int)($game['domain']['turnsRemaining'] ?? 0);
-            if ((string)($game['domain']['targetKey'] ?? '') === $currentKey && $domainTurns > 0) {
-                $novoValor = $domainTurns - 1;
-                $game['domain']['turnsRemaining'] = $novoValor;
-                if ($novoValor <= 0) {
-                    self::resetarDomain($game);
-                }
+            if ((string)($game['domain']['targetKey'] ?? '') === $currentKey && (int)($game['domain']['turnsRemaining'] ?? 0) > 0) {
+                self::decrementarDomain($game);
             }
 
             $mensagens[] = $jogadorPulando->getNome() . ' teve o turno pulado por Domain.';
-            self::avancarParaProximoTurno($game, $currentKey);
+            self::avancarTurno($game, $currentKey);
             $limiteSeguranca++;
         }
 
@@ -158,7 +151,7 @@ class GameService {
 
     // ── Setup ────────────────────────────────────────────────────────────
 
-    public static function getClassMap(): array {
+    public static function mapaDeClasses(): array {
         return [
             'sukuna'       => Sukuna::class,
             'gojo'         => Gojo::class,
@@ -172,9 +165,9 @@ class GameService {
         ];
     }
 
-    public static function getCharacterCatalog(): array {
+    public static function catalogoDePersonagens(): array {
         $catalogo = [];
-        foreach (self::getClassMap() as $key => $className) {
+        foreach (self::mapaDeClasses() as $key => $className) {
             $personagem = new $className('_');
             $visual = $personagem->getConfiguracaoVisual();
             $catalogo[] = [
@@ -186,57 +179,53 @@ class GameService {
         return $catalogo;
     }
 
-    public static function createCharacter(string $classKey, string $name): Personagem {
+    public static function criarPersonagem(string $classKey, string $nome): Personagem {
         $normalizedKey = strtolower(trim($classKey));
-        $className = self::getClassMap()[$normalizedKey] ?? null;
+        $className = self::mapaDeClasses()[$normalizedKey] ?? null;
 
         if ($className === null) {
             throw new EntradaInvalidaException();
         }
 
-        $normalizedName = trim($name);
-        if ($normalizedName === '') {
-            $normalizedName = 'Jogador';
+        $nome = trim($nome);
+        if ($nome === '') {
+            $nome = 'Jogador';
         }
 
-        return new $className($normalizedName);
+        return new $className($nome);
     }
 
-    public static function createGameState(Personagem $p1, Personagem $p2): array {
+    public static function criarEstadoDeJogo(Personagem $p1, Personagem $p2): array {
         return [
             'p1'         => $p1,
             'p2'         => $p2,
             'turno'      => 1,
             'currentKey' => 'p1',
             'skipTurns'  => ['p1' => 0, 'p2' => 0],
-            'domain'     => self::getDomainVazio(),
+            'domain'     => self::domainVazio(),
         ];
     }
 
     // ── API de jogo ──────────────────────────────────────────────────────
 
-    public static function determineWinner(array $game): ?string {
-        $p1 = self::obterJogadorPorChave($game, 'p1');
-        $p2 = self::obterJogadorPorChave($game, 'p2');
-
-        if (!$p1->estaVivo()) return 'p2';
-        if (!$p2->estaVivo()) return 'p1';
-
+    public static function determinarVencedor(array $game): ?string {
+        if (!$game['p1']->estaVivo()) return 'p2';
+        if (!$game['p2']->estaVivo()) return 'p1';
         return null;
     }
 
-    public static function getCurrentAndOpponent(array $game): array {
-        $currentKey  = self::normalizarChaveJogador((string)($game['currentKey'] ?? 'p1'));
-        $opponentKey = $currentKey === 'p1' ? 'p2' : 'p1';
+    public static function jogadoresDoTurno(array $game): array {
+        $currentKey  = self::validarChave((string)($game['currentKey'] ?? 'p1'));
+        $opponentKey = self::chaveOposta($currentKey);
 
         return [
             $currentKey,
-            self::obterJogadorPorChave($game, $currentKey),
-            self::obterJogadorPorChave($game, $opponentKey),
+            self::jogadorPorChave($game, $currentKey),
+            self::jogadorPorChave($game, $opponentKey),
         ];
     }
 
-    public static function buildAvailableActions(Personagem $current): array {
+    public static function acoesDisponiveis(Personagem $current): array {
         $descricoes = $current->getDescricoesAcoes();
         $actions    = [];
 
@@ -285,13 +274,13 @@ class GameService {
             return false;
         }
 
-        [, $current] = self::getCurrentAndOpponent($game);
-        $metodoSkill = self::obterMetodoSkill($current, $skillIndex);
+        [, $current] = self::jogadoresDoTurno($game);
+        $metodo = self::metodoSkill($current, $skillIndex);
 
-        return $metodoSkill !== null && $current->retornaAoSetup($metodoSkill);
+        return $metodo !== null && $current->retornaAoSetup($metodo);
     }
 
-    public static function executeAction(Personagem $current, Personagem $opponent, string $actionType, ?int $skillIndex = null): string {
+    public static function executarAcao(Personagem $current, Personagem $opponent, string $actionType, ?int $skillIndex = null, ?array $habilidade = null): string {
         if ($actionType === 'attack') {
             return $current->atacar($opponent);
         }
@@ -301,12 +290,14 @@ class GameService {
         }
 
         if ($actionType === 'skill') {
-            $habilidades = $current->getHabilidades();
-            if ($skillIndex === null || !isset($habilidades[$skillIndex])) {
-                throw new EntradaInvalidaException();
+            if ($habilidade === null) {
+                $habilidades = $current->getHabilidades();
+                if ($skillIndex === null || !isset($habilidades[$skillIndex])) {
+                    throw new EntradaInvalidaException();
+                }
+                $habilidade = $habilidades[$skillIndex];
             }
 
-            $habilidade  = $habilidades[$skillIndex];
             $metodo      = (string)$habilidade['metodo'];
             $precisaAlvo = (bool)$habilidade['precisaAlvo'];
 
@@ -316,22 +307,26 @@ class GameService {
         throw new EntradaInvalidaException();
     }
 
-    public static function performTurn(array &$game, string $actionType, ?int $skillIndex = null): string {
-        [$currentKey, $current, $opponent] = self::getCurrentAndOpponent($game);
-
-        $efeitos = self::getEfeitosVazio();
+    public static function executarTurno(array &$game, string $actionType, ?int $skillIndex = null): string {
+        [$currentKey, $current, $opponent] = self::jogadoresDoTurno($game);
+        $habilidadeAtual = null;
 
         if ($actionType === 'skill' && $skillIndex !== null) {
             $habilidades = $current->getHabilidades();
-            $efeitos     = self::obterEfeitosSkill($current, $skillIndex);
-            $custo       = (int)($habilidades[$skillIndex]['energyCost'] ?? 0);
+            if (!isset($habilidades[$skillIndex])) {
+                throw new EntradaInvalidaException();
+            }
+
+            $habilidadeAtual = $habilidades[$skillIndex];
+            $custo           = (int)($habilidadeAtual['energyCost'] ?? 0);
 
             if ($custo > 0 && $current->getEnergiaAtual() < $custo) {
                 throw new EntradaInvalidaException();
             }
         }
 
-        $message = self::executeAction($current, $opponent, $actionType, $skillIndex);
+        $efeitos = self::efeitosDaSkill($habilidadeAtual);
+        $mensagem = self::executarAcao($current, $opponent, $actionType, $skillIndex, $habilidadeAtual);
 
         $turnosParalisados = $efeitos['skipTurns'];
         if ($efeitos['skipTurnsChance'] > 0 && random_int(1, 100) <= $efeitos['skipTurnsChance']) {
@@ -339,64 +334,59 @@ class GameService {
         }
 
         if ($turnosParalisados > 0 || $efeitos['activatesDomain']) {
-            self::aplicarEfeitoParalisia($game, $currentKey, $turnosParalisados, $efeitos['activatesDomain']);
+            self::aplicarParalisia($game, $currentKey, $turnosParalisados, $efeitos['activatesDomain']);
         }
 
-        self::consumirTurnoExtraDoLancador($game, $currentKey);
+        self::consumirTurnoExtra($game, $currentKey);
         $current->processarEfeitosContinuosFimTurno();
 
-        if (self::determineWinner($game) === null) {
-            self::avancarParaProximoTurno($game, $currentKey);
+        if (self::determinarVencedor($game) === null) {
+            self::avancarTurno($game, $currentKey);
 
             $mensagemTurnosPulados = self::processarTurnosPulados($game);
             if ($mensagemTurnosPulados !== null) {
-                $message .= " $mensagemTurnosPulados";
+                $mensagem .= " $mensagemTurnosPulados";
             }
         }
 
-        return $message;
+        return $mensagem;
     }
 
     // ── Export ───────────────────────────────────────────────────────────
 
-    public static function exportCharacter(Personagem $character, string $label): array {
+    public static function exportarPersonagem(Personagem $character, string $label): array {
         return [
-            'label'          => $label,
-            'nome'           => $character->getNome(),
-            'classe'         => $character->getClasse(),
-            'classeNome'     => $character->getClasseNome(),
-            'vidaAtual'      => $character->getVidaAtual(),
-            'vidaMaxima'     => $character->getVidaMaxima(),
-            'energiaAtual'   => $character->getEnergiaAtual(),
-            'energiaMaxima'  => $character->getEnergiaMaxima(),
-            'ultimoTipoDano'   => $character->getUltimoTipoDano(),
-            'defendendo'       => $character->estaDefendendo(),
-            'bleedTurnos'      => $character->getSangramentoTurnos(),
-            'burnTurnos'       => $character->getQueimaduraTurnos(),
-            'visual'         => $character->getConfiguracaoVisual(),
+            'label'        => $label,
+            'nome'         => $character->getNome(),
+            'classe'       => $character->getClasse(),
+            'classeNome'   => $character->getClasseNome(),
+            'vidaAtual'    => $character->getVidaAtual(),
+            'vidaMaxima'   => $character->getVidaMaxima(),
+            'energiaAtual' => $character->getEnergiaAtual(),
+            'energiaMaxima'=> $character->getEnergiaMaxima(),
+            'ultimoTipoDano' => $character->getUltimoTipoDano(),
+            'defendendo'   => $character->estaDefendendo(),
+            'bleedTurnos'  => $character->getSangramentoTurnos(),
+            'burnTurnos'   => $character->getQueimaduraTurnos(),
+            'visual'       => $character->getConfiguracaoVisual(),
         ];
     }
 
-    public static function exportState(array $game, ?string $message = null): array {
-        /** @var Personagem $p1 */
-        $p1 = $game['p1'];
-        /** @var Personagem $p2 */
-        $p2 = $game['p2'];
-
-        [$currentKey, $current] = self::getCurrentAndOpponent($game);
-        $winner = self::determineWinner($game);
+    public static function exportarEstado(array $game, ?string $mensagem = null): array {
+        [$currentKey, $current] = self::jogadoresDoTurno($game);
+        $vencedor = self::determinarVencedor($game);
 
         return [
             'started'              => true,
             'turno'                => (int)$game['turno'],
             'currentKey'           => $currentKey,
-            'winner'               => $winner,
+            'winner'               => $vencedor,
             'domainTurnsRemaining' => (int)($game['domain']['turnsRemaining'] ?? 0),
             'domainCasterKey'      => $game['domain']['casterKey'] ?? null,
-            'p1'                   => self::exportCharacter($p1, 'Jogador 1'),
-            'p2'                   => self::exportCharacter($p2, 'Jogador 2'),
-            'availableActions'     => $winner ? [] : self::buildAvailableActions($current),
-            'message'              => $message,
+            'p1'                   => self::exportarPersonagem($game['p1'], 'Jogador 1'),
+            'p2'                   => self::exportarPersonagem($game['p2'], 'Jogador 2'),
+            'availableActions'     => $vencedor ? [] : self::acoesDisponiveis($current),
+            'message'              => $mensagem,
         ];
     }
 }

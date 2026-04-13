@@ -31,7 +31,7 @@ function exportarEstadoDaSessao(?string $mensagem = null): array {
         ];
     }
 
-    return GameService::exportState($_SESSION['game'], $mensagem);
+    return GameService::exportarEstado($_SESSION['game'], $mensagem);
 }
 
 function obterPartidaAtiva(): array {
@@ -43,53 +43,46 @@ function obterPartidaAtiva(): array {
 }
 
 function iniciarPartida(array $input): void {
-    $p1 = GameService::createCharacter(
+    $p1 = GameService::criarPersonagem(
         (string)($input['p1Class'] ?? 'sukuna'),
         (string)($input['p1Name'] ?? 'Jogador 1')
     );
 
-    $p2 = GameService::createCharacter(
+    $p2 = GameService::criarPersonagem(
         (string)($input['p2Class'] ?? 'gojo'),
         (string)($input['p2Name'] ?? 'Jogador 2')
     );
 
-    $_SESSION['game'] = GameService::createGameState($p1, $p2);
+    $_SESSION['game'] = GameService::criarEstadoDeJogo($p1, $p2);
 
     responder([
-        'ok' => true,
+        'ok'    => true,
         'state' => exportarEstadoDaSessao('Partida iniciada.'),
     ]);
 }
 
 function executarAcao(array $input): void {
-    $game = obterPartidaAtiva();
+    $game        = obterPartidaAtiva();
+    $actionType  = (string)($input['actionType'] ?? '');
+    $skillIndex  = isset($input['skillIndex']) ? (int)$input['skillIndex'] : null;
 
-    $actionType = (string)($input['actionType'] ?? '');
-    $skillIndex = isset($input['skillIndex']) ? (int)$input['skillIndex'] : null;
     $deveRetornarSetup = GameService::retornaAoSetup($game, $actionType, $skillIndex);
-
-    $mensagem = GameService::performTurn($game, $actionType, $skillIndex);
+    $mensagem          = GameService::executarTurno($game, $actionType, $skillIndex);
 
     if ($deveRetornarSetup) {
         unset($_SESSION['game']);
-
-        responder([
-            'ok' => true,
-            'message' => $mensagem,
-            'state' => exportarEstadoDaSessao($mensagem),
-        ]);
+    } else {
+        $_SESSION['game'] = $game;
     }
 
-    $_SESSION['game'] = $game;
-
     responder([
-        'ok' => true,
+        'ok'      => true,
         'message' => $mensagem,
-        'state' => exportarEstadoDaSessao($mensagem),
+        'state'   => exportarEstadoDaSessao($mensagem),
     ]);
 }
 
-$input = receberJson();
+$input  = receberJson();
 $action = (string)($input['action'] ?? 'state');
 
 try {
@@ -100,7 +93,7 @@ try {
 
         case 'state':
             responder([
-                'ok' => true,
+                'ok'    => true,
                 'state' => exportarEstadoDaSessao(),
             ]);
             break;
@@ -112,7 +105,7 @@ try {
         case 'catalog':
             responder([
                 'ok'      => true,
-                'catalog' => GameService::getCharacterCatalog(),
+                'catalog' => GameService::catalogoDePersonagens(),
             ]);
             break;
 
@@ -121,13 +114,13 @@ try {
     }
 } catch (ExcecaoJogo $e) {
     responder([
-        'ok' => false,
+        'ok'      => false,
         'message' => $e->getMessage(),
-        'state' => exportarEstadoDaSessao($e->getMessage()),
+        'state'   => exportarEstadoDaSessao($e->getMessage()),
     ], 400);
 } catch (Throwable $e) {
     responder([
-        'ok' => false,
+        'ok'      => false,
         'message' => 'Erro interno no servidor.',
     ], 500);
 }

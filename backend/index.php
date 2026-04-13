@@ -7,7 +7,7 @@ function limparTela(): void {
 }
 
 function exibirStatus(array $game): void {
-    [$currentKey, $atual] = GameService::getCurrentAndOpponent($game);
+    [$currentKey, $atual] = GameService::jogadoresDoTurno($game);
 
     /** @var Personagem $p1 */
     $p1 = $game['p1'];
@@ -32,7 +32,8 @@ function exibirAcoesDisponiveis(array $acoes): void {
 }
 
 function escolherPersonagem(int $jogador): Personagem {
-    $catalogo = GameService::getCharacterCatalog();
+    $catalogo     = GameService::catalogoDePersonagens();
+    $totalOpcoes  = count($catalogo);
 
     echo "Jogador {$jogador}, escolha seu personagem:\n";
 
@@ -41,24 +42,21 @@ function escolherPersonagem(int $jogador): Personagem {
     }
 
     do {
-
         echo "Escolha: ";
-
-        $input = trim((string)fgets(STDIN));
+        $input  = trim((string)fgets(STDIN));
         $escolha = is_numeric($input) ? (int)$input : -1;
 
-        if ($escolha < 1 || $escolha > count($catalogo)) {
+        if ($escolha < 1 || $escolha > $totalOpcoes) {
             echo "Opção inválida. Escolha um personagem existente.\n";
         }
-
-    } while ($escolha < 1 || $escolha > count($catalogo));
+    } while ($escolha < 1 || $escolha > $totalOpcoes);
 
     echo "Digite o nome do personagem: ";
 
     $nome = trim((string)fgets(STDIN));
     $item = $catalogo[$escolha - 1];
 
-    return GameService::createCharacter($item['key'], $nome !== '' ? $nome : "Jogador {$jogador}");
+    return GameService::criarPersonagem($item['key'], $nome !== '' ? $nome : "Jogador {$jogador}");
 }
 
 function main(): void {
@@ -69,17 +67,18 @@ function main(): void {
 
         echo "Bem-vindo ao Jogo de Combate por Turnos!\n\n";
 
-        $p1 = escolherPersonagem(1);
-        $p2 = escolherPersonagem(2);
-        $game = GameService::createGameState($p1, $p2);
+        $p1   = escolherPersonagem(1);
+        $p2   = escolherPersonagem(2);
+        $game = GameService::criarEstadoDeJogo($p1, $p2);
 
-        while (GameService::determineWinner($game) === null) {
+        $vencedor = null;
+        while (($vencedor = GameService::determinarVencedor($game)) === null) {
 
             limparTela();
 
-            [, $atual] = GameService::getCurrentAndOpponent($game);
+            [, $atual] = GameService::jogadoresDoTurno($game);
             exibirStatus($game);
-            $acoes = GameService::buildAvailableActions($atual);
+            $acoes = GameService::acoesDisponiveis($atual);
             exibirAcoesDisponiveis($acoes);
 
             try {
@@ -97,7 +96,7 @@ function main(): void {
                 }
 
                 $acaoSelecionada = $acoes[$acaoIndex];
-                $resultado = GameService::performTurn(
+                $resultado = GameService::executarTurno(
                     $game,
                     (string)$acaoSelecionada['type'],
                     isset($acaoSelecionada['skillIndex']) ? (int)$acaoSelecionada['skillIndex'] : null
@@ -117,12 +116,7 @@ function main(): void {
 
         limparTela();
 
-        $winner = GameService::determineWinner($game);
-        if ($winner === 'p2') {
-            echo "Jogador 2 venceu!\n";
-        } else {
-            echo "Jogador 1 venceu!\n";
-        }
+        echo ($vencedor === 'p2' ? "Jogador 2" : "Jogador 1") . " venceu!\n";
 
         echo "\nDeseja jogar novamente? (s/n): ";
 

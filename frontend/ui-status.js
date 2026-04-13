@@ -20,10 +20,6 @@ function classePerigosa(hpAtual, hpMax) {
 	return hpMax > 0 && hpAtual / hpMax <= 0.3;
 }
 
-function obterCustoEnergiaAcao(acao) {
-	return Number(acao?.energyCost) || 0;
-}
-
 export function createUIController({ state, els, onActionSelected }) {
 	function adicionarLog(texto) {
 		const li = document.createElement("li");
@@ -35,26 +31,19 @@ export function createUIController({ state, els, onActionSelected }) {
 		}
 	}
 
-	function obterDescricaoAcao(acao) {
-		if (acao && typeof acao.description === "string" && acao.description.trim() !== "") {
-			return acao.description;
-		}
-		return "Ação de combate sem descrição detalhada.";
-	}
-
-	function mostrarPreviewSkill(nomeAcao, descricao) {
+	function mostrarPreview(nomeAcao, descricao) {
 		if (!els.combatFeed || !els.skillPreviewTitle || !els.skillPreviewText) return;
 		els.skillPreviewTitle.textContent = nomeAcao;
 		els.skillPreviewText.textContent = descricao;
 		els.combatFeed.classList.add("previewing-skill");
 	}
 
-	function esconderPreviewSkill() {
+	function esconderPreview() {
 		if (!els.combatFeed) return;
 		els.combatFeed.classList.remove("previewing-skill");
 	}
 
-	function setArenaDomain(domainImage) {
+	function setDomain(domainImage) {
 		if (!els.arena) return;
 		const img = domainImage || state.arenaFundo;
 		if (img) {
@@ -71,7 +60,7 @@ export function createUIController({ state, els, onActionSelected }) {
 		}
 	}
 
-	function atualizarCardStatus(personagem, refs) {
+	function atualizarCard(personagem, refs) {
 		refs.name.textContent = personagem.classeNome.toUpperCase();
 		refs.tag.textContent = personagem.nome;
 		refs.hpText.textContent = `${personagem.vidaAtual} / ${personagem.vidaMaxima}`;
@@ -99,7 +88,7 @@ export function createUIController({ state, els, onActionSelected }) {
 		}
 	}
 
-	function mostrarTelaVitoria(server) {
+	function mostrarVitoria(server) {
 		if (!server || !server.winner) {
 			els.winnerOverlay.classList.add("is-hidden");
 			return;
@@ -124,7 +113,7 @@ export function createUIController({ state, els, onActionSelected }) {
 	function atualizarHUD({ renderFighter }) {
 		const server = state.serverState;
 		if (!server || !server.started) {
-			setArenaDomain(null);
+			setDomain(null);
 			els.winnerOverlay.classList.add("is-hidden");
 			return;
 		}
@@ -136,16 +125,16 @@ export function createUIController({ state, els, onActionSelected }) {
 				if (action.domainImage) { domainImage = action.domainImage; break; }
 			}
 		}
-		setArenaDomain(domainImage);
+		setDomain(domainImage);
 
-		atualizarCardStatus(server.p2, els.cards.enemy);
-		atualizarCardStatus(server.p1, els.cards.player);
+		atualizarCard(server.p2, els.cards.enemy);
+		atualizarCard(server.p1, els.cards.player);
 		renderFighter("p2", server.p2, els.fighters.p2);
 		renderFighter("p1", server.p1, els.fighters.p1);
 
 		if (server.winner) {
 			els.turnInfo.textContent = `${labelJogador(server.winner)} venceu!`;
-			mostrarTelaVitoria(server);
+			mostrarVitoria(server);
 			return;
 		}
 
@@ -155,7 +144,7 @@ export function createUIController({ state, els, onActionSelected }) {
 		els.turnInfo.textContent = `Turno ${server.turno} • ${jogadorDaVez} (${nomeDaVez})`;
 	}
 
-	function setBotoesAcaoHabilitados(habilitado) {
+	function habilitarBotoes(habilitado) {
 		const totalAcoes = (state.serverState?.availableActions || []).length;
 		const totalPaginas = Math.max(1, Math.ceil(totalAcoes / ACOES_POR_PAGINA));
 		Array.from(els.menu.querySelectorAll("button")).forEach((btn) => {
@@ -210,19 +199,19 @@ export function createUIController({ state, els, onActionSelected }) {
 			if (!acao.type) {
 				btn.disabled = true;
 			} else {
-				const nomeAcao = acao.nomeSprite || acao.nome;
-				const custoEnergia = obterCustoEnergiaAcao(acao);
-				const semEnergia = Boolean(acao.disabled) || custoEnergia > energiaAtual;
-				const descricaoAcao = obterDescricaoAcao(acao);
+				const nomeAcao     = acao.nomeSprite || acao.nome;
+				const custoEnergia = Number(acao?.energyCost) || 0;
+				const semEnergia   = Boolean(acao.disabled) || custoEnergia > energiaAtual;
+				const descricao    = (acao?.description?.trim()) || "Ação de combate sem descrição detalhada.";
 
 				btn.classList.toggle("is-disabled-by-energy", semEnergia);
 				if (semEnergia || state.resolvendoAcao) btn.tabIndex = -1;
 				if (state.resolvendoAcao) btn.disabled = true;
 
-				btn.addEventListener("mouseenter", () => mostrarPreviewSkill(nomeAcao, descricaoAcao));
-				btn.addEventListener("mouseleave", esconderPreviewSkill);
-				btn.addEventListener("focus", () => mostrarPreviewSkill(nomeAcao, descricaoAcao));
-				btn.addEventListener("blur", esconderPreviewSkill);
+				btn.addEventListener("mouseenter", () => mostrarPreview(nomeAcao, descricao));
+				btn.addEventListener("mouseleave", esconderPreview);
+				btn.addEventListener("focus",      () => mostrarPreview(nomeAcao, descricao));
+				btn.addEventListener("blur",       esconderPreview);
 				btn.addEventListener("click", () => {
 					if (semEnergia || state.resolvendoAcao) return;
 					onActionSelected(acao);
@@ -233,19 +222,19 @@ export function createUIController({ state, els, onActionSelected }) {
 		});
 	}
 
-	function resetarParaSetup(cancelAnimation) {
+	function resetarParaSetup(cancelar) {
 		state.serverState = null;
 		state.resolvendoAcao = false;
 		state.actionPage = 0;
 		state.arenaFundo = null;
-		cancelAnimation();
-		esconderPreviewSkill();
+		cancelar();
+		esconderPreview();
 
 		els.battleView.classList.add("is-hidden");
 		els.battleApp?.classList.remove("is-playing");
 		els.setupPanel.classList.remove("is-hidden");
 		els.winnerOverlay.classList.add("is-hidden");
-		setArenaDomain(null);
+		setDomain(null);
 
 		els.turnInfo.textContent = "Prepare a partida";
 		els.log.innerHTML = "";
@@ -255,11 +244,11 @@ export function createUIController({ state, els, onActionSelected }) {
 
 	return {
 		adicionarLog,
-		mostrarPreviewSkill,
-		esconderPreviewSkill,
-		setArenaDomain,
+		mostrarPreview,
+		esconderPreview,
+		setDomain,
 		atualizarHUD,
-		setBotoesAcaoHabilitados,
+		habilitarBotoes,
 		montarAcoes,
 		resetarParaSetup,
 	};

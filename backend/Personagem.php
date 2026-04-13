@@ -237,8 +237,8 @@ abstract class Personagem {
     }
 
     public function processarEfeitosContinuosFimTurno(): void {
-        $this->processarSangramento();
-        $this->processarQueimadura();
+        $this->processarEfeitoContinuo('bleed', $this->sangramentoTurnos, $this->sangramentoDanoPorTurno);
+        $this->processarEfeitoContinuo('burn', $this->queimaduraTurnos, $this->queimaduraDanoPorTurno);
     }
 
     private function processarEfeitoContinuo(string $tipo, int &$turnos, int &$danoPorTurno): void {
@@ -253,14 +253,6 @@ abstract class Personagem {
         if ($turnos <= 0) {
             $danoPorTurno = 0;
         }
-    }
-
-    private function processarSangramento(): void {
-        $this->processarEfeitoContinuo('bleed', $this->sangramentoTurnos, $this->sangramentoDanoPorTurno);
-    }
-
-    private function processarQueimadura(): void {
-        $this->processarEfeitoContinuo('burn', $this->queimaduraTurnos, $this->queimaduraDanoPorTurno);
     }
 
     // ── Dados e configuração ─────────────────────────────────────────────
@@ -293,7 +285,7 @@ abstract class Personagem {
     // ── Identidade e flags ───────────────────────────────────────────────
 
     private function nomeClasse(): string {
-        return (new ReflectionClass($this))->getShortName();
+        return static::class;
     }
 
     public function getClasse(): string {

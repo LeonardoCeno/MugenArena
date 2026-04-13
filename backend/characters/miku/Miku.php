@@ -155,7 +155,7 @@ class Miku extends Personagem {
                             'durationMs' => 1150,
                             'thicknessPx' => 38,
                             'frontOffsetPx' => 90,
-                            'startOffsetX' => 10,
+                            'startOffsetX' => -60,
                             'startOffsetY' => 15,
                             'endOffsetX' => 0,
                             'endOffsetY' => 10,
