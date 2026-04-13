@@ -79,6 +79,13 @@ class Gojo extends Personagem {
             'winImage' => './assets/gojo/sprites/gojowin.jpg',
             'actions' => [
                 'Ataque' => [
+                    'audio' => [
+                        [
+                            'file' => './assets/audiosgerais/punchs2.mp3',
+                            'startMs' => 0,
+                            'durationMs' => 1300,
+                        ],
+                    ],
                     'frames' => [
                         [
                             'sprite' => './assets/gojo/sprites/gojopancadafinalmenor.png',

@@ -146,6 +146,13 @@ class Profe extends Personagem {
 					],
 				],
 				'VibeCode' => [
+					'audio' => [
+                        [
+                            'file' => './assets/profe/audios/vibecodigo.mp3',
+                            'startMs' => 700,
+                            'durationMs' => 1900,
+                        ],
+                    ],
 					'frames' => [
 						[
 							'sprite' => './assets/profe/sprites/PROGRAMA.png',

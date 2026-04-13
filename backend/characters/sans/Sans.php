@@ -128,6 +128,13 @@ class Sans extends Personagem {
             'dodgeSprite' => './assets/sans/sprites/SANSSKILL1FINAL.png',
             'actions' => [
                 'bluesoul' => [
+                    'audio' => [
+                        [
+                            'file' => './assets/sans/audios/sansfala.mp3',
+                            'startMs' => 0,
+                            'durationMs' => 1500,
+                        ],
+                    ],
                     'domainDelayMs' => 1500,
                     'domainImage' => './assets/sans/sprites/batebate.gif',
                     'frames' => [
@@ -154,6 +161,13 @@ class Sans extends Personagem {
                      ],
                 ],
                 'começou' => [
+                    'audio' => [
+                        [
+                            'file' => './assets/sans/audios/sansfala.mp3',
+                            'startMs' => 0,
+                            'durationMs' => 1500,
+                        ],
+                    ],
                     'domainDelayMs' => 1500,
                     'domainImage' => './assets/sans/sprites/start.gif',
                     'frames' => [
@@ -179,6 +193,13 @@ class Sans extends Personagem {
                      ],
                 ],
                 'BADTIME' => [
+                    'audio' => [
+                        [
+                            'file' => './assets/sans/audios/sansfala.mp3',
+                            'startMs' => 0,
+                            'durationMs' => 1500,
+                        ],
+                    ],
                     'domainDelayMs' => 1500,
                     'domainImage' => './assets/sans/sprites/finalsans.gif',
                     'frames' => [
@@ -205,6 +226,13 @@ class Sans extends Personagem {
                      ],
                 ],
                 'eh eh' => [
+                    'audio' => [
+                        [
+                            'file' => './assets/audiosdefundo/megalovania.mp3',
+                            'startMs' => 0,
+                            'durationMs' => 3000,
+                        ],
+                    ],
                     'frames' => [
                         [
                             'sprite' => './assets/sans/sprites/seguraopassodosans.gif',

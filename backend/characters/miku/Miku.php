@@ -79,18 +79,32 @@ class Miku extends Personagem {
             'winImage' => './assets/miku/sprites/mikuganho.jpeg',
             'actions' => [
                 'Ataque' => [
+                    'audio' => [
+                        [
+                            'file' => './assets/miku/audios/dorime.mp3',
+                            'startMs' => 0,
+                            'durationMs' => 1700,
+                        ],
+                    ],
                     'frames' => [
                         [
                             'sprite' => './assets/miku/sprites/mikuprebeamreal.png',
-                            'durationMs' => 500,
+                            'durationMs' => 600,
                         ],
                         [
                             'sprite' => './assets/miku/sprites/ATAQUEREAALA.png',
-                            'durationMs' => 500,
+                            'durationMs' => 600,
                         ],
                     ],
                 ],
                 'MAGIC!' => [
+                    'audio' => [
+                        [
+                            'file' => './assets/miku/audios/mikumiku.mp3',
+                            'startMs' => 0,
+                            'durationMs' => 1700,
+                        ],
+                    ],
                     'frames' => [
                         [
                             'sprite' => './assets/miku/sprites/outro.png',
@@ -164,6 +178,13 @@ class Miku extends Personagem {
                     ],
                 ],
                 'MY VOICE' => [
+                    'audio' => [
+                        [
+                            'file' => './assets/miku/audios/wee.mp3',
+                            'startMs' => 0,
+                            'durationMs' => 2000,
+                        ],
+                    ],
                     'frames' => [
                         [
                             'sprite' => './assets/miku/sprites/mikuprebeamreal.png',
@@ -179,7 +200,7 @@ class Miku extends Personagem {
                         ],
                          [
                             'sprite' => './assets/miku/sprites/mikufinalbeamREAL.png',
-                            'durationMs' => 300,
+                            'durationMs' => 600,
                         ],
                     ],
                      'overlays' => [
@@ -195,6 +216,13 @@ class Miku extends Personagem {
                      ],
                 ],
                 'mikupower' => [
+                    'audio' => [
+                        [
+                            'file' => './assets/miku/audios/charge.mp3',
+                            'startMs' => 0,
+                            'durationMs' => 2400,
+                        ],
+                    ],
                     'frames' => [
                         [
                             'sprite' => './assets/miku/sprites/mikupower1.png',

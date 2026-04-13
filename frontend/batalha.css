@@ -83,7 +83,7 @@ body {
   height: var(--topbar-height);
   min-height: var(--topbar-height);
   border-bottom: 1px solid var(--line);
-  background: linear-gradient(180deg, #1b1f2e, #161a27 65%, #111420);
+  background: linear-gradient(180deg, #1b1f2e97, #161a27d8 65%, #11142093);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
   flex-shrink: 0;
   z-index: 15;

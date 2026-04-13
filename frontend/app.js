@@ -6,6 +6,8 @@ const MUSICAS_FUNDO = [
 	"./assets/audiosdefundo/megalovania.mp3",
 	"./assets/audiosdefundo/intheend.mp3",
 	"./assets/audiosdefundo/numb.mp3",
+	"./assets/audiosdefundo/HERO.mp3",
+	"./assets/audiosdefundo/monsterskillet.mp3",
 ];
 const NIVEL_VOLUME_BGM_PADRAO = 3;
 
@@ -145,13 +147,14 @@ const NIVEL_VOLUME_BGM_PADRAO = 3;
 		pararMusicaFundo();
 		const src = MUSICAS_FUNDO[Math.floor(Math.random() * MUSICAS_FUNDO.length)];
 		const audio = new Audio(src);
-		audio.loop = true;
+		audio.loop = false;
 		audio.volume = obterVolumeBgm();
 		audio.currentTime = 0;
 		audio.muted = state.bgMusicMuted;
 		audio.addEventListener("play", () => {
 			audio.volume = obterVolumeBgm();
 		});
+		audio.addEventListener("ended", tocarMusicaFundoAleatoria);
 		audio.play().catch(() => {});
 		state.bgMusic = audio;
 	}

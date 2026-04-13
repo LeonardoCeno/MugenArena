@@ -120,6 +120,13 @@ class Sukuna extends Personagem {
             'winImage' => './assets/sukuna/sprites/sukunawin.jpg',
             'actions' => [
                 'Ataque' => [
+                    'audio' => [
+                        [
+                            'file' => './assets/audiosgerais/punchs2.mp3',
+                            'startMs' => 0,
+                            'durationMs' => 1300,
+                        ],
+                    ],
                     'frames' => [
                         [
                             'sprite' => './assets/sukuna/sprites/sukuachute1.png',
@@ -260,6 +267,11 @@ class Sukuna extends Personagem {
                             'file'    => './assets/sukuna/audios/sukunadomain.mp3',
                             'startMs' => 0,
                             'durationMs' => 2800,
+                        ],
+                        [
+                            'file'    => './assets/sukuna/audios/sukunatheme.mp3',
+                            'startMs' => 1600,
+                            'durationMs' => 9000,
                         ],
                     ],
                     'frames' => [
