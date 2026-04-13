@@ -39,7 +39,14 @@
   <main class="battle-app">
     <header class="topbar">
       <h1> Arena MUGEN </h1>
-      <p id="turn-info">Prepare a partida</p>
+      <div class="topbar-actions">
+        <p id="turn-info">Prepare a partida</p>
+        <button id="bgm-toggle-btn" type="button" class="bgm-toggle-btn" aria-pressed="false">MUSICA: ON</button>
+        <label class="bgm-volume-wrap" for="bgm-volume-input">
+          VOL
+          <input id="bgm-volume-input" class="bgm-volume-input" type="number" min="1" max="10" step="1" value="3" />
+        </label>
+      </div>
     </header>
     <div id="black-hole-overlay" class="black-hole-overlay">
       <canvas id="black-hole-canvas"></canvas>

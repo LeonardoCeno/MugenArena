@@ -94,6 +94,44 @@ body {
 }
 .topbar h1 { margin: 0; font-size: 1cqw; letter-spacing: 0.16em; }
 .topbar p { margin: 0; color: var(--muted); font-size: 1.1cqw; }
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.bgm-toggle-btn {
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 0.8cqw;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
+.bgm-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+.bgm-toggle-btn.is-muted {
+  opacity: 0.72;
+}
+.bgm-volume-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.8cqw;
+  letter-spacing: 0.08em;
+}
+.bgm-volume-input {
+  width: 46px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 4px 6px;
+  text-align: center;
+}
 
 /* ===== SETUP SCREEN (SELEÇÃO) ===== */
 .setup-screen {

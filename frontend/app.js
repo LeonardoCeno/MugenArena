@@ -2,6 +2,12 @@ import { createUIController } from "./ui-status.js";
 import { createAnimationController } from "./battle-animations.js";
 
 const FUNDOS_ARENA = ["BEACH 2.png","BEACH NIGHT.png","BEACH.png","CAVE 2.png","CAVE NIGHT.png","CAVE.png","DESERT NIGHT.png","DESERT.png","LAKE NIGHT.png","LAKE.png","MOUNTAIN 2.png","MOUNTAIN NIGHT.png","MOUNTAIN.png","OCEAN NIGHT.png","OCEAN.png","PATH 2.png","PATH NIGHT.png","PATH.png","SNOW NIGHT.png","SNOW.png","TALL GRASS NIGHT.png","TALL GRASS.png","UNDERWATER.png"];
+const MUSICAS_FUNDO = [
+	"./assets/audiosdefundo/megalovania.mp3",
+	"./assets/audiosdefundo/intheend.mp3",
+	"./assets/audiosdefundo/numb.mp3",
+];
+const NIVEL_VOLUME_BGM_PADRAO = 3;
 
 (() => {
 	const API_URL = "../backend/web_api.php";
@@ -11,6 +17,9 @@ const FUNDOS_ARENA = ["BEACH 2.png","BEACH NIGHT.png","BEACH.png","CAVE 2.png","
 		resolvendoAcao: false,
 		actionPage: 0,
 		anim: null,
+		bgMusic: null,
+		bgMusicVolumeLevel: NIVEL_VOLUME_BGM_PADRAO,
+		bgMusicMuted: false,
 		sprites: { p1: null, p2: null },
 		frameScale: { p1: null, p2: null },
 		domainImage: null,
@@ -22,6 +31,8 @@ const FUNDOS_ARENA = ["BEACH 2.png","BEACH NIGHT.png","BEACH.png","CAVE 2.png","
 
 	const els = {
 		turnInfo:         document.getElementById("turn-info"),
+		bgmToggleBtn:     document.getElementById("bgm-toggle-btn"),
+		bgmVolumeInput:   document.getElementById("bgm-volume-input"),
 		log:              document.getElementById("battle-log"),
 		combatFeed:       document.getElementById("combat-feed"),
 		skillPreview:     document.getElementById("skill-preview"),
@@ -81,6 +92,69 @@ const FUNDOS_ARENA = ["BEACH 2.png","BEACH NIGHT.png","BEACH.png","CAVE 2.png","
 	let animations = null;
 
 	function oposto(chave) { return chave === "p1" ? "p2" : "p1"; }
+
+	function obterVolumeBgm() {
+		return Math.max(1, Math.min(10, state.bgMusicVolumeLevel)) / 10;
+	}
+
+	function aplicarVolumeNaMusicaAtual() {
+		if (!state.bgMusic) return;
+		state.bgMusic.volume = obterVolumeBgm();
+	}
+
+	function ajustarNivelVolumeBgm(valorCru) {
+		const nivel = Number.parseInt(String(valorCru), 10);
+		if (Number.isNaN(nivel)) {
+			if (els.bgmVolumeInput) els.bgmVolumeInput.value = String(state.bgMusicVolumeLevel);
+			return;
+		}
+
+		state.bgMusicVolumeLevel = Math.max(1, Math.min(10, nivel));
+		if (els.bgmVolumeInput) {
+			els.bgmVolumeInput.value = String(state.bgMusicVolumeLevel);
+		}
+		aplicarVolumeNaMusicaAtual();
+	}
+
+	function atualizarBotaoMusicaFundo() {
+		if (!els.bgmToggleBtn) return;
+		els.bgmToggleBtn.textContent = state.bgMusicMuted ? "MUSICA: OFF" : "MUSICA: ON";
+		els.bgmToggleBtn.classList.toggle("is-muted", state.bgMusicMuted);
+		els.bgmToggleBtn.setAttribute("aria-pressed", String(state.bgMusicMuted));
+	}
+
+	function aplicarMuteNaMusicaAtual() {
+		if (!state.bgMusic) return;
+		state.bgMusic.muted = state.bgMusicMuted;
+	}
+
+	function alternarMuteMusicaFundo() {
+		state.bgMusicMuted = !state.bgMusicMuted;
+		aplicarMuteNaMusicaAtual();
+		atualizarBotaoMusicaFundo();
+	}
+
+	function pararMusicaFundo() {
+		if (!state.bgMusic) return;
+		state.bgMusic.pause();
+		state.bgMusic.currentTime = 0;
+		state.bgMusic = null;
+	}
+
+	function tocarMusicaFundoAleatoria() {
+		pararMusicaFundo();
+		const src = MUSICAS_FUNDO[Math.floor(Math.random() * MUSICAS_FUNDO.length)];
+		const audio = new Audio(src);
+		audio.loop = true;
+		audio.volume = obterVolumeBgm();
+		audio.currentTime = 0;
+		audio.muted = state.bgMusicMuted;
+		audio.addEventListener("play", () => {
+			audio.volume = obterVolumeBgm();
+		});
+		audio.play().catch(() => {});
+		state.bgMusic = audio;
+	}
 
 	const atualizarHUD = () => {
 		if (!ui || !animations) return;
@@ -178,6 +252,7 @@ const FUNDOS_ARENA = ["BEACH 2.png","BEACH NIGHT.png","BEACH.png","CAVE 2.png","
 	}
 
 	function resetarParaSetup() {
+		pararMusicaFundo();
 		ui.resetarParaSetup(animations.cancelarAnimacao);
 	}
 
@@ -214,6 +289,7 @@ const FUNDOS_ARENA = ["BEACH 2.png","BEACH NIGHT.png","BEACH.png","CAVE 2.png","
 			state.resolvendoAcao = false;
 			state.actionPage = 0;
 			animations.cancelarAnimacao();
+			tocarMusicaFundoAleatoria();
 			ui.esconderPreview();
 
 			await startBlackHoleAnimation({
@@ -240,6 +316,8 @@ const FUNDOS_ARENA = ["BEACH 2.png","BEACH NIGHT.png","BEACH.png","CAVE 2.png","
 
 	animations = createAnimationController({ state, els, atualizarHUD });
 	ui = createUIController({ state, els, onActionSelected: processarAcao });
+	ajustarNivelVolumeBgm(state.bgMusicVolumeLevel);
+	atualizarBotaoMusicaFundo();
 
 	function atualizarPreview(pickerDataFor, spriteUrl, label) {
 		const side = pickerDataFor === 'p1-class' ? 'p1' : 'p2';
@@ -296,6 +374,9 @@ const FUNDOS_ARENA = ["BEACH 2.png","BEACH NIGHT.png","BEACH.png","CAVE 2.png","
 
 	els.startBtn.addEventListener("click", iniciar);
 	els.playAgainBtn.addEventListener("click", resetarParaSetup);
+	els.bgmToggleBtn?.addEventListener("click", alternarMuteMusicaFundo);
+	els.bgmVolumeInput?.addEventListener("input", (e) => ajustarNivelVolumeBgm(e.target.value));
+	els.bgmVolumeInput?.addEventListener("change", (e) => ajustarNivelVolumeBgm(e.target.value));
 	ui.adicionarLog("Configure os jogadores e clique em INICIAR BATALHA.");
 })();
 /**
