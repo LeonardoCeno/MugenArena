@@ -159,15 +159,21 @@ const FUNDOS_ARENA = ["BEACH 2.png","BEACH NIGHT.png","BEACH.png","CAVE 2.png","
 			}
 
 			ui.adicionarLog(mensagem);
+
+			if (resposta.state?.winner) {
+				const perdedorKey = resposta.state.winner === "p1" ? "p2" : "p1";
+				await animations.animarMorte(perdedorKey);
+			}
+
 			atualizarHUD();
 		} catch (erro) {
 			animations.cancelAnimation();
 			atualizarHUD();
 			ui.adicionarLog(`Erro ao executar ação: ${erro.message || "falha desconhecida."}`);
 		} finally {
-			state.resolvendoAcao = false;
 			state.actionPage = 0;
-			ui.montarAcoes();
+			ui.montarAcoes();         // cria botões com resolvendoAcao ainda true → nascem disabled
+			state.resolvendoAcao = false;
 			ui.setBotoesAcaoHabilitados(true);
 		}
 	}
@@ -495,7 +501,7 @@ function startBlackHoleAnimation({ onBattleSetup } = {}) {
       if (phase === 1) {
         const t   = Math.min(elapsed / PHASE1, 1);
         // Quadratic ease-in: starts visible immediately (offset 8px), then rapidly expands
-        const bhR = 8 + easeInQuad(t) * (diagR - 8);
+        const bhR = 4 + easeInQuad(t) * (diagR - 4);
         drawBlackHole(bhR, Math.min(1, t * 2.2), ts);
 
         if (t >= 1) {

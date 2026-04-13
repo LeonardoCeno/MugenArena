@@ -6,6 +6,8 @@ const STATUS_EFFECT_VISUALS = {
 
 export function createAnimationController({ state, els, atualizarHUD }) {
 
+	let meleeAttackerKey = null;
+
 	// ── Helpers visuais ──────────────────────────────────────────────────
 
 	function normalizarTipoFlutuante(tipo) {
@@ -139,6 +141,7 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		els.arena
 			?.querySelectorAll(".arena-action-overlay, .arena-energy-beam, .fighter-action-overlay")
 			.forEach((el) => el.remove());
+		if (meleeAttackerKey) resetMeleePosition(meleeAttackerKey);
 	}
 
 	// ── Leitura de dados de animação ─────────────────────────────────────
@@ -278,11 +281,96 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		}];
 	}
 
+	// ── Melee dash ───────────────────────────────────────────────────────
+	// Ajuste fino de altura por atacante (px positivo = mais para baixo)
+	const MELEE_Y_OFFSET = {
+		p1:  0,   // P1 atacando P2
+		p2:  0,   // P2 atacando P1
+	};
+	// Distância horizontal do inimigo (px positivo = mais afastado do inimigo)
+	// P1 ataca da esquerda → valor positivo afasta para a esquerda
+	// P2 ataca da direita  → valor positivo afasta para a direita
+	const MELEE_X_GAP = {
+		p1: -30,
+		p2: -5,
+	};
+
+	function calcularOffsetMelee(atacanteKey, defensorKey) {
+		const atacanteEl = els.fighters[atacanteKey]?.root;
+		const defensorEl = els.fighters[defensorKey]?.root;
+		if (!atacanteEl || !defensorEl) return null;
+
+		const aRect = atacanteEl.getBoundingClientRect();
+		const dRect = defensorEl.getBoundingClientRect();
+
+		const aCx = aRect.left + aRect.width  / 2;
+		const dCx = dRect.left + dRect.width  / 2;
+		const direcao = aCx < dCx ? 1 : -1;
+
+		// Alinha os centros e recua metade da largura do atacante + gap manual
+		const offsetX = (dCx - aCx) - direcao * (aRect.width / 2 + MELEE_X_GAP[atacanteKey]);
+		const dCy = dRect.top + dRect.height / 2;
+		const aCy = aRect.top + aRect.height / 2;
+
+		// Quando o scale muda (transform-origin: center bottom), o bottom fica fixo
+		// e o centro visual desloca (aRect.height - novaAltura) / 2.
+		// Compensamos esse desvio para que o atacante apareça onde esperamos visualmente.
+		const scaleRatio = dRect.height / aRect.height;
+		const compensacaoScaleY = (aRect.height / 2) * (1 - scaleRatio);
+
+		const offsetY = (dCy - aCy) - compensacaoScaleY + MELEE_Y_OFFSET[atacanteKey];
+
+		return { offsetX, offsetY };
+	}
+
+	function aplicarMeleePosition(atacanteKey, defensorKey) {
+		const atacanteEl = els.fighters[atacanteKey]?.root;
+		const defensorEl = els.fighters[defensorKey]?.root;
+		if (!atacanteEl || !defensorEl) return;
+		const result = calcularOffsetMelee(atacanteKey, defensorKey);
+		if (!result) return;
+
+		// Scale real do defensor (já considera media queries e transform)
+		const defensorScale = defensorEl.getBoundingClientRect().width / (defensorEl.offsetWidth || 1);
+
+		meleeAttackerKey = atacanteKey;
+		atacanteEl.style.transition = "none";
+		atacanteEl.style.setProperty("--melee-offset-x", `${result.offsetX}px`);
+		atacanteEl.style.setProperty("--melee-offset-y", `${result.offsetY}px`);
+		atacanteEl.style.setProperty("--melee-scale", defensorScale);
+		atacanteEl.style.zIndex = "10";
+	}
+
+	function resetMeleePosition(chave) {
+		const el = els.fighters[chave]?.root;
+		if (!el) return;
+		el.style.transition = "none";
+		el.style.removeProperty("--melee-offset-x");
+		el.style.removeProperty("--melee-offset-y");
+		el.style.removeProperty("--melee-scale");
+		el.style.removeProperty("z-index");
+		el.classList.remove("melee-dashing");
+		meleeAttackerKey = null;
+	}
+
+	function buildMeleeEvents(atacanteKey, defensorKey, frameDuration) {
+		return [
+			{
+				at: 0,
+				run() { aplicarMeleePosition(atacanteKey, defensorKey); },
+			},
+			{
+				at: frameDuration,
+				run() { resetMeleePosition(atacanteKey); },
+			},
+		];
+	}
+
 	function buildAnimation(atacanteKey, acao, defensorKey, defensorEstaDefendendo) {
 		const nomeAcao = acao.nomeSprite || acao.nome;
 		const events = [];
-
-		events.push(...buildFrameEvents(atacanteKey, obterFramesAnimacaoAcao(atacanteKey, nomeAcao)));
+		const frameEvents = buildFrameEvents(atacanteKey, obterFramesAnimacaoAcao(atacanteKey, nomeAcao));
+		events.push(...frameEvents);
 
 		if (acao.targetsOpponent && defensorEstaDefendendo) {
 			events.push(...buildFrameEvents(defensorKey, obterFramesReacaoDefesa(defensorKey)));
@@ -293,6 +381,14 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		}
 
 		events.push(...buildDomainEvents(atacanteKey, nomeAcao));
+
+		if (acao.melee) {
+			const frameDuration = frameEvents.length
+				? frameEvents[frameEvents.length - 1].at
+				: 0;
+			events.push(...buildMeleeEvents(atacanteKey, defensorKey, frameDuration));
+		}
+
 		return events;
 	}
 
@@ -469,6 +565,20 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		}, 1200);
 	}
 
+	function animarMorte(chaveJogador) {
+		const fighter = obterFighterRootPorChave(chaveJogador);
+		if (!fighter) return Promise.resolve();
+		return new Promise(resolve => {
+			fighter.style.transition = "opacity 0.9s ease-out";
+			fighter.style.opacity = "0";
+			setTimeout(() => {
+				fighter.style.transition = "";
+				fighter.style.opacity = "";
+				resolve();
+			}, 1500);
+		});
+	}
+
 	return {
 		aplicarFeedbackDeDano,
 		wait,
@@ -478,5 +588,6 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		buildAnimation,
 		aplicarVisualPersonagem,
 		animarEsquiva,
+		animarMorte,
 	};
 }

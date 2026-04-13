@@ -7,8 +7,11 @@ class Profe extends Personagem {
 	const CUSTO_RED_BILL = 120;
 	const CUSTO_APELACAO = 180;
 	const CUSTO_VIBECODE = 140;
+
+	const CUSTO_MYWORLD = 200;
+	const DANO_MYWORLD = 110;
 	const CURA_RED_BILL = 67;
-	const DANO_APELACAO = 100;
+	const DANO_APELACAO = 85;
 	const DANO_VIBECODE = 70;
 	const REGENERACAO_PROPRIA = 35;
 
@@ -45,11 +48,19 @@ class Profe extends Personagem {
 		return $this->apelacao($alvo);
 	}
 
+	    public function MyWorld(Personagem $alvo): string {
+        $this->consumirEnergia(self::CUSTO_MYWORLD);
+        $resultado = $this->executarAtaqueDireto($alvo, "DOOCKER", self::DANO_MYWORLD);
+
+        return $resultado['mensagem'];
+    }
+
 	public function getHabilidades(): array {
 		return [
 			["nome" => "Red bill", "metodo" => "redBill", "precisaAlvo" => false, "energyCost" => self::CUSTO_RED_BILL],
 			["nome" => "Apelação", "metodo" => "apelacao", "precisaAlvo" => true,  "energyCost" => self::CUSTO_APELACAO],
 			["nome" => "VibeCode", "metodo" => "vibeCode", "precisaAlvo" => true,  "energyCost" => self::CUSTO_VIBECODE],
+			["nome" => "DOOCKER",  "metodo" => "MyWorld",  "precisaAlvo" => true,  "energyCost" => self::CUSTO_MYWORLD, "skipTurns" => 1, "activatesDomain" => true]
 		];
 	}
 
@@ -58,14 +69,15 @@ class Profe extends Personagem {
 			'Red bill' => 'Toma um Red Bull e recupera energia vital.' . "\n" . 'Cura: ' . self::CURA_RED_BILL . "\n" . 'Custo: ' . self::CUSTO_RED_BILL,
 			'Apelação' => 'Apela à autoridade máxima e dispara no inimigo.' . "\n" . 'Dano: ' . self::DANO_APELACAO . "\n" . 'Custo: ' . self::CUSTO_APELACAO,
 			'VibeCode' => 'Lança ferramentas de desenvolvimento como projéteis.' . "\n" . 'Dano: ' . self::DANO_VIBECODE . "\n" . 'Custo: ' . self::CUSTO_VIBECODE,
+			'DOOCKER' => 'Invoca o godDOCKER, mogando e dockerizando o beta por 1 turno.' . "\n" . 'Dano: ' . self::DANO_MYWORLD . "\n" . 'Custo: ' . self::CUSTO_MYWORLD,
 		]);
 	}
 
 	public function getConfiguracaoVisual(): array {
 		return [
 			'baseSprite' => './assets/profe/sprites/smurfprofe.png',
-			'winMessage' => 'Claude, farmar aura',
-			'winImage' => './assets/profe/sprites/WINWIN.png',
+			'winMessage' => 'Claude, faça os tiros valerem a pena...',
+			'winImage' => './assets/profe/sprites/profefarmo.png',
 			'actions' => [
 				'Ataque' => [
 					'frames' => [
@@ -111,7 +123,7 @@ class Profe extends Personagem {
 							'startOffsetX' => 10,
 							'startOffsetY' => 15,
 							'endOffsetX' => 0,
-							'endOffsetY' => 75,
+							'endOffsetY' => 10,
 						],
 					],
 				],
@@ -183,6 +195,53 @@ class Profe extends Personagem {
 							'endOffsetX' => 0,
 							'endOffsetY' => 45,
 						],
+					],
+				],
+				'DOOCKER' => [
+					'domainDelayMs' => 1500,
+					'domainImage' => './assets/profe/sprites/domainprofe.png',
+					'frames' => [
+						[
+							'sprite' => './assets/profe/sprites/DOOOCKER.png',
+							'durationMs' => 2300,
+							'scale' => 1.1,
+						],
+						[
+							'sprite' => './assets/profe/sprites/prepara.png',
+							'durationMs' => 1800,
+							'scale' => 1.1,
+						],
+						[
+							'sprite' => './assets/profe/sprites/atirar.png',
+							'durationMs' => 1500,
+							'scale' => 1.1,
+						],
+					],
+					'overlays' => [
+						[
+							'mode' => 'projectile',
+							'target' => 'opponent',
+							'sprite' => './assets/profe/sprites/DOCKERPRIME.png',
+							'startMs' => 4100,
+							'durationMs' => 950,
+							'sizePx' => 300,
+							'frontOffsetPx' => 130,
+							'projectileAngleDeg' => -15,
+							'startOffsetX' => 0,
+							'startOffsetY' => -20,
+							'endOffsetX' => 0,
+							'endOffsetY' => 50,
+							'scale' => 1.1,
+						],
+						[
+                            'target' => 'opponent',
+                            'sprite' => './assets/profe/sprites/dockercabum.gif',
+                            'startMs' => 5150,
+                            'durationMs' => 2000,
+                            'x' => 0,
+                            'y' => 0,
+                            'scale' => 2.7,
+                        ],
 					],
 				],
 			],

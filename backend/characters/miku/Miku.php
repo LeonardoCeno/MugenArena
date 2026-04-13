@@ -76,17 +76,17 @@ class Miku extends Personagem {
         return [
             'baseSprite' => './assets/miku/sprites/mikubase.png',
             'winMessage' => 'Miku Miku, you can call me M I K U',
-            'winImage' => './assets/miku/sprites/mikuwin.png',
+            'winImage' => './assets/miku/sprites/mikuganho.jpeg',
             'actions' => [
                 'Ataque' => [
                     'frames' => [
                         [
                             'sprite' => './assets/miku/sprites/mikuprebeamreal.png',
-                            'durationMs' => 400,
+                            'durationMs' => 500,
                         ],
                         [
                             'sprite' => './assets/miku/sprites/ATAQUEREAALA.png',
-                            'durationMs' => 400,
+                            'durationMs' => 500,
                         ],
                     ],
                 ],
@@ -212,43 +212,8 @@ class Miku extends Personagem {
                             'sprite' => './assets/miku/sprites/mikupower4.png',
                             'durationMs' => 140,
                         ],
-                         [
-                            'sprite' => './assets/miku/sprites/mikupower1.png',
-                            'durationMs' => 140,
-                        ],
-                        [
-                            'sprite' => './assets/miku/sprites/mikupower2.png',
-                            'durationMs' => 140,
-                        ],
-                        [
-                            'sprite' => './assets/miku/sprites/mikupower3.png',
-                            'durationMs' => 140,
-                        ],
-                        [
-                            'sprite' => './assets/miku/sprites/mikupower4.png',
-                            'durationMs' => 140,
-                        ],
-                                      [
-                            'sprite' => './assets/miku/sprites/mikupower4.png',
-                            'durationMs' => 140,
-                        ],
-                         [
-                            'sprite' => './assets/miku/sprites/mikupower1.png',
-                            'durationMs' => 140,
-                        ],
-                        [
-                            'sprite' => './assets/miku/sprites/mikupower2.png',
-                            'durationMs' => 140,
-                        ],
-                        [
-                            'sprite' => './assets/miku/sprites/mikupower3.png',
-                            'durationMs' => 140,
-                        ],
-                        [
-                            'sprite' => './assets/miku/sprites/mikupower4.png',
-                            'durationMs' => 140,
-                        ],
                     ],
+                    'repeatFrames' => 4,
                 ],
             ],
             'reactions' => [

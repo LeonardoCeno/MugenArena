@@ -61,11 +61,11 @@ class Labubu extends Personagem {
                     'frames' => [
                         [
                             'sprite' => './assets/labubu/sprites/labubo.png',
-                            'durationMs' => 450,
+                            'durationMs' => 500,
                         ],
                         [
                             'sprite' => './assets/labubu/sprites/labubo2.png',
-                            'durationMs' => 350,
+                            'durationMs' => 450,
                         ],
                     ],
                 ],

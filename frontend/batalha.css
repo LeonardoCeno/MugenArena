@@ -563,7 +563,7 @@ justify-content: center;
 .meter strong { font-size: 1cqw; }
 .track {
   height: 0.8cqw;
-  border-radius: 999px;
+  border-radius: 4px;
   background: #171b27;
   border: 1px solid #515c75;
   overflow: hidden;
@@ -654,7 +654,14 @@ justify-content: center;
   box-shadow: none;
   background: transparent;
 }
-.fighter::after {
+.fighter-shadow {
+  position: absolute;
+  width: var(--fighter-size);
+  height: var(--fighter-size);
+  pointer-events: none;
+  z-index: 1;
+}
+.fighter-shadow::after {
   content: "";
   position: absolute;
   left: 49%;
@@ -665,8 +672,18 @@ justify-content: center;
   border-radius: 50%;
   background: radial-gradient(ellipse at center, rgba(152, 223, 122, 0.52) 0%, rgba(115, 186, 99, 0.42) 55%, rgba(73, 102, 86, 0.18) 100%);
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.22);
-  z-index: 1;
-  pointer-events: none;
+}
+.fighter-shadow.enemy {
+  right: 8%;
+  bottom: 38%;
+  transform: scale(1.25);
+  transform-origin: center bottom;
+}
+.fighter-shadow.player {
+  left: 8%;
+  bottom: 5%;
+  transform: scale(1.55);
+  transform-origin: center bottom;
 }
 .fighter span {
   font-size: 4.2rem;
@@ -734,20 +751,22 @@ justify-content: center;
   bottom: 38%;
   background: transparent;
   z-index: 4;
-  transform: scale(1.25);
+  --natural-scale: 1.25;
+  transform: translateX(var(--melee-offset-x, 0px)) translateY(var(--melee-offset-y, 0px)) scale(var(--melee-scale, var(--natural-scale)));
   transform-origin: center bottom;
 }
 .fighter.player {
   left: 8%;
   bottom: 5%;
   background: transparent;
-  transform: scale(1.55);
+  --natural-scale: 1.55;
+  transform: translateX(var(--melee-offset-x, 0px)) translateY(var(--melee-offset-y, 0px)) scale(var(--melee-scale, var(--natural-scale)));
   transform-origin: center bottom;
 }
 
 /* Tamanho dos fighters relativo à altura da arena (container queries) */
 @supports (width: 1cqh) {
-  .fighter {
+  .fighter, .fighter-shadow {
     width: 29.9cqh;
     height: 28.9cqh;
   }
@@ -803,8 +822,10 @@ justify-content: center;
 /* ===== RESPONSIVIDADE ===== */
 @media (max-width: 860px) {
   .fighter span { font-size: 3.1rem; }
-  .fighter.enemy { right: 6%; bottom: 36%; transform: scale(1.15); transform-origin: center bottom; }
-  .fighter.player { left: 5%; bottom: 4%; transform: scale(1.45); transform-origin: center bottom; }
+  .fighter.enemy { right: 6%; bottom: 36%; --natural-scale: 1.15; transform: translateX(var(--melee-offset-x, 0px)) translateY(var(--melee-offset-y, 0px)) scale(var(--melee-scale, var(--natural-scale))); transform-origin: center bottom; }
+  .fighter.player { left: 5%; bottom: 4%; --natural-scale: 1.45; transform: translateX(var(--melee-offset-x, 0px)) translateY(var(--melee-offset-y, 0px)) scale(var(--melee-scale, var(--natural-scale))); transform-origin: center bottom; }
+  .fighter-shadow.enemy { right: 6%; bottom: 36%; transform: scale(1.15); transform-origin: center bottom; }
+  .fighter-shadow.player { left: 5%; bottom: 4%; transform: scale(1.45); transform-origin: center bottom; }
 }
 @media (max-width: 700px) {
   .topbar { flex-direction: column; align-items: flex-start; gap: 6px; }
@@ -855,8 +876,10 @@ justify-content: center;
   .card { width: calc(100% - 24px); left: 12px; right: 12px; }
   .card-enemy { top: 10px; }
   .card-player { bottom: 10px; }
-  .fighter.enemy { right: 4%; bottom: 35%; }
-  .fighter.player { left: 3%; bottom: 8%; }
+  .fighter.enemy { right: 4%; bottom: 35%; --natural-scale: 1.25; transform: translateX(var(--melee-offset-x, 0px)) translateY(var(--melee-offset-y, 0px)) scale(var(--melee-scale, var(--natural-scale))); transform-origin: center bottom; }
+  .fighter.player { left: 3%; bottom: 8%; --natural-scale: 1.55; transform: translateX(var(--melee-offset-x, 0px)) translateY(var(--melee-offset-y, 0px)) scale(var(--melee-scale, var(--natural-scale))); transform-origin: center bottom; }
+  .fighter-shadow.enemy { right: 4%; bottom: 35%; transform: scale(1.25); transform-origin: center bottom; }
+  .fighter-shadow.player { left: 3%; bottom: 8%; transform: scale(1.55); transform-origin: center bottom; }
 }
 /* ===== BURACO NEGRO ===== */
 .black-hole-overlay {

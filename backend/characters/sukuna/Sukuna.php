@@ -97,7 +97,7 @@ class Sukuna extends Personagem {
 
     public function getHabilidades(): array {
         return [
-            ["nome" => "Desmantelar",   "metodo" => "usarHabilidadeEspecial", "precisaAlvo" => true,  "energyCost" => self::CUSTO_DESMANTELAR],
+            ["nome" => "Desmantelar",   "metodo" => "usarHabilidadeEspecial", "precisaAlvo" => true,  "energyCost" => self::CUSTO_DESMANTELAR,],
             ["nome" => "Kamino Fuga",   "metodo" => "kaminoFuga",             "precisaAlvo" => true,  "energyCost" => self::CUSTO_KAMINO_FUGA],
             ["nome" => "Reverse Energy","metodo" => "reverseEnergy",          "precisaAlvo" => false, "energyCost" => self::CUSTO_REVERSE],
             ["nome" => "Domain",        "metodo" => "santuarioMalevolente",   "precisaAlvo" => true,  "energyCost" => self::CUSTO_DOMAIN]
@@ -123,11 +123,11 @@ class Sukuna extends Personagem {
                     'frames' => [
                         [
                             'sprite' => './assets/sukuna/sprites/sukuachute1.png',
-                            'durationMs' => 400,
+                            'durationMs' => 450,
                         ],
                         [
                             'sprite' => './assets/sukuna/sprites/sukunachute2real.png',
-                            'durationMs' => 300,
+                            'durationMs' => 400,
                         ],
                     ],
                 ],

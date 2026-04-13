@@ -249,6 +249,7 @@ class GameService {
                 'targetsOpponent' => true,
                 'energyCost'      => 0,
                 'disabled'        => false,
+                'melee'           => true,
             ];
             $actions[] = [
                 'type'            => 'defend',
@@ -272,6 +273,7 @@ class GameService {
                 'targetsOpponent' => (bool)$habilidade['precisaAlvo'],
                 'energyCost'      => $custoEnergia,
                 'disabled'        => $current->getEnergiaAtual() < $custoEnergia,
+                'melee'           => (bool)($habilidade['melee'] ?? false),
             ];
         }
 

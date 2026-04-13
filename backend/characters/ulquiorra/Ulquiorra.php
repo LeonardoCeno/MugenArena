@@ -75,7 +75,7 @@ class Ulquiorra extends Personagem {
         return [
             ["nome" => "Cero",        "metodo" => "cero",     "precisaAlvo" => true,  "energyCost" => self::CUSTO_CERO],
             ["nome" => "cero oscuras","metodo" => "trueCero", "precisaAlvo" => true,  "energyCost" => self::CUSTO_TRUE_CERO],
-            ["nome" => "Barrage",     "metodo" => "barrage",  "precisaAlvo" => true,  "energyCost" => self::CUSTO_BARRAGE],
+            ["nome" => "Barrage",     "metodo" => "barrage",  "precisaAlvo" => true,  "energyCost" => self::CUSTO_BARRAGE, "melee" => true],
             ["nome" => "Heal",        "metodo" => "heal",     "precisaAlvo" => false, "energyCost" => self::CUSTO_HEAL]
         ];
     }
@@ -99,11 +99,11 @@ class Ulquiorra extends Personagem {
                     'frames' => [
                         [
                             'sprite' => './assets/ulquiorra/sprites/ciferhit1.png',
-                            'durationMs' => 400,
+                            'durationMs' => 500,
                         ],
                         [
                             'sprite' => './assets/ulquiorra/sprites/ciferhit2.png',
-                            'durationMs' => 400,
+                            'durationMs' => 500,
                         ],
                     ],
                 ],

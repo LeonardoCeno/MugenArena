@@ -113,7 +113,10 @@ export function createUIController({ state, els, onActionSelected }) {
 
 		let domainImage = state.domainImage;
 		if (!domainImage && (server.domainTurnsRemaining || 0) > 0 && server.domainCasterKey) {
-			domainImage = server[server.domainCasterKey]?.visual?.actions?.["Domain"]?.domainImage ?? null;
+			const actions = server[server.domainCasterKey]?.visual?.actions ?? {};
+			for (const action of Object.values(actions)) {
+				if (action.domainImage) { domainImage = action.domainImage; break; }
+			}
 		}
 		setArenaDomain(domainImage);
 
@@ -175,14 +178,12 @@ export function createUIController({ state, els, onActionSelected }) {
 			if (slotIndex === 2) {
 				btn.textContent = "→";
 				btn.classList.add("pagination-btn");
-				if (totalPaginas <= 1 || state.resolvendoAcao) {
-					btn.disabled = true;
-				} else {
-					btn.addEventListener("click", () => {
-						state.actionPage = (state.actionPage + 1) % totalPaginas;
-						montarAcoes();
-					});
-				}
+				btn.disabled = totalPaginas <= 1 || state.resolvendoAcao;
+				btn.addEventListener("click", () => {
+					if (state.resolvendoAcao) return;
+					state.actionPage = (state.actionPage + 1) % totalPaginas;
+					montarAcoes();
+				});
 				els.menu.appendChild(btn);
 				return;
 			}
@@ -197,7 +198,8 @@ export function createUIController({ state, els, onActionSelected }) {
 				const descricaoAcao = obterDescricaoAcao(acao);
 
 				btn.classList.toggle("is-disabled-by-energy", semEnergia);
-				if (semEnergia) btn.tabIndex = -1;
+				if (semEnergia || state.resolvendoAcao) btn.tabIndex = -1;
+				if (state.resolvendoAcao) btn.disabled = true;
 
 				btn.addEventListener("mouseenter", () => mostrarPreviewSkill(nomeAcao, descricaoAcao));
 				btn.addEventListener("mouseleave", esconderPreviewSkill);

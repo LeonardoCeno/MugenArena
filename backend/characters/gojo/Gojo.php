@@ -82,11 +82,13 @@ class Gojo extends Personagem {
                     'frames' => [
                         [
                             'sprite' => './assets/gojo/sprites/gojopancadafinalmenor.png',
-                            'durationMs' => 450,
+                            'durationMs' => 500,
+                            'scale' => 0.95,
                         ],
                         [
                             'sprite' => './assets/gojo/sprites/gojohitpt2.png',
-                            'durationMs' => 450,
+                            'durationMs' => 500,
+                            'scale' => 0.95,
                         ],
                     ],
                 ],
