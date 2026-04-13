@@ -52,7 +52,7 @@ class Sukuna extends Personagem {
             return $resultado['mensagem'];
         }
 
-        $danoBurn = (int) ceil(self::DANO_KAMINO_FUGA * 0.40);
+        $danoBurn = (int) ceil(self::DANO_KAMINO_FUGA * 0.60);
         if ($danoBurn > 0) {
             $alvo->aplicarQueimadura($danoBurn, 1);
         }
@@ -106,10 +106,10 @@ class Sukuna extends Personagem {
 
     public function getDescricoesAcoes(): array {
         return array_merge(parent::getDescricoesAcoes(), [
-            'Desmantelar' => 'Cria cortes contínuos no inimigo, causando sangramento.' . "\n" . 'Dano: ' . self::DANO_DESMANTELAR . "\n" . 'Custo: ' . self::CUSTO_DESMANTELAR,
-            'Kamino Fuga' => 'Lança uma explosão que queima o inimigo por 1 turno.' . "\n" . 'Dano: ' . self::DANO_KAMINO_FUGA . "\n" . 'Custo: ' . self::CUSTO_KAMINO_FUGA,
-            'Reverse Energy' => 'Inverte a energia maldita para regenerar vida.' . "\n" . 'Cura: ' . self::CURA_REVERSE . "\n" . 'Custo: ' . self::CUSTO_REVERSE,
-            'Domain' => 'Expande o Santuário Malevolente, cortando o inimigo repetidamente.' . "\n" . 'Dano: ' . self::DANO_DOMAIN . "\n" . 'Custo: ' . self::CUSTO_DOMAIN,
+            'Desmantelar' => 'Cria cortes contínuos no inimigo, causando sangramento.' . "\n" . 'Dano: ' . self::DANO_DESMANTELAR .  ' Custo: ' . self::CUSTO_DESMANTELAR,
+            'Kamino Fuga' => 'Lança uma flecha de fogo que queima o inimigo por 1 turno.' . "\n" . 'Dano: ' . self::DANO_KAMINO_FUGA .  ' Custo: ' . self::CUSTO_KAMINO_FUGA,
+            'Reverse Energy' => 'Inverte a energia amaldiçoada para regenerar vida.' . "\n" . 'Cura: ' . self::CURA_REVERSE . ' Custo: ' . self::CUSTO_REVERSE,
+            'Domain' => 'Expande o Santuário Malevolente, cortando o inimigo repetidamente.' . "\n" . 'Dano: ' . self::DANO_DOMAIN .  ' Custo: ' . self::CUSTO_DOMAIN,
         ]);
     }
 

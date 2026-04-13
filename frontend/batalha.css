@@ -343,7 +343,7 @@ justify-content: center;
   height: 100%;
   display: flex;
   flex-direction: column;
-  padding: 2% 4% 3% 4%;            /* laterais 5%, topo reduzido */
+  padding: 2% 3% 3% 3%;            /* laterais 5%, topo reduzido */
   box-sizing: border-box;
   background: transparent;
 }
@@ -445,7 +445,7 @@ justify-content: center;
   background: rgba(14, 18, 34, 0.88);
   border: 1px solid rgba(255, 255, 255, 0.536);
   border-radius: 3px;
-  padding: 10px 6px 10px 10px;
+  padding: 6px 8px 6px 8px;
   backdrop-filter: blur(6px);
   pointer-events: none;
 }
@@ -460,6 +460,7 @@ justify-content: center;
   font-weight: 600;
   color: var(--muted);
   line-height: 1.45;
+  white-space: pre-line;
 }
 
 #combat-feed.previewing-skill .skill-preview {
