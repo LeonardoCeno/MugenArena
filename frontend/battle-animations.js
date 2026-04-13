@@ -208,6 +208,8 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 			t += frame.durationMs;
 		}
 
+		events.push({ at: t, run() {} });
+
 		return { events, duration: t };
 	}
 

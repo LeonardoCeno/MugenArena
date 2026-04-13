@@ -16,7 +16,7 @@ class Profe extends Personagem {
 	const REGENERACAO_PROPRIA = 35;
 
 	public function __construct(string $nome) {
-		parent::__construct($nome, 220, 24, 500);
+		parent::__construct($nome, 267, 24, 500);
 	}
 
 	public static function getDescricao(): string {
