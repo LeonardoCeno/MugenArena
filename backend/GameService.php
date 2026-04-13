@@ -369,8 +369,10 @@ class GameService {
             'vidaMaxima'     => $character->getVidaMaxima(),
             'energiaAtual'   => $character->getEnergiaAtual(),
             'energiaMaxima'  => $character->getEnergiaMaxima(),
-            'ultimoTipoDano' => $character->getUltimoTipoDano(),
-            'defendendo'     => $character->estaDefendendo(),
+            'ultimoTipoDano'   => $character->getUltimoTipoDano(),
+            'defendendo'       => $character->estaDefendendo(),
+            'bleedTurnos'      => $character->getSangramentoTurnos(),
+            'burnTurnos'       => $character->getQueimaduraTurnos(),
             'visual'         => $character->getConfiguracaoVisual(),
         ];
     }

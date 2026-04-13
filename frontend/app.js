@@ -50,6 +50,7 @@ const FUNDOS_ARENA = ["BEACH 2.png","BEACH NIGHT.png","BEACH.png","CAVE 2.png","
 				energyText: document.getElementById("enemy-energy-text"),
 				hpBar: document.getElementById("enemy-hp-bar"),
 				energyBar: document.getElementById("enemy-energy-bar"),
+				statusIcons: document.getElementById("enemy-status-icons"),
 			},
 			player: {
 				root: document.getElementById("card-player"),
@@ -59,6 +60,7 @@ const FUNDOS_ARENA = ["BEACH 2.png","BEACH NIGHT.png","BEACH.png","CAVE 2.png","
 				energyText: document.getElementById("player-energy-text"),
 				hpBar: document.getElementById("player-hp-bar"),
 				energyBar: document.getElementById("player-energy-bar"),
+				statusIcons: document.getElementById("player-status-icons"),
 			},
 		},
 		fighters: {

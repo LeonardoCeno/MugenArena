@@ -544,6 +544,16 @@ justify-content: center;
 }
 .card-enemy { top: 24px; left: 26px; }
 .card-player { right: 26px; bottom: 20px; }
+.status-icons {
+  display: flex;
+  gap: 4px;
+  min-height: 0;
+}
+.status-icons img {
+  width: 1.6cqw;
+  height: 1.6cqw;
+  object-fit: contain;
+}
 .card-head {
   display: flex;
   justify-content: space-between;

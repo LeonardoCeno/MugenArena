@@ -79,6 +79,24 @@ export function createUIController({ state, els, onActionSelected }) {
 		refs.hpBar.style.width = percentual(personagem.vidaAtual, personagem.vidaMaxima);
 		refs.energyBar.style.width = percentual(personagem.energiaAtual, personagem.energiaMaxima);
 		refs.hpBar.classList.toggle("danger", classePerigosa(personagem.vidaAtual, personagem.vidaMaxima));
+
+		if (refs.statusIcons) {
+			refs.statusIcons.innerHTML = "";
+			if ((personagem.bleedTurnos || 0) > 0) {
+				const img = document.createElement("img");
+				img.src = "./assets/efeitos/sangrar.png";
+				img.alt = "Sangramento";
+				img.title = `Sangramento: ${personagem.bleedTurnos} turno(s)`;
+				refs.statusIcons.appendChild(img);
+			}
+			if ((personagem.burnTurnos || 0) > 0) {
+				const img = document.createElement("img");
+				img.src = "./assets/efeitos/queimar.png";
+				img.alt = "Queimadura";
+				img.title = `Queimadura: ${personagem.burnTurnos} turno(s)`;
+				refs.statusIcons.appendChild(img);
+			}
+		}
 	}
 
 	function mostrarTelaVitoria(server) {

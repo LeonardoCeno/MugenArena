@@ -223,6 +223,9 @@ abstract class Personagem {
 
     // ── Efeitos contínuos ────────────────────────────────────────────────
 
+    public function getSangramentoTurnos(): int { return $this->sangramentoTurnos; }
+    public function getQueimaduraTurnos(): int  { return $this->queimaduraTurnos; }
+
     public function aplicarSangramento(int $danoPorTurno, int $turnos): void {
         $this->sangramentoDanoPorTurno = max(0, $danoPorTurno);
         $this->sangramentoTurnos = max(0, $turnos);
