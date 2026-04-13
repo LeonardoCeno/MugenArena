@@ -80,26 +80,44 @@ class Profe extends Personagem {
 			'winImage' => './assets/profe/sprites/profefarmo.png',
 			'actions' => [
 				'Ataque' => [
+					'audio' => [
+						[
+							'file'    => './assets/profe/audios/pancada.mp3',
+							'startMs' => 0,
+						],
+                    ],
 					'frames' => [
 						[
 							'sprite' => './assets/profe/sprites/PANCADA.png',
-							'durationMs' => 550,
+							'durationMs' => 1000,
 						],
 						[
 							'sprite' => './assets/profe/sprites/PANCADADOIS.png',
-							'durationMs' => 550,
+							'durationMs' => 950,
 						],
 					],
 				],
 				'Red bill' => [
+					'audio' => [
+						[
+							'file'    => './assets/profe/audios/beber.mp3',
+							'startMs' => 0,
+						],
+                    ],
 					'frames' => [
 						[
 							'sprite' => './assets/profe/sprites/redbil.png',
-							'durationMs' => 700,
+							'durationMs' => 1400,
 						],
 					],
 				],
 				'Apelação' => [
+					'audio' => [
+						[
+							'file'    => './assets/profe/audios/shot.mp3',
+							'startMs' => 800,
+						],
+					],
 					'frames' => [
 						[
 							'sprite' => './assets/profe/sprites/THELAST.png',
@@ -121,7 +139,7 @@ class Profe extends Personagem {
 							'frontOffsetPx' => 140,
 							'projectileAngleDeg' => -12,
 							'startOffsetX' => 10,
-							'startOffsetY' => 15,
+							'startOffsetY' => 0,
 							'endOffsetX' => 0,
 							'endOffsetY' => 10,
 						],
@@ -198,6 +216,12 @@ class Profe extends Personagem {
 					],
 				],
 				'DOOCKER' => [
+					'audio' => [
+                        [
+                            'file'    => './assets/audiosgerais/bomba.mp3',
+                            'startMs' => 5150,
+                        ],
+                    ],
 					'domainDelayMs' => 1500,
 					'domainImage' => './assets/profe/sprites/domainprofe.png',
 					'frames' => [

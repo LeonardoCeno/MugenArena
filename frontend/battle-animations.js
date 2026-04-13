@@ -181,6 +181,13 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		return obterFramesAnimacao(chaveJogador, "reactions", "defendingHit");
 	}
 
+	function obterAudiosAnimacaoAcao(chaveJogador, nomeAcao) {
+		const actionConfig = state.serverState?.[chaveJogador]?.visual?.actions?.[nomeAcao];
+		return (Array.isArray(actionConfig?.audio) ? actionConfig.audio : [])
+			.filter(a => a?.file)
+			.map(a => ({ file: a.file, startMs: a.startMs ?? 0, durationMs: a.durationMs ?? null }));
+	}
+
 	function obterOverlaysAnimacaoAcao(chaveJogador, nomeAcao) {
 		const server = state.serverState;
 		if (!server || !server[chaveJogador]) return [];
@@ -366,6 +373,24 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		];
 	}
 
+	function buildAudioEvents(chaveJogador, nomeAcao) {
+		return obterAudiosAnimacaoAcao(chaveJogador, nomeAcao).flatMap(a => {
+			const audio = new Audio(a.file);
+			audio.preload = "auto";
+			const events = [{
+				at: a.startMs,
+				run() { audio.currentTime = 0; audio.play().catch(() => {}); },
+			}];
+			if (a.durationMs != null) {
+				events.push({
+					at: a.startMs + a.durationMs,
+					run() { audio.pause(); audio.currentTime = 0; },
+				});
+			}
+			return events;
+		});
+	}
+
 	function buildAnimation(atacanteKey, acao, defensorKey, defensorEstaDefendendo) {
 		const nomeAcao = acao.nomeSprite || acao.nome;
 		const events = [];
@@ -381,6 +406,7 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		}
 
 		events.push(...buildDomainEvents(atacanteKey, nomeAcao));
+		events.push(...buildAudioEvents(atacanteKey, nomeAcao));
 
 		if (acao.melee) {
 			const frameDuration = frameEvents.length

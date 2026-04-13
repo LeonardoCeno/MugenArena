@@ -116,6 +116,16 @@ class Gojo extends Personagem {
                     ],
                 ],
                 'Vazio Roxo' => [
+                    'audio' => [
+                        [
+                            'file'    => './assets/gojo/audios/gojoroxo.mp3',
+                            'startMs' => 0,
+                        ],
+                        [
+                            'file'    => './assets/audiosgerais/bomba.mp3',
+                            'startMs' => 2700,
+                        ],
+                    ],
                     'frames' => [
                         [
                             'sprite' => './assets/gojo/sprites/GOJOROXOFASE1FINAL.png',
@@ -127,7 +137,7 @@ class Gojo extends Personagem {
                         ],
                         [
                             'sprite' => './assets/gojo/sprites/gojoroxolast.png',
-                            'durationMs' => 400,
+                            'durationMs' => 700,
                         ],
                     ],
                     'overlays' => [
@@ -135,7 +145,7 @@ class Gojo extends Personagem {
                             'mode' => 'projectile',
                             'target' => 'opponent',
                             'sprite' => './assets/gojo/sprites/ROXO.png',
-                            'startMs' => 1700,
+                            'startMs' => 2000,
                             'durationMs' => 600,
                             'sizePx' => 260,
                             'frontOffsetPx' => 130,
@@ -147,7 +157,7 @@ class Gojo extends Personagem {
                         [
                             'target' => 'opponent',
                             'sprite' => './assets/gojo/sprites/roxocabum.gif',
-                            'startMs' => 2400,
+                            'startMs' => 2700,
                             'durationMs' => 975,
                             'x' => 0,
                             'y' => -40,
@@ -164,12 +174,22 @@ class Gojo extends Personagem {
                     ],
                 ],
                 'Domain' => [
-                    'domainDelayMs' => 1500,
+                    'audio' => [
+                        [
+                            'file'    => './assets/gojo/audios/domainrealgojo.mp3',
+                            'startMs' => 0,
+                        ],
+                    ],
+                    'domainDelayMs' => 6500,
                     'domainImage' => './assets/gojo/sprites/DomainGojo.gif',
                     'frames' => [
                         [
+                            'sprite' => './assets/gojo/sprites/GOJOBASEFINAL.png',
+                            'durationMs' => 1000,
+                        ],
+                        [
                             'sprite' => './assets/gojo/sprites/gojodomainfinal.png',
-                            'durationMs' => 2000,
+                            'durationMs' => 7000,
                         ],
                     ],
                 ],

@@ -132,17 +132,45 @@ class Sukuna extends Personagem {
                     ],
                 ],
                 'Desmantelar' => [
+                    'audio' => [
+                        [
+                            'file'    => './assets/sukuna/audios/sukunahai.mp3',
+                            'startMs' => 0,
+                        ],
+                    ],
                     'frames' => [
                         [
+                            'sprite' => './assets/sukuna/sprites/sukunabasefinal.png',
+                            'durationMs' => 400,
+                        ],
+                        [
                             'sprite' => './assets/sukuna/sprites/sukuacleave.png',
-                            'durationMs' => 1000,
+                            'durationMs' => 1600,
                         ],
                     ],
                     'overlays' => [
                         [
                             'target' => 'opponent',
                             'sprite' => './assets/sukuna/sprites/CORTE1.png',
-                            'startMs' => 0,
+                            'startMs' => 1200,
+                            'durationMs' => 150,
+                            'x' => 0,
+                            'y' => 0,
+                            'scale' => 1.2,
+                        ],
+                        [
+                            'target' => 'opponent',
+                            'sprite' => './assets/sukuna/sprites/CORTE2.png',
+                            'startMs' => 1300,
+                            'durationMs' => 150,
+                            'x' => 0,
+                            'y' => 0,
+                            'scale' => 1.2,
+                        ],
+                        [
+                            'target' => 'opponent',
+                            'sprite' => './assets/sukuna/sprites/CORTE1.png',
+                            'startMs' => 1400,
                             'durationMs' => 190,
                             'x' => 0,
                             'y' => 0,
@@ -151,14 +179,13 @@ class Sukuna extends Personagem {
                         [
                             'target' => 'opponent',
                             'sprite' => './assets/sukuna/sprites/CORTE2.png',
-                            'startMs' => 150,
-                            'durationMs' => 190,
+                            'startMs' => 1500,
+                            'durationMs' => 200,
                             'x' => 0,
                             'y' => 0,
                             'scale' => 1.2,
                         ],
                     ],
-                    'repeatOverlays' => 3,
                 ],
                 'Kamino Fuga' => [
                     'frames' => [
@@ -205,6 +232,16 @@ class Sukuna extends Personagem {
                             'scale' => 2,
                         ],
                     ],
+                    'audio' => [
+                        [
+                            'file'    => './assets/sukuna/audios/fuga.mp3',
+                            'startMs' => 0,
+                        ],
+                        [
+                            'file'    => './assets/audiosgerais/bomba.mp3',
+                            'startMs' => 2750,
+                        ],
+                    ],
                 ],
                 'Reverse Energy' => [
                     'frames' => [
@@ -215,9 +252,16 @@ class Sukuna extends Personagem {
                     ],
                 ],
                 'Domain' => [
-                    'domainDelayMs' => 1200,
+                    'domainDelayMs' => 1700,
                     'domainImage' => './assets/sukuna/sprites/DomainSukuna.gif',
                     'domainCutsDelayMs' => 1000,
+                    'audio' => [
+                        [
+                            'file'    => './assets/sukuna/audios/sukunadomain.mp3',
+                            'startMs' => 0,
+                            'durationMs' => 2800,
+                        ],
+                    ],
                     'frames' => [
                         [
                             'sprite' => './assets/sukuna/sprites/DOMAINSUKUNA.png',
