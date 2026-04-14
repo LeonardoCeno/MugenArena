@@ -146,6 +146,8 @@ class Sukuna extends Personagem {
                 "metodo"     => "kaminoFuga",
                 "precisaAlvo"=> true,
                 "energyCost" => self::CUSTO_KAMINO_FUGA,
+                "priority"   => true,
+                "clashable"  => true,
             ],
             [
                 "nome"       => "Reverse Energy",

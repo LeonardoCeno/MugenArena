@@ -58,7 +58,7 @@ class Gojo extends Personagem {
     public function getHabilidades(): array {
         return [
             ["nome" => "Azul",          "metodo" => "azul",          "precisaAlvo" => true,  "energyCost" => self::CUSTO_AZUL],
-            ["nome" => "Vazio Roxo",    "metodo" => "vazioRoxo",     "precisaAlvo" => true,  "energyCost" => self::CUSTO_VAZIO_ROXO],
+            ["nome" => "Vazio Roxo",    "metodo" => "vazioRoxo",     "precisaAlvo" => true,  "energyCost" => self::CUSTO_VAZIO_ROXO, "priority" => true, "clashable" => true],
             ["nome" => "Reverse Energy","metodo" => "reverseEnergy", "precisaAlvo" => false, "energyCost" => self::CUSTO_REVERSE],
             ["nome" => "Domain",        "metodo" => "infinityVoid",  "precisaAlvo" => false, "energyCost" => self::CUSTO_INFINITO, "skipTurns" => 2, "activatesDomain" => true, "priority" => true]
         ];
