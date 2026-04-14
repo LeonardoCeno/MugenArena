@@ -437,13 +437,22 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		el.alt = "";
 		el.setAttribute("aria-hidden", "true");
 		const sizePx = escala(overlay.sizePx ?? 260, pos.arenaW);
-		el.style.cssText = `width:${sizePx}px;left:${pos.origemX}px;top:${pos.origemY}px;transform:translate(-50%,-50%) scaleX(${pos.escalaHorizontal}) scale(${overlay.scale ?? 1}) rotate(${pos.anguloProjetil}deg);transition:left ${overlay.durationMs}ms linear,top ${overlay.durationMs}ms linear`;
+		// Position + transform set via inline style (no transition — animation handles movement)
+		el.style.cssText = `width:${sizePx}px;left:${pos.origemX}px;top:${pos.origemY}px;transform:translate(-50%,-50%) scaleX(${pos.escalaHorizontal}) scale(${overlay.scale ?? 1}) rotate(${pos.anguloProjetil}deg);`;
 		els.arena.appendChild(el);
-		// force reflow — garante que posição inicial está committed antes da transição de movimento
-		void el.getBoundingClientRect();
-		el.style.left = `${pos.alvoX}px`;
-		el.style.top  = `${pos.alvoY}px`;
-		return el;
+		void el.getBoundingClientRect(); // force layout before animation starts
+
+		const animation = el.animate(
+			[
+				{ left: `${pos.origemX}px`, top: `${pos.origemY}px` },
+				{ left: `${pos.alvoX}px`,   top: `${pos.alvoY}px`   },
+			],
+			{ duration: overlay.durationMs, fill: "forwards", easing: "linear" }
+		);
+		// Default: remove element when animation finishes (non-clash path)
+		animation.onfinish = () => el.remove();
+
+		return { el, animation };
 	}
 
 	function criarAttached(overlay, alvoKey) {
@@ -479,7 +488,7 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 
 		const pos = posicoes(overlay, atacanteKey, origemEl, alvoEl, arenaRect);
 		if (overlay.mode === "beam") return criarBeam(overlay, pos);
-		return criarProjetil(overlay, pos);
+		return criarProjetil(overlay, pos).el;
 	}
 
 	// ── Renderização de personagens ──────────────────────────────────────

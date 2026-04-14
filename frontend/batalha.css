@@ -1003,3 +1003,17 @@ justify-content: center;
 .fighter.char-transformed .fighter-img {
   animation: char-transformed-idle 2.4s ease-in-out infinite;
 }
+
+/* ── Clash system ──────────────────────────────────────────────────── */
+
+/* Uses standalone `translate` (CSS Transforms Level 2) so it composes
+   independently of the inline `transform` (scaleX flip + rotate) that
+   projectile elements already have. No conflict. */
+.clash-shaking {
+    animation: clash-shake 0.08s infinite alternate;
+}
+
+@keyframes clash-shake {
+    from { translate: -5px 0; }
+    to   { translate:  5px 0; }
+}
