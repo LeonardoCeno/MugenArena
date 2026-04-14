@@ -223,9 +223,33 @@ const NIVEL_VOLUME_BGM_PADRAO = 1	;
 		animations.cancelarAnimacao();
 	}
 
+	function deslocarEventos(events, delayMs) {
+		if (delayMs <= 0) return events;
+		return events.map(event => ({ ...event, at: event.at + delayMs }));
+	}
+
+	function sincronizarLancamentoDeProjeteis(animData1, animData2) {
+		const syncedLaunchMs = Math.max(animData1.projectileStartMs, animData2.projectileStartMs);
+
+		const sincronizar = (animData) => {
+			const delayMs = Math.max(0, syncedLaunchMs - animData.projectileStartMs);
+			return {
+				...animData,
+				preEvents: [
+					...animData.preLaunchEvents,
+					...deslocarEventos(animData.launchEvents, delayMs),
+				],
+				projectileStartMs: syncedLaunchMs,
+			};
+		};
+
+		return [sincronizar(animData1), sincronizar(animData2)];
+	}
+
 	async function executarTurnoClash(acoesMap, clashMeta, estadoFinal) {
-		const animData1 = animations.montarAnimacaoClash("p1", acoesMap["p1"], "p2");
-		const animData2 = animations.montarAnimacaoClash("p2", acoesMap["p2"], "p1");
+		const rawAnimData1 = animations.montarAnimacaoClash("p1", acoesMap["p1"], "p2");
+		const rawAnimData2 = animations.montarAnimacaoClash("p2", acoesMap["p2"], "p1");
+		const [animData1, animData2] = sincronizarLancamentoDeProjeteis(rawAnimData1, rawAnimData2);
 
 		// Both character animations start simultaneously
 		const allPreEvents = [...animData1.preEvents, ...animData2.preEvents];
@@ -238,12 +262,16 @@ const NIVEL_VOLUME_BGM_PADRAO = 1	;
 
 		const ref1 = animData1.getProjectileRef();
 		const ref2 = animData2.getProjectileRef();
+		const refs1 = animData1.getProjectileRefs?.() ?? (ref1 ? [ref1] : []);
+		const refs2 = animData2.getProjectileRefs?.() ?? (ref2 ? [ref2] : []);
 
 		if (ref1 && ref2) {
 			await clashSystem.runClash(
 				ref1, ref2, clashMeta,
 				animData1.postEvents, animData2.postEvents,
-				animations
+				animations,
+				refs1,
+				refs2
 			);
 		} else {
 			// Fallback: projectile refs unavailable — wait out clash, then fire winner's post-events

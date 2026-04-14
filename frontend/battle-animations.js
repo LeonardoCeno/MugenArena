@@ -361,58 +361,69 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		const actionConfig = state.serverState?.[atacanteKey]?.visual?.actions?.[nomeAcao] ?? {};
 
 		const allOverlays   = overlaysDeConfig(actionConfig);
-		const projOverlay   = allOverlays.find(o => o.mode === "projectile") ?? null;
+		const projectileOverlays = allOverlays.filter(o => o.mode === "projectile");
 		const otherOverlays = allOverlays.filter(o => o.mode !== "projectile");
+		const primaryProjectileOverlay = projectileOverlays[0] ?? null;
+		const projectileStartMs = primaryProjectileOverlay?.startMs ?? 0;
 
 		const { events: frameEvts } = eventosFrames(atacanteKey, framesDeConfig(actionConfig));
 
-		const projArrivalMs = projOverlay
-			? (projOverlay.startMs + projOverlay.durationMs)
+		const projArrivalMs = projectileOverlays.length > 0
+			? Math.max(...projectileOverlays.map(overlay => overlay.startMs + overlay.durationMs))
 			: 0;
 
 		const allAudio = eventosAudio(actionConfig);
-		const preAudio  = allAudio.filter(e => e.at < projArrivalMs);
+		const preAudio  = allAudio.filter(e => e.at < projectileStartMs);
+		const launchAudio = allAudio.filter(e => e.at >= projectileStartMs && e.at < projArrivalMs);
 		const postAudio = allAudio.filter(e => e.at >= projArrivalMs)
 			.map(e => ({ ...e, at: e.at - projArrivalMs }));
 
-		const preOverlayEvts  = otherOverlays
-			.filter(o => o.startMs < projArrivalMs)
-			.flatMap(o => eventosOverlay(o, atacanteKey));
-		const postOverlayEvts = otherOverlays
-			.filter(o => o.startMs >= projArrivalMs)
-			.flatMap(o => eventosOverlay(o, atacanteKey)
-				.map(e => ({ ...e, at: e.at - projArrivalMs }))
-			);
+		const allOtherOverlayEvts = otherOverlays.flatMap(o => eventosOverlay(o, atacanteKey));
+		const preOverlayEvts = allOtherOverlayEvts.filter(e => e.at < projectileStartMs);
+		const launchOverlayEvts = allOtherOverlayEvts.filter(e => e.at >= projectileStartMs && e.at < projArrivalMs);
+		const postOverlayEvts = allOtherOverlayEvts
+			.filter(e => e.at >= projArrivalMs)
+			.map(e => ({ ...e, at: e.at - projArrivalMs }));
 
 		let projectileRef = null;
-		const projCreationEvent = projOverlay ? {
-			at: projOverlay.startMs,
+		const projectileRefs = [];
+		const projectileCreationEvents = projectileOverlays.map((overlay, index) => ({
+			at: overlay.startMs,
 			run() {
 				const arenaRect = els.arena?.getBoundingClientRect();
 				const origemEl  = els.fighters[atacanteKey]?.root;
 				const alvoEl    = els.fighters[defensorKey]?.root;
 				if (!arenaRect || !origemEl || !alvoEl) return;
-				const pos = posicoes(projOverlay, atacanteKey, origemEl, alvoEl, arenaRect);
-				const ref = criarProjetil(projOverlay, pos);
+				const pos = posicoes(overlay, atacanteKey, origemEl, alvoEl, arenaRect);
+				const ref = criarProjetil(overlay, pos, atacanteKey);
 				ref.animation.onfinish = null; // clash system manages removal
-				projectileRef = ref;
+				projectileRefs.push(ref);
+				if (index === 0) projectileRef = ref;
 			},
-		} : null;
+		}));
 
-		const preEvents = [
-			...frameEvts,
+		const preLaunchEvents = [
+			...frameEvts.filter(e => e.at < projectileStartMs),
 			...preAudio,
 			...preOverlayEvts,
-			...(projCreationEvent ? [projCreationEvent] : []),
+		];
+
+		const launchEvents = [
+			...frameEvts.filter(e => e.at >= projectileStartMs && e.at < projArrivalMs),
+			...launchAudio,
+			...launchOverlayEvts,
+			...projectileCreationEvents,
 		];
 
 		const postEvents = [...postAudio, ...postOverlayEvts];
 
 		return {
-			preEvents,
+			preLaunchEvents,
+			launchEvents,
 			postEvents,
-			projectileStartMs: projOverlay?.startMs ?? 0,
+			projectileStartMs,
 			getProjectileRef: () => projectileRef,
+			getProjectileRefs: () => projectileRefs,
 		};
 	}
 
@@ -490,7 +501,11 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		return el;
 	}
 
-	function criarProjetil(overlay, pos) {
+	function zIndexProjetil(atacanteKey) {
+		return atacanteKey === "p1" ? 6 : 5;
+	}
+
+	function criarProjetil(overlay, pos, atacanteKey) {
 		const el = document.createElement("img");
 		el.className = "arena-action-overlay";
 		el.src = overlay.sprite;
@@ -498,7 +513,7 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		el.setAttribute("aria-hidden", "true");
 		const sizePx = escala(overlay.sizePx ?? 260, pos.arenaW);
 		// Position + transform set via inline style (no transition — animation handles movement)
-		el.style.cssText = `width:${sizePx}px;left:${pos.origemX}px;top:${pos.origemY}px;transform:translate(-50%,-50%) scaleX(${pos.escalaHorizontal}) scale(${overlay.scale ?? 1}) rotate(${pos.anguloProjetil}deg);`;
+		el.style.cssText = `width:${sizePx}px;left:${pos.origemX}px;top:${pos.origemY}px;z-index:${zIndexProjetil(atacanteKey)};transform:translate(-50%,-50%) scaleX(${pos.escalaHorizontal}) scale(${overlay.scale ?? 1}) rotate(${pos.anguloProjetil}deg);`;
 		els.arena.appendChild(el);
 		void el.getBoundingClientRect(); // force layout before animation starts
 
@@ -512,7 +527,13 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		// Default: remove element when animation finishes (non-clash path)
 		animation.onfinish = () => el.remove();
 
-		return { el, animation };
+		return {
+			el,
+			animation,
+			pos,
+			overlay,
+			atacanteKey,
+		};
 	}
 
 	function criarAttached(overlay, alvoKey) {
@@ -548,7 +569,7 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 
 		const pos = posicoes(overlay, atacanteKey, origemEl, alvoEl, arenaRect);
 		if (overlay.mode === "beam") return criarBeam(overlay, pos);
-		return criarProjetil(overlay, pos).el;
+		return criarProjetil(overlay, pos, atacanteKey).el;
 	}
 
 	// ── Renderização de personagens ──────────────────────────────────────

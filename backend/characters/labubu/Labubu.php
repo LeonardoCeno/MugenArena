@@ -40,7 +40,7 @@ class Labubu extends Personagem {
 
     public function getHabilidades(): array {
         return [
-            ["nome" => "MorangodoAmor","metodo" => "MorangodoAmor","precisaAlvo" => true,  "energyCost" => self::CUSTO_MORANGO_DO_AMOR, "priority" => true],
+            ["nome" => "MorangodoAmor","metodo" => "MorangodoAmor","precisaAlvo" => true,  "energyCost" => self::CUSTO_MORANGO_DO_AMOR, "priority" => true, "clashable" => true],
             ["nome" => "labuaura",     "metodo" => "labuaura",    "precisaAlvo" => false, "energyCost" => self::CUSTO_LABUAURA]
         ];
     }
@@ -95,11 +95,11 @@ class Labubu extends Personagem {
                     'frames' => [
                         [
                             'sprite' => './assets/labubu/sprites/LANCE.png',
-                            'durationMs' => 800,
+                            'durationMs' => 1100,
                         ],
                         [
                             'sprite' => './assets/labubu/sprites/MORANGOLABUBU.png',
-                            'durationMs' => 600,
+                            'durationMs' => 800,
                         ],
                     ],
                     'overlays' => [
@@ -107,8 +107,8 @@ class Labubu extends Personagem {
                             'mode' => 'projectile',
                             'target' => 'opponent',
                             'sprite' => './assets/labubu/sprites/AMORMORANGO.png',
-                            'startMs' => 1100,
-                            'durationMs' => 500,
+                            'startMs' => 1600,
+                            'durationMs' => 650,
                             'sizePx' => 280,
                             'frontOffsetPx' => 130,
                             'projectileAngleDeg' => -15,

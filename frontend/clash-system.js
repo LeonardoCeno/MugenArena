@@ -11,45 +11,51 @@
 export function createClashSystem() {
     return { runClash };
 
-    async function runClash(ref1, ref2, clashMeta, postEvents1, postEvents2, anim) {
-        // 1. Poll until projectiles overlap by ≥20% of the smaller sprite width
-        await waitForOverlap(ref1.el, ref2.el, 0.20);
+    async function runClash(ref1, ref2, clashMeta, postEvents1, postEvents2, anim, refs1 = [], refs2 = []) {
+        const overlapResult = await waitForOverlap(ref1, ref2, 0.45, calcularTimeoutDeClash(ref1, ref2));
 
-        // Guard: if either element was removed during the overlap wait, abort cleanly
         if (!ref1.el.isConnected || !ref2.el.isConnected) return;
+        if (overlapResult !== "overlap" && overlapResult !== "timeout") return;
 
-        // 2. Freeze both at current animated position
-        freezeAtCurrentPosition(ref1);
-        freezeAtCurrentPosition(ref2);
+        await executarClashSincronizado(ref1, ref2, clashMeta, postEvents1, postEvents2, anim, refs1, refs2);
+    }
 
-        // 3. Shake both
-        ref1.el.classList.add("clash-shaking");
-        ref2.el.classList.add("clash-shaking");
-
-        // 4. Hold for clash duration
-        await anim.wait(clashMeta.durationMs);
-
-        // 5. Identify winner and loser
+    async function executarClashSincronizado(ref1, ref2, clashMeta, postEvents1, postEvents2, anim, refs1, refs2) {
         const winnerRef  = clashMeta.winner === "p1" ? ref1 : ref2;
         const loserRef   = clashMeta.winner === "p1" ? ref2 : ref1;
         const winnerPost = clashMeta.winner === "p1" ? postEvents1 : postEvents2;
+        const winnerRefs = clashMeta.winner === "p1" ? refs1 : refs2;
+        const loserRefs = clashMeta.winner === "p1" ? refs2 : refs1;
 
-        // 6. Remove loser
-        loserRef.el.classList.remove("clash-shaking");
-        loserRef.el.remove();
+        if (ref1.el.isConnected) freezeAtCurrentPosition(ref1);
+        if (ref2.el.isConnected) freezeAtCurrentPosition(ref2);
+
+        const ref1Anchor = ref1.el.isConnected ? getCenterInArena(ref1) : null;
+        const ref2Anchor = ref2.el.isConnected ? getCenterInArena(ref2) : null;
+        const stopSync1 = monitorarProjeteisSecundarios(refs1, ref1, ref1Anchor, anim);
+        const stopSync2 = monitorarProjeteisSecundarios(refs2, ref2, ref2Anchor, anim);
+
+        const cleanupLight = criarLuzDeClash(ref1, ref2, clashMeta.durationMs);
+
+        if (ref1.el.isConnected) ref1.el.classList.add("clash-shaking");
+        if (ref2.el.isConnected) ref2.el.classList.add("clash-shaking");
+
+        await anim.wait(clashMeta.durationMs);
+        cleanupLight(true);
+        stopSync1();
+        stopSync2();
+
+        removerProjeteisSecundarios(loserRefs, loserRef);
+
+        if (loserRef.el.isConnected) {
+            loserRef.el.classList.remove("clash-shaking");
+            loserRef.el.remove();
+        }
         loserRef.animation.cancel();
 
-        // 7. Resume winner
-        winnerRef.el.classList.remove("clash-shaking");
-        winnerRef.animation.play();
-
-        // 8. Wait for winner to reach target, then fire post-impact events
-        await new Promise(resolve => {
-            winnerRef.animation.onfinish = () => {
-                winnerRef.el.remove();
-                resolve();
-            };
-        });
+        if (winnerRef.el.isConnected) {
+            await continuarFormacaoAteAlvo(winnerRefs, winnerRef, anim);
+        }
 
         if (winnerPost.length > 0) {
             const handle = anim.rodarTimeline(winnerPost);
@@ -67,14 +73,317 @@ export function createClashSystem() {
         ref.animation.pause();
     }
 
+    function calcularTimeoutDeClash(ref1, ref2) {
+        const timing1 = Number(ref1?.animation?.effect?.getTiming?.().duration ?? 0);
+        const timing2 = Number(ref2?.animation?.effect?.getTiming?.().duration ?? 0);
+        return Math.max(timing1, timing2) + 1200;
+    }
+
+    function getAnimationRemainingMs(ref) {
+        const total = Number(ref?.animation?.effect?.getTiming?.().duration ?? 0);
+        const current = Number(ref?.animation?.currentTime ?? 0);
+        return Math.max(0, total - current);
+    }
+
+    function getArenaRect(ref) {
+        return ref.el.parentElement?.getBoundingClientRect() ?? null;
+    }
+
+    function getArenaElement(ref) {
+        return ref.el.parentElement ?? null;
+    }
+
+    function getCenterInArena(ref) {
+        const arenaRect = getArenaRect(ref);
+        const rect = ref.el.getBoundingClientRect();
+        if (!arenaRect) {
+            return {
+                x: rect.left + rect.width / 2,
+                y: rect.top + rect.height / 2,
+            };
+        }
+
+        return {
+            x: rect.left - arenaRect.left + rect.width / 2,
+            y: rect.top - arenaRect.top + rect.height / 2,
+        };
+    }
+
+    function setProjectilePosition(ref, point) {
+        ref.el.style.left = `${point.x}px`;
+        ref.el.style.top = `${point.y}px`;
+    }
+
+    function criarLuzDeClash(ref1, ref2, durationMs) {
+        const arena = getArenaElement(ref1) ?? getArenaElement(ref2);
+        if (!arena) {
+            return () => {};
+        }
+
+        const luz = document.createElement("div");
+        luz.className = "clash-light-core";
+        arena.appendChild(luz);
+
+        const startedAt = performance.now();
+        let frameId = 0;
+        let active = true;
+
+        const render = (now) => {
+            if (!active) return;
+
+            if (!ref1.el.isConnected || !ref2.el.isConnected) {
+                cleanup();
+                return;
+            }
+
+            const center1 = getCenterInArena(ref1);
+            const center2 = getCenterInArena(ref2);
+            const midpoint = {
+                x: (center1.x + center2.x) / 2,
+                y: (center1.y + center2.y) / 2,
+            };
+            const progress = clamp(0, (now - startedAt) / Math.max(1, durationMs), 1);
+            const size = 46 + (progress * 110);
+            const glow = 18 + (progress * 46);
+            const alpha = 0.55 + (progress * 0.4);
+
+            luz.style.left = `${midpoint.x}px`;
+            luz.style.top = `${midpoint.y}px`;
+            luz.style.width = `${size}px`;
+            luz.style.height = `${size}px`;
+            luz.style.opacity = `${alpha}`;
+            luz.style.setProperty("--clash-glow", `${glow}px`);
+            luz.style.setProperty("--clash-progress", `${progress}`);
+
+            frameId = requestAnimationFrame(render);
+        };
+
+        const cleanup = (immediate = false) => {
+            if (!active) return;
+            active = false;
+            cancelAnimationFrame(frameId);
+
+            if (immediate) {
+                luz.remove();
+                return;
+            }
+
+            luz.classList.add("is-fading");
+            setTimeout(() => luz.remove(), 220);
+        };
+
+        frameId = requestAnimationFrame(render);
+        return cleanup;
+    }
+
+    function clamp(min, value, max) {
+        return Math.max(min, Math.min(max, value));
+    }
+
+    function removerProjeteisSecundarios(refs, primaryRef) {
+        for (const ref of refs) {
+            if (!ref || ref === primaryRef) continue;
+            ref.animation.cancel();
+            ref.el.classList.remove("clash-shaking");
+            if (ref.el.isConnected) ref.el.remove();
+        }
+    }
+
+    function monitorarProjeteisSecundarios(refs, primaryRef, anchorPoint, anim) {
+        if (!anchorPoint || !Array.isArray(refs)) {
+            return () => {};
+        }
+
+        const control = { active: true };
+        const processed = new WeakSet();
+
+        const tick = () => {
+            if (!control.active) return;
+
+            for (const ref of refs) {
+                if (!ref || ref === primaryRef || processed.has(ref) || !ref.el.isConnected) continue;
+                processed.add(ref);
+                const queuePoint = calcularPosicaoNaFilaDeClash(refs, primaryRef, ref, anchorPoint);
+                void ancorarProjetilSecundario(ref, queuePoint, anim, control);
+            }
+
+            requestAnimationFrame(tick);
+        };
+
+        requestAnimationFrame(tick);
+
+        return () => {
+            control.active = false;
+        };
+    }
+
+    async function ancorarProjetilSecundario(ref, anchorPoint, anim, control) {
+        if (!ref.el.isConnected) return;
+
+        const current = getCenterInArena(ref);
+        const target = ref?.pos ? { x: ref.pos.alvoX, y: ref.pos.alvoY } : null;
+        const remainingMs = Math.max(0, getAnimationRemainingMs(ref));
+        const distanceToAnchor = Math.hypot(anchorPoint.x - current.x, anchorPoint.y - current.y);
+        const distanceToTarget = target
+            ? Math.max(1, Math.hypot(target.x - current.x, target.y - current.y))
+            : Math.max(1, distanceToAnchor);
+        const travelMs = Math.max(80, Math.round(remainingMs * (distanceToAnchor / distanceToTarget)));
+
+        ref.animation.cancel();
+        ref.el.style.transition = `left ${travelMs}ms linear, top ${travelMs}ms linear`;
+        setProjectilePosition(ref, current);
+        void ref.el.getBoundingClientRect();
+        setProjectilePosition(ref, anchorPoint);
+        await anim.wait(travelMs);
+
+        if (!control?.active) return;
+        if (!ref.el.isConnected) return;
+        ref.el.style.transition = "none";
+        setProjectilePosition(ref, anchorPoint);
+        ref.el.classList.add("clash-shaking");
+    }
+
+    function calcularPosicaoNaFilaDeClash(refs, primaryRef, ref, anchorPoint) {
+        const secondaries = refs.filter(candidate => candidate && candidate !== primaryRef);
+        const targetIndex = secondaries.indexOf(ref);
+        if (targetIndex < 0) return anchorPoint;
+
+        const direction = getDirecaoDoProjetil(primaryRef);
+        let distance = 0;
+        let previousRef = primaryRef;
+
+        for (let index = 0; index <= targetIndex; index += 1) {
+            const currentRef = secondaries[index];
+            distance += calcularEspacamentoEntreProjeteis(previousRef, currentRef);
+            previousRef = currentRef;
+        }
+
+        return {
+            x: anchorPoint.x - (direction.x * distance),
+            y: anchorPoint.y - (direction.y * distance),
+        };
+    }
+
+    function getDirecaoDoProjetil(ref) {
+        const deltaX = Number(ref?.pos?.alvoX ?? 0) - Number(ref?.pos?.origemX ?? 0);
+        const deltaY = Number(ref?.pos?.alvoY ?? 0) - Number(ref?.pos?.origemY ?? 0);
+        const magnitude = Math.hypot(deltaX, deltaY);
+
+        if (magnitude <= 0.001) {
+            return { x: ref?.atacanteKey === "p2" ? -1 : 1, y: 0 };
+        }
+
+        return {
+            x: deltaX / magnitude,
+            y: deltaY / magnitude,
+        };
+    }
+
+    function calcularEspacamentoEntreProjeteis(previousRef, currentRef) {
+        const previousWidth = getProjectileWidth(previousRef);
+        const currentWidth = getProjectileWidth(currentRef);
+        const maxOverlap = Math.min(currentWidth, previousWidth * 0.85);
+        const centerDistance = ((previousWidth + currentWidth) / 2) - maxOverlap;
+        return Math.max(12, centerDistance);
+    }
+
+    function getProjectileWidth(ref) {
+        if (ref?.el?.isConnected) {
+            return Math.max(1, ref.el.getBoundingClientRect().width);
+        }
+
+        if (ref?.overlay?.sizePx && ref?.pos?.arenaW) {
+            return Math.max(1, ref.overlay.sizePx * (ref.pos.arenaW / 1000));
+        }
+
+        return 1;
+    }
+
+    async function continuarFormacaoAteAlvo(refs, primaryRef, anim) {
+        const group = Array.isArray(refs) && refs.length > 0 ? refs.filter(Boolean) : [primaryRef];
+        const remainingMs = Math.max(0, Number(primaryRef.remainingMs ?? getAnimationRemainingMs(primaryRef)));
+        const primaryTarget = primaryRef?.pos ? { x: primaryRef.pos.alvoX, y: primaryRef.pos.alvoY } : null;
+
+        if (!primaryTarget) {
+            removerGrupoDeProjeteis(group);
+            return;
+        }
+
+        if (remainingMs <= 16) {
+            removerGrupoDeProjeteis(group);
+            return;
+        }
+
+        for (const ref of group) {
+            if (!ref?.el?.isConnected) continue;
+
+            const targetPoint = ref === primaryRef
+                ? primaryTarget
+                : calcularPosicaoNaFilaDeClash(group, primaryRef, ref, primaryTarget);
+
+            ref.animation.cancel();
+            ref.el.classList.remove("clash-shaking");
+            ref.el.style.transition = `left ${remainingMs}ms linear, top ${remainingMs}ms linear`;
+            setProjectilePosition(ref, getCenterInArena(ref));
+            void ref.el.getBoundingClientRect();
+            setProjectilePosition(ref, targetPoint);
+        }
+
+        await anim.wait(remainingMs);
+        removerGrupoDeProjeteis(group);
+    }
+
+    function removerGrupoDeProjeteis(refs) {
+        for (const ref of refs) {
+            if (!ref) continue;
+            ref.animation.cancel();
+            ref.el.classList.remove("clash-shaking");
+            if (ref.el.isConnected) ref.el.remove();
+        }
+    }
+
+    async function continuarProjetilAteAlvo(ref, anim) {
+        const remainingMs = Math.max(0, Number(ref.remainingMs ?? getAnimationRemainingMs(ref)));
+        const target = ref?.pos ? { x: ref.pos.alvoX, y: ref.pos.alvoY } : null;
+
+        if (!target) {
+            ref.el.remove();
+            return;
+        }
+
+        if (remainingMs <= 16) {
+            ref.el.remove();
+            return;
+        }
+
+        const current = getCenterInArena(ref);
+        ref.animation.cancel();
+        ref.el.style.transition = `left ${remainingMs}ms linear, top ${remainingMs}ms linear`;
+        setProjectilePosition(ref, current);
+        void ref.el.getBoundingClientRect();
+        setProjectilePosition(ref, target);
+        await anim.wait(remainingMs);
+        ref.el.remove();
+    }
+
     /**
      * Polls via requestAnimationFrame until the horizontal overlap between
-     * the two projectile elements is ≥ threshold fraction of the smaller width.
-     * Resolves immediately if either element is removed from the DOM.
+     * the two projectile elements is >= threshold fraction of the smaller width.
+     * Resolves with overlap, timeout, or disconnected.
      */
-    function waitForOverlap(el1, el2, threshold) {
+    function waitForOverlap(ref1, ref2, threshold, timeoutMs) {
         return new Promise(resolve => {
+            const startedAt = performance.now();
+
             function check() {
+                const el1 = ref1.el;
+                const el2 = ref2.el;
+
+                if ((performance.now() - startedAt) >= timeoutMs) {
+                    resolve("timeout");
+                    return;
+                }
+
                 if (!el1.isConnected || !el2.isConnected) { resolve(); return; }
                 const r1 = el1.getBoundingClientRect();
                 const r2 = el2.getBoundingClientRect();
@@ -82,7 +391,10 @@ export function createClashSystem() {
                     Math.min(r1.right, r2.right) - Math.max(r1.left, r2.left)
                 );
                 const smaller = Math.min(r1.width, r2.width);
-                if (smaller > 0 && overlapW / smaller >= threshold) { resolve(); return; }
+                if (smaller > 0 && overlapW / smaller >= threshold) {
+                    resolve("overlap");
+                    return;
+                }
                 requestAnimationFrame(check);
             }
             requestAnimationFrame(check);

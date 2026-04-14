@@ -61,8 +61,8 @@ class Profe extends Personagem {
 		return [
 			["nome" => "Red bill", "metodo" => "redBill", "precisaAlvo" => false, "energyCost" => self::CUSTO_RED_BILL],
 			["nome" => "Apelação", "metodo" => "apelacao", "precisaAlvo" => true,  "energyCost" => self::CUSTO_APELACAO],
-			["nome" => "VibeCode", "metodo" => "vibeCode", "precisaAlvo" => true,  "energyCost" => self::CUSTO_VIBECODE],
-			["nome" => "DOOCKER",  "metodo" => "MyWorld",  "precisaAlvo" => true,  "energyCost" => self::CUSTO_MYWORLD, "skipTurns" => 1, "activatesDomain" => true, "priority" => true]
+			["nome" => "VibeCode", "metodo" => "vibeCode", "precisaAlvo" => true,  "energyCost" => self::CUSTO_VIBECODE, "clashable" => true],
+			["nome" => "DOOCKER",  "metodo" => "MyWorld",  "precisaAlvo" => true,  "energyCost" => self::CUSTO_MYWORLD, "skipTurns" => 1, "activatesDomain" => true, "priority" => true, ]
 		];
 	}
 

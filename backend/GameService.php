@@ -136,9 +136,13 @@ class GameService {
         } elseif ($p1HasPriority) {
             $winnerKey  = 'p1';
             $durationMs = 1000;
-        } else {
+        } elseif ($p2HasPriority) {
             $winnerKey  = 'p2';
             $durationMs = 1000;
+        } else {
+            // Neither has priority — random 50/50
+            $winnerKey  = random_int(0, 1) === 0 ? 'p1' : 'p2';
+            $durationMs = 3000;
         }
 
         $loserKey = $winnerKey === 'p1' ? 'p2' : 'p1';
@@ -366,6 +370,7 @@ class GameService {
         $mensagens[]         = $resultado['mensagem'];
         $resolucaoOrdem      = $resultado['resolucaoOrdem'];
         $estadoIntermediario = $resultado['estadoIntermediario'];
+        $clashResultado      = $resultado['clash'] ?? null;
         if ($resultado['resetJogo']) {
             $resetJogo = true;
         }
@@ -393,7 +398,7 @@ class GameService {
             'resolucaoOrdem'     => $resolucaoOrdem,
             'mensagensResolucao' => $resultado['mensagensResolucao'] ?? [],
             'estadoIntermediario' => $estadoIntermediario,
-            'clash'              => $resultado['clash'] ?? null,
+            'clash'              => $clashResultado,
         ];
     }
 

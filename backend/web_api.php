@@ -83,6 +83,7 @@ function executarAcao(array $input): void {
         'resolucaoOrdem'      => $resultado['resolucaoOrdem'] ?? null,
         'mensagensResolucao'  => $resultado['mensagensResolucao'] ?? [],
         'estadoIntermediario' => $resultado['estadoIntermediario'] ?? null,
+        'clash'               => $resultado['clash'] ?? null,
         'message'             => $mensagem,
         'state'               => exportarEstadoDaSessao($mensagem),
     ]);
