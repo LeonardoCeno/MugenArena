@@ -946,8 +946,8 @@ justify-content: center;
   height: 100%;
   display: block;
 }
-/* ===== TRANSFORMAÇÃO SUKUNA ===== */
-.sukuna-transform-overlay {
+/* ===== TRANSFORMAÇÃO ===== */
+.char-transform-overlay {
   position: fixed;
   inset: 0;
   z-index: 8000;
@@ -955,33 +955,33 @@ justify-content: center;
   background: transparent;
   transition: background 0.55s ease;
 }
-.sukuna-transform-overlay.active {
+.char-transform-overlay.active {
   background: rgba(0, 0, 0, 0.90);
 }
-.sukuna-transform-overlay.flash {
-  background: rgba(180, 0, 0, 0.92);
+.char-transform-overlay.flash {
+  background: rgba(255, 255, 255, 0.75);
   transition: background 0.12s;
 }
-.sukuna-transform-overlay.fade-out {
+.char-transform-overlay.fade-out {
   background: transparent;
   transition: background 0.85s ease-out;
 }
 
-@keyframes sukuna-pulse {
-  0%   { filter: brightness(1)   saturate(1)   drop-shadow(0 0 0px #c00); }
-  40%  { filter: brightness(3.5) saturate(0.1) drop-shadow(0 0 32px #c00); }
-  100% { filter: brightness(6)   saturate(0)   drop-shadow(0 0 64px #ff2200); }
+@keyframes char-transform-pulse {
+  0%   { filter: brightness(1)   saturate(1)   drop-shadow(0 0 0px #fff); }
+  40%  { filter: brightness(3.5) saturate(0.1) drop-shadow(0 0 32px #fff); }
+  100% { filter: brightness(6)   saturate(0)   drop-shadow(0 0 64px #fff); }
 }
 
-.fighter.sukuna-transforming .fighter-img {
-  animation: sukuna-pulse 1.6s ease-in-out forwards;
+.fighter.char-transforming .fighter-img {
+  animation: char-transform-pulse 1.6s ease-in-out forwards;
 }
 
-@keyframes sukuna-transformed-idle {
-  0%, 100% { filter: brightness(1)   drop-shadow(0 0  8px rgba(200,0,0,0.5)); }
-  50%       { filter: brightness(1.2) drop-shadow(0 0 22px rgba(255,30,0,0.8)); }
+@keyframes char-transformed-idle {
+  0%, 100% { filter: brightness(1)   drop-shadow(0 0  8px rgba(255,255,255,0.4)); }
+  50%       { filter: brightness(1.2) drop-shadow(0 0 22px rgba(255,255,255,0.7)); }
 }
 
-.fighter.sukuna-transformed .fighter-img {
-  animation: sukuna-transformed-idle 2.4s ease-in-out infinite;
+.fighter.char-transformed .fighter-img {
+  animation: char-transformed-idle 2.4s ease-in-out infinite;
 }

@@ -281,9 +281,9 @@ const NIVEL_VOLUME_BGM_PADRAO = 3;
 					await verificarEAnimarTransformacao(estadoAntesDaAtualizacao, estadoAplicar);
 				}
 
-				// 2 segundos entre ataques
+				// 1 segundo entre ataques
 				if (!isUltimo) {
-					await new Promise(r => setTimeout(r, 2000));
+					await new Promise(r => setTimeout(r, 500));
 				}
 			}
 

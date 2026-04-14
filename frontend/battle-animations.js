@@ -122,9 +122,9 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		els.arena
 			?.querySelectorAll(".arena-action-overlay, .arena-energy-beam, .fighter-action-overlay")
 			.forEach(el => el.remove());
-		document.querySelectorAll(".sukuna-transform-overlay").forEach(el => el.remove());
+		document.querySelectorAll(".char-transform-overlay").forEach(el => el.remove());
 		for (const chave of ["p1", "p2"]) {
-			els.fighters[chave]?.root?.classList.remove("sukuna-transforming", "sukuna-transformed");
+			els.fighters[chave]?.root?.classList.remove("char-transforming", "char-transformed");
 		}
 		if (meleeAttackerKey) resetMelee(meleeAttackerKey);
 	}
@@ -534,7 +534,7 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 
 		// Overlay escuro
 		const overlay = document.createElement("div");
-		overlay.className = "sukuna-transform-overlay";
+		overlay.className = "char-transform-overlay";
 		document.body.appendChild(overlay);
 
 		// Audio
@@ -546,7 +546,7 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		}
 
 		// Fase 1: pulso no sprite do fighter
-		if (fighter) fighter.classList.add("sukuna-transforming");
+		if (fighter) fighter.classList.add("char-transforming");
 
 		await wait(200);
 		overlay.classList.add("active"); // escurece a tela
@@ -555,7 +555,7 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		await wait(900);
 		if (spriteTransf) { state.sprites[chave] = spriteTransf; atualizarHUD(); }
 
-		// Fase 3: flash vermelho
+		// Fase 3: flash
 		await wait(300);
 		overlay.classList.add("flash");
 
@@ -566,8 +566,8 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		// Fase 4: limpa animação de pulso, aplica idle de transformado
 		await wait(500);
 		if (fighter) {
-			fighter.classList.remove("sukuna-transforming");
-			fighter.classList.add("sukuna-transformed");
+			fighter.classList.remove("char-transforming");
+			fighter.classList.add("char-transformed");
 		}
 
 		// Fase 5: solta o sprite temporário (baseSprite já é DOMAINSUKUNA.png via servidor)

@@ -182,7 +182,7 @@ class Sukuna extends Personagem {
 
     public function getConfiguracaoVisual(): array {
         $baseSprite = $this->transformado
-            ? './assets/sukuna/sprites/DOMAINSUKUNA.png'
+            ? './assets/sukuna/sprites/sprite_8.png'
             : './assets/sukuna/sprites/sukunabasefinal.png';
 
         return [
@@ -264,6 +264,10 @@ class Sukuna extends Personagem {
                     ],
                 ],
             ],
+            'transformation' => [
+                'sprite' => './assets/sukuna/sprites/sprite_8.png',
+                ],
+
         ];
     }
 

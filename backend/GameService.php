@@ -560,7 +560,6 @@ class GameService {
         if (!$vencedor && $currentKey !== null) {
             $availableActionsFlat = self::acoesDisponiveis($game[$currentKey], false);
         }
-
         return [
             'started'              => true,
             'turno'                => (int)$game['turno'],
