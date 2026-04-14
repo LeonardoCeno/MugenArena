@@ -15,6 +15,9 @@ export function createClashSystem() {
         // 1. Poll until projectiles overlap by ≥20% of the smaller sprite width
         await waitForOverlap(ref1.el, ref2.el, 0.20);
 
+        // Guard: if either element was removed during the overlap wait, abort cleanly
+        if (!ref1.el.isConnected || !ref2.el.isConnected) return;
+
         // 2. Freeze both at current animated position
         freezeAtCurrentPosition(ref1);
         freezeAtCurrentPosition(ref2);
@@ -55,16 +58,13 @@ export function createClashSystem() {
     }
 
     /**
-     * Pauses the Web Animations API animation and locks the current
-     * animated position into inline style so the element stays put.
+     * Pauses the Web Animations API animation at its current frame.
+     * WAAPI fill:"forwards" with composite:"replace" holds the animated
+     * position regardless of inline style — animation.pause() alone is
+     * sufficient. animation.play() will resume from this exact frame.
      */
     function freezeAtCurrentPosition(ref) {
-        const computed   = window.getComputedStyle(ref.el);
-        const frozenLeft = computed.left;
-        const frozenTop  = computed.top;
         ref.animation.pause();
-        ref.el.style.left = frozenLeft;
-        ref.el.style.top  = frozenTop;
     }
 
     /**

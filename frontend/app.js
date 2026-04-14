@@ -246,8 +246,13 @@ const NIVEL_VOLUME_BGM_PADRAO = 1	;
 				animations
 			);
 		} else {
-			// Fallback: no projectile refs — just wait out the clash duration
+			// Fallback: projectile refs unavailable — wait out clash, then fire winner's post-events
 			await animations.wait(clashMeta.durationMs);
+			const winnerPost = clashMeta.winner === "p1" ? animData1.postEvents : animData2.postEvents;
+			if (winnerPost.length > 0) {
+				const h = animations.rodarTimeline(winnerPost);
+				await animations.wait(h.duration);
+			}
 		}
 
 		animations.cancelarAnimacao();
