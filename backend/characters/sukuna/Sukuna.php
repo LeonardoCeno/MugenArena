@@ -160,6 +160,7 @@ class Sukuna extends Personagem {
                 "metodo"     => "santuarioMalevolente",
                 "precisaAlvo"=> true,
                 "energyCost" => self::CUSTO_DOMAIN,
+                "activatesDomain" => true,
                 "priority"   => true,
             ],
         ];

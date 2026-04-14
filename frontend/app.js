@@ -246,6 +246,15 @@ const NIVEL_VOLUME_BGM_PADRAO = 1	;
 		return [sincronizar(animData1), sincronizar(animData2)];
 	}
 
+	function sincronizarExpansaoDeDomains(animData1, animData2) {
+		const syncedExpandMs = Math.max(animData1.domainExpandMs, animData2.domainExpandMs);
+
+		return [
+			{ ...animData1, syncedExpandMs },
+			{ ...animData2, syncedExpandMs },
+		];
+	}
+
 	async function executarTurnoClash(acoesMap, clashMeta, estadoFinal) {
 		const rawAnimData1 = animations.montarAnimacaoClash("p1", acoesMap["p1"], "p2");
 		const rawAnimData2 = animations.montarAnimacaoClash("p2", acoesMap["p2"], "p1");
@@ -283,6 +292,43 @@ const NIVEL_VOLUME_BGM_PADRAO = 1	;
 			}
 		}
 
+		animations.cancelarAnimacao();
+	}
+
+	async function executarTurnoDomainClash(acoesMap, clashMeta) {
+		const winnerKey = clashMeta.winner;
+		animations.mostrarAnelClashDeDomain();
+		const rawAnimData1 = animations.montarAnimacaoDomainClash("p1", acoesMap["p1"], "p2");
+		const rawAnimData2 = animations.montarAnimacaoDomainClash("p2", acoesMap["p2"], "p1");
+		const [animData1, animData2] = sincronizarExpansaoDeDomains(rawAnimData1, rawAnimData2);
+
+		const preEvents = [...animData1.preExpandEvents, ...animData2.preExpandEvents];
+		const handle = animations.rodarTimeline(preEvents);
+		state.anim = handle;
+
+		await animations.wait(Math.max(animData1.syncedExpandMs, animData2.syncedExpandMs));
+
+		const cleanupSplit = animations.mostrarPainelClashDeDomain(
+			animData1.domainImage,
+			animData2.domainImage,
+			6000
+		);
+		await animations.wait(6000);
+		cleanupSplit();
+
+		const loserKey = winnerKey === "p1" ? "p2" : "p1";
+		state.sprites[loserKey] = null;
+		state.frameScale[loserKey] = null;
+
+		const winnerAnimData = winnerKey === "p1" ? animData1 : animData2;
+		state.domainImage = winnerAnimData.domainImage ?? null;
+		atualizarHUD();
+
+		const winnerPostHandle = winnerAnimData.winnerDeferredEvents.length > 0
+			? animations.rodarTimeline(winnerAnimData.winnerDeferredEvents)
+			: { duration: 0, cancel() {} };
+
+		await animations.wait(Math.max(clashMeta.durationMs ?? 0, winnerPostHandle.duration));
 		animations.cancelarAnimacao();
 	}
 
@@ -340,7 +386,11 @@ const NIVEL_VOLUME_BGM_PADRAO = 1	;
 
 			// ── Clash branch ─────────────────────────────────────────────────────
 			if (resposta.clash?.occurred) {
-				await executarTurnoClash(acoesMap, resposta.clash, estadoFinal);
+				if (resposta.clash.kind === "domain") {
+					await executarTurnoDomainClash(acoesMap, resposta.clash);
+				} else {
+					await executarTurnoClash(acoesMap, resposta.clash, estadoFinal);
+				}
 				const estadoAntesDaAtualizacao = state.serverState;
 				atualizarEstado(estadoFinal, true);
 				atualizarHUD();

@@ -25,7 +25,7 @@ export function createClashSystem() {
         const loserRef   = clashMeta.winner === "p1" ? ref2 : ref1;
         const winnerPost = clashMeta.winner === "p1" ? postEvents1 : postEvents2;
         const winnerRefs = clashMeta.winner === "p1" ? refs1 : refs2;
-        const loserRefs = clashMeta.winner === "p1" ? refs2 : refs1;
+        const loserRefs  = clashMeta.winner === "p1" ? refs2 : refs1;
 
         if (ref1.el.isConnected) freezeAtCurrentPosition(ref1);
         if (ref2.el.isConnected) freezeAtCurrentPosition(ref2);
@@ -35,13 +35,26 @@ export function createClashSystem() {
         const stopSync1 = monitorarProjeteisSecundarios(refs1, ref1, ref1Anchor, anim);
         const stopSync2 = monitorarProjeteisSecundarios(refs2, ref2, ref2Anchor, anim);
 
-        const cleanupLight = criarLuzDeClash(ref1, ref2, clashMeta.durationMs);
+        const arena    = getArenaElement(ref1) ?? getArenaElement(ref2);
+        const midpoint = (ref1Anchor && ref2Anchor)
+            ? { x: (ref1Anchor.x + ref2Anchor.x) / 2, y: (ref1Anchor.y + ref2Anchor.y) / 2 }
+            : ref1Anchor ?? ref2Anchor;
+
+        const cleanupLight      = criarLuzDeClash(ref1, ref2, clashMeta.durationMs);
+        const cleanupArenaShake = aplicarShakeArena(arena);
+
+        if (midpoint) {
+            criarFlashDeImpacto(arena, midpoint);
+            criarAnelDeChoque(arena, midpoint);
+            setTimeout(() => criarAnelDeChoque(arena, midpoint, true), 160);
+        }
 
         if (ref1.el.isConnected) ref1.el.classList.add("clash-shaking");
         if (ref2.el.isConnected) ref2.el.classList.add("clash-shaking");
 
         await anim.wait(clashMeta.durationMs);
         cleanupLight(true);
+        cleanupArenaShake();
         stopSync1();
         stopSync2();
 
@@ -114,6 +127,33 @@ export function createClashSystem() {
         ref.el.style.top = `${point.y}px`;
     }
 
+    function aplicarShakeArena(arena) {
+        if (!arena) return () => {};
+        arena.classList.add("clash-arena-shaking");
+        return () => arena.classList.remove("clash-arena-shaking");
+    }
+
+    function criarFlashDeImpacto(arena, midpoint) {
+        if (!arena) return;
+        const flash = document.createElement("div");
+        flash.className = "clash-impact-flash";
+        flash.style.left = `${midpoint.x}px`;
+        flash.style.top  = `${midpoint.y}px`;
+        arena.appendChild(flash);
+        flash.addEventListener("animationend", () => flash.remove(), { once: true });
+    }
+
+    function criarAnelDeChoque(arena, midpoint, secondary = false) {
+        if (!arena) return;
+        const ring = document.createElement("div");
+        ring.className = "clash-shockwave-ring";
+        if (secondary) ring.classList.add("is-secondary");
+        ring.style.left = `${midpoint.x}px`;
+        ring.style.top  = `${midpoint.y}px`;
+        arena.appendChild(ring);
+        ring.addEventListener("animationend", () => ring.remove(), { once: true });
+    }
+
     function criarLuzDeClash(ref1, ref2, durationMs) {
         const arena = getArenaElement(ref1) ?? getArenaElement(ref2);
         if (!arena) {
@@ -143,9 +183,9 @@ export function createClashSystem() {
                 y: (center1.y + center2.y) / 2,
             };
             const progress = clamp(0, (now - startedAt) / Math.max(1, durationMs), 1);
-            const size = 46 + (progress * 110);
-            const glow = 18 + (progress * 46);
-            const alpha = 0.55 + (progress * 0.4);
+            const size = 60 + (progress * 152);
+            const glow = 24 + (progress * 64);
+            const alpha = 0.68 + (progress * 0.3);
 
             luz.style.left = `${midpoint.x}px`;
             luz.style.top = `${midpoint.y}px`;

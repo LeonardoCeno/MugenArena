@@ -120,7 +120,7 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		state.frameScale.p2 = null;
 		state.domainImage = null;
 		els.arena
-			?.querySelectorAll(".arena-action-overlay, .arena-energy-beam, .fighter-action-overlay")
+			?.querySelectorAll(".arena-action-overlay, .arena-energy-beam, .fighter-action-overlay, .domain-clash-ring, .domain-clash-split")
 			.forEach(el => el.remove());
 		document.querySelectorAll(".char-transform-overlay").forEach(el => el.remove());
 		for (const chave of ["p1", "p2"]) {
@@ -427,6 +427,35 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		};
 	}
 
+	function montarAnimacaoDomainClash(atacanteKey, acao, defensorKey, options = {}) {
+		const nomeAcao     = acao.nomeSprite || acao.nome;
+		const actionConfig = state.serverState?.[atacanteKey]?.visual?.actions?.[nomeAcao] ?? {};
+		const domainExpandMs = Number(actionConfig?.domainDelayMs) > 0 ? Number(actionConfig.domainDelayMs) : 0;
+		const domainImage = actionConfig?.domainImage ?? null;
+
+		const { events: frameEvts } = eventosFrames(atacanteKey, framesDeConfig(actionConfig));
+		const overlayEvts = overlaysDeConfig(actionConfig).flatMap(overlay => eventosOverlay(overlay, atacanteKey));
+		const audioEvts = eventosAudio(actionConfig);
+
+		const preExpandEvents = frameEvts.filter(event => event.at < domainExpandMs);
+
+		const winnerDeferredEvents = [
+			...overlayEvts,
+			...audioEvts,
+			...frameEvts.filter(event => event.at >= domainExpandMs),
+		].map(event => ({
+			...event,
+			at: event.at >= domainExpandMs ? event.at - domainExpandMs : event.at,
+		}));
+
+		return {
+			preExpandEvents,
+			winnerDeferredEvents,
+			domainExpandMs,
+			domainImage,
+		};
+	}
+
 	// ── Criação de elementos de overlay ─────────────────────────────────
 
 	function escala(px, arenaW) {
@@ -644,6 +673,56 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		});
 	}
 
+	function mostrarAnelClashDeDomain() {
+		if (!els.arena) return;
+
+		for (const chave of ["p1", "p2"]) {
+			const fighter = els.fighters[chave]?.root;
+			const arenaRect = els.arena.getBoundingClientRect();
+			const fighterRect = fighter?.getBoundingClientRect();
+			if (!fighterRect) continue;
+
+			const ring = document.createElement("div");
+			ring.className = "domain-clash-ring";
+			ring.style.left = `${fighterRect.left - arenaRect.left + (fighterRect.width / 2)}px`;
+			ring.style.top = `${fighterRect.top - arenaRect.top + (fighterRect.height / 2)}px`;
+			els.arena.appendChild(ring);
+
+			ring.addEventListener("animationend", () => ring.remove(), { once: true });
+		}
+	}
+
+	function mostrarPainelClashDeDomain(leftImage, rightImage, durationMs = 6000) {
+		if (!els.arena || (!leftImage && !rightImage)) {
+			return () => {};
+		}
+
+		const panel = document.createElement("div");
+		panel.className = "domain-clash-split";
+		panel.style.setProperty("--domain-clash-duration", `${durationMs}ms`);
+
+		const leftPane = document.createElement("div");
+		leftPane.className = "domain-clash-split-pane is-left";
+		if (leftImage) leftPane.style.backgroundImage = `url('${leftImage}')`;
+
+		const rightPane = document.createElement("div");
+		rightPane.className = "domain-clash-split-pane is-right";
+		if (rightImage) rightPane.style.backgroundImage = `url('${rightImage}')`;
+
+		panel.append(leftPane, rightPane);
+		els.arena.appendChild(panel);
+
+		let removed = false;
+		const cleanup = () => {
+			if (removed) return;
+			removed = true;
+			panel.remove();
+		};
+
+		setTimeout(cleanup, durationMs + 100);
+		return cleanup;
+	}
+
 	async function animarTransformacao(chave) {
 		const fighter       = els.fighters[chave]?.root;
 		const transformCfg  = state.serverState?.[chave]?.visual?.transformation ?? {};
@@ -701,10 +780,13 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		feedbackDano,
 		wait,
 		mostrarSplashErroInsano,
+		mostrarAnelClashDeDomain,
+		mostrarPainelClashDeDomain,
 		rodarTimeline,
 		cancelarAnimacao,
 		montarAnimacao,
 		montarAnimacaoClash,
+		montarAnimacaoDomainClash,
 		visualPersonagem,
 		animarEsquiva,
 		animarMorte,

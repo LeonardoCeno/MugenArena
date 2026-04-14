@@ -62,6 +62,20 @@ class GameService {
         return $metodo !== '' ? $metodo : null;
     }
 
+    private static function habilidadeDaAcao(Personagem $p, array $acao): ?array {
+        if (($acao['actionType'] ?? null) !== 'skill') {
+            return null;
+        }
+
+        $skillIndex = $acao['skillIndex'] ?? null;
+        $habilidades = $p->getHabilidades();
+        if ($skillIndex === null || !isset($habilidades[$skillIndex])) {
+            return null;
+        }
+
+        return $habilidades[$skillIndex];
+    }
+
     private static function efeitosVazio(): array {
         return ['skipTurns' => 0, 'skipTurnsChance' => 0, 'activatesDomain' => false];
     }
@@ -113,11 +127,29 @@ class GameService {
     }
 
     private static function acaoEhClashavel(Personagem $p, array $acao): bool {
-        if ($acao['actionType'] !== 'skill') return false;
-        $skillIndex  = $acao['skillIndex'] ?? null;
-        $habilidades = $p->getHabilidades();
-        if ($skillIndex === null || !isset($habilidades[$skillIndex])) return false;
-        return (bool)($habilidades[$skillIndex]['clashable'] ?? false);
+        $habilidade = self::habilidadeDaAcao($p, $acao);
+        return (bool)($habilidade['clashable'] ?? false);
+    }
+
+    private static function acaoAtivaDomain(Personagem $p, array $acao): bool {
+        $habilidade = self::habilidadeDaAcao($p, $acao);
+        return (bool)($habilidade['activatesDomain'] ?? false);
+    }
+
+    private static function decidirVencedorDoClash(bool $p1HasPriority, bool $p2HasPriority): array {
+        if ($p1HasPriority && $p2HasPriority) {
+            return [random_int(0, 1) === 0 ? 'p1' : 'p2', 3000];
+        }
+
+        if ($p1HasPriority) {
+            return ['p1', 1000];
+        }
+
+        if ($p2HasPriority) {
+            return ['p2', 1000];
+        }
+
+        return [random_int(0, 1) === 0 ? 'p1' : 'p2', 3000];
     }
 
     /**
@@ -125,25 +157,11 @@ class GameService {
      * Apenas o vencedor executa sua ação; o perdedor é cancelado.
      * Retorna o array de resultado padrão + chave 'clash'.
      */
-    private static function resolverClash(array &$game, string $k1, array $a1, string $k2, array $a2): array {
-        $p1HasPriority = (bool)($game['p1']->getHabilidades()[$a1['skillIndex'] ?? -1]['priority'] ?? false);
-        $p2HasPriority = (bool)($game['p2']->getHabilidades()[$a2['skillIndex'] ?? -1]['priority'] ?? false);
-
-        // Determine winner
-        if ($p1HasPriority && $p2HasPriority) {
-            $winnerKey = random_int(0, 1) === 0 ? 'p1' : 'p2';
-            $durationMs = 3000;
-        } elseif ($p1HasPriority) {
-            $winnerKey  = 'p1';
-            $durationMs = 1000;
-        } elseif ($p2HasPriority) {
-            $winnerKey  = 'p2';
-            $durationMs = 1000;
-        } else {
-            // Neither has priority — random 50/50
-            $winnerKey  = random_int(0, 1) === 0 ? 'p1' : 'p2';
-            $durationMs = 3000;
-        }
+    private static function resolverClash(array &$game, array $a1, array $a2, string $kind): array {
+        [$winnerKey, $durationMs] = self::decidirVencedorDoClash(
+            self::acaoTemPrioridade($game['p1'], $a1),
+            self::acaoTemPrioridade($game['p2'], $a2)
+        );
 
         $loserKey = $winnerKey === 'p1' ? 'p2' : 'p1';
 
@@ -172,6 +190,7 @@ class GameService {
                 'occurred'   => true,
                 'winner'     => $winnerKey,
                 'durationMs' => $durationMs,
+                'kind'       => $kind,
             ],
         ];
     }
@@ -291,9 +310,14 @@ class GameService {
         $a1 = $game['pendingActions']['p1'];
         $a2 = $game['pendingActions']['p2'];
 
-        // Clash: ambos usaram skills clashable — apenas o vencedor age
+        // Domain clash: ambos ativaram domínio — apenas o vencedor age
+        if (self::acaoAtivaDomain($game['p1'], $a1) && self::acaoAtivaDomain($game['p2'], $a2)) {
+            return self::resolverClash($game, $a1, $a2, 'domain');
+        }
+
+        // Projectile clash: ambos usaram skills clashable — apenas o vencedor age
         if (self::acaoEhClashavel($game['p1'], $a1) && self::acaoEhClashavel($game['p2'], $a2)) {
-            return self::resolverClash($game, 'p1', $a1, 'p2', $a2);
+            return self::resolverClash($game, $a1, $a2, 'projectile');
         }
 
         $p1First        = self::determinarOrdem($game['p1'], $a1, $game['p2'], $a2);
