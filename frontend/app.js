@@ -1,5 +1,6 @@
 import { createUIController } from "./ui-status.js";
 import { createAnimationController } from "./battle-animations.js";
+import { createClashSystem } from "./clash-system.js";
 
 const FUNDOS_ARENA = ["BEACH 2.png","BEACH NIGHT.png","BEACH.png","CAVE 2.png","CAVE NIGHT.png","CAVE.png","DESERT NIGHT.png","DESERT.png","LAKE NIGHT.png","LAKE.png","MOUNTAIN 2.png","MOUNTAIN NIGHT.png","MOUNTAIN.png","OCEAN NIGHT.png","OCEAN.png","PATH 2.png","PATH NIGHT.png","PATH.png","SNOW NIGHT.png","SNOW.png","TALL GRASS NIGHT.png","TALL GRASS.png","UNDERWATER.png"];
 const MUSICAS_FUNDO = [
@@ -222,6 +223,36 @@ const NIVEL_VOLUME_BGM_PADRAO = 1	;
 		animations.cancelarAnimacao();
 	}
 
+	async function executarTurnoClash(acoesMap, clashMeta, estadoFinal) {
+		const animData1 = animations.montarAnimacaoClash("p1", acoesMap["p1"], "p2");
+		const animData2 = animations.montarAnimacaoClash("p2", acoesMap["p2"], "p1");
+
+		// Both character animations start simultaneously
+		const allPreEvents = [...animData1.preEvents, ...animData2.preEvents];
+		const handle = animations.rodarTimeline(allPreEvents);
+		state.anim = handle;
+
+		// Wait until both projectiles are in flight (max startMs + small buffer)
+		const bothLaunchedMs = Math.max(animData1.projectileStartMs, animData2.projectileStartMs) + 80;
+		await animations.wait(bothLaunchedMs);
+
+		const ref1 = animData1.getProjectileRef();
+		const ref2 = animData2.getProjectileRef();
+
+		if (ref1 && ref2) {
+			await clashSystem.runClash(
+				ref1, ref2, clashMeta,
+				animData1.postEvents, animData2.postEvents,
+				animations
+			);
+		} else {
+			// Fallback: no projectile refs — just wait out the clash duration
+			await animations.wait(clashMeta.durationMs);
+		}
+
+		animations.cancelarAnimacao();
+	}
+
 	async function processarAcao(acao) {
 		if (state.resolvendoAcao || !state.serverState?.started || state.serverState.winner) return;
 
@@ -273,6 +304,22 @@ const NIVEL_VOLUME_BGM_PADRAO = 1	;
 			// Estados intermediário e final para aplicar dano em tempo real
 			const estadoIntermediario = resposta.estadoIntermediario ?? null;
 			const estadoFinal         = resposta.state ?? null;
+
+			// ── Clash branch ─────────────────────────────────────────────────────
+			if (resposta.clash?.occurred) {
+				await executarTurnoClash(acoesMap, resposta.clash, estadoFinal);
+				const estadoAntesDaAtualizacao = state.serverState;
+				atualizarEstado(estadoFinal, true);
+				atualizarHUD();
+				await verificarEAnimarTransformacao(estadoAntesDaAtualizacao, estadoFinal);
+				if (mensagem) ui.adicionarLog(mensagem);
+				if (resposta.state?.winner) {
+					await animations.animarMorte(oposto(resposta.state.winner));
+				}
+				atualizarHUD();
+				return;
+			}
+			// ── End clash branch ──────────────────────────────────────────────────
 
 			// Filtra apenas ataques que têm animação (ignora skip)
 			const ordemAnimada = ordem.filter(k => acoesMap[k] && acoesMap[k].type !== "skip");
@@ -397,6 +444,7 @@ const NIVEL_VOLUME_BGM_PADRAO = 1	;
 	}
 
 	animations = createAnimationController({ state, els, atualizarHUD });
+	const clashSystem = createClashSystem();
 	ui = createUIController({ state, els, onActionSelected: processarAcao });
 	ajustarNivelVolumeBgm(state.bgMusicVolumeLevel);
 	atualizarBotaoMusicaFundo();
