@@ -112,6 +112,66 @@ class GameService {
         return false;
     }
 
+    private static function acaoEhClashavel(Personagem $p, array $acao): bool {
+        if ($acao['actionType'] !== 'skill') return false;
+        $skillIndex  = $acao['skillIndex'] ?? null;
+        $habilidades = $p->getHabilidades();
+        if ($skillIndex === null || !isset($habilidades[$skillIndex])) return false;
+        return (bool)($habilidades[$skillIndex]['clashable'] ?? false);
+    }
+
+    /**
+     * Resolve um turno onde ambas as ações são clashable.
+     * Apenas o vencedor executa sua ação; o perdedor é cancelado.
+     * Retorna o array de resultado padrão + chave 'clash'.
+     */
+    private static function resolverClash(array &$game, string $k1, array $a1, string $k2, array $a2): array {
+        $p1HasPriority = (bool)($game['p1']->getHabilidades()[$a1['skillIndex'] ?? -1]['priority'] ?? false);
+        $p2HasPriority = (bool)($game['p2']->getHabilidades()[$a2['skillIndex'] ?? -1]['priority'] ?? false);
+
+        // Determine winner
+        if ($p1HasPriority && $p2HasPriority) {
+            $winnerKey = random_int(0, 1) === 0 ? 'p1' : 'p2';
+            $durationMs = 3000;
+        } elseif ($p1HasPriority) {
+            $winnerKey  = 'p1';
+            $durationMs = 1000;
+        } else {
+            $winnerKey  = 'p2';
+            $durationMs = 1000;
+        }
+
+        $loserKey = $winnerKey === 'p1' ? 'p2' : 'p1';
+
+        // Execute only winner's action
+        $mensagem = self::executarAcaoPendente($game, $winnerKey);
+
+        // Clear loser without executing
+        $game['pendingActions'][$loserKey] = null;
+
+        // Continuous effects, turn advance, energy regen
+        if ($game['p1']->estaVivo()) $game['p1']->processarEfeitosContinuosFimTurno();
+        if ($game['p2']->estaVivo()) $game['p2']->processarEfeitosContinuosFimTurno();
+
+        $game['turno']++;
+        $game['pendingActions'] = ['p1' => null, 'p2' => null];
+        $game['p1']->iniciarTurno();
+        $game['p2']->iniciarTurno();
+
+        return [
+            'mensagem'            => $mensagem,
+            'resetJogo'           => false,
+            'resolucaoOrdem'      => [$winnerKey, $loserKey],
+            'mensagensResolucao'  => [$mensagem],
+            'estadoIntermediario' => null,
+            'clash' => [
+                'occurred'   => true,
+                'winner'     => $winnerKey,
+                'durationMs' => $durationMs,
+            ],
+        ];
+    }
+
     /**
      * Retorna true se p1 age antes de p2.
      * Regras: prioridade > velocidade > aleatório.
@@ -227,6 +287,11 @@ class GameService {
         $a1 = $game['pendingActions']['p1'];
         $a2 = $game['pendingActions']['p2'];
 
+        // Clash: ambos usaram skills clashable — apenas o vencedor age
+        if (self::acaoEhClashavel($game['p1'], $a1) && self::acaoEhClashavel($game['p2'], $a2)) {
+            return self::resolverClash($game, 'p1', $a1, 'p2', $a2);
+        }
+
         $p1First        = self::determinarOrdem($game['p1'], $a1, $game['p2'], $a2);
         $firstKey       = $p1First ? 'p1' : 'p2';
         $secondKey      = $p1First ? 'p2' : 'p1';
@@ -279,6 +344,7 @@ class GameService {
             'resolucaoOrdem'     => $resolucaoOrdem,
             'mensagensResolucao' => $mensagens,
             'estadoIntermediario' => $estadoIntermediario,
+            'clash'              => null,
         ];
     }
 
@@ -327,6 +393,7 @@ class GameService {
             'resolucaoOrdem'     => $resolucaoOrdem,
             'mensagensResolucao' => $resultado['mensagensResolucao'] ?? [],
             'estadoIntermediario' => $estadoIntermediario,
+            'clash'              => $resultado['clash'] ?? null,
         ];
     }
 
@@ -453,6 +520,7 @@ class GameService {
                 'resolucaoOrdem'     => $resultado['resolucaoOrdem'],
                 'mensagensResolucao' => $resultado['mensagensResolucao'] ?? [],
                 'estadoIntermediario' => $resultado['estadoIntermediario'],
+                'clash'              => $resultado['clash'] ?? null,
             ];
         }
 
