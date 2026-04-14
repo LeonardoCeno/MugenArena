@@ -9,7 +9,7 @@ const MUSICAS_FUNDO = [
 	"./assets/audiosdefundo/HERO.mp3",
 	"./assets/audiosdefundo/monsterskillet.mp3",
 ];
-const NIVEL_VOLUME_BGM_PADRAO = 3;
+const NIVEL_VOLUME_BGM_PADRAO = 1	;
 
 (() => {
 	const API_URL = "../backend/web_api.php";

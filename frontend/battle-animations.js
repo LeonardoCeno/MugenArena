@@ -396,11 +396,37 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		if (overlay.beamTone === "dark")       el.classList.add("arena-energy-beam-dark");
 		else if (overlay.beamTone === "pink")  el.classList.add("arena-energy-beam-pink");
 		el.setAttribute("aria-hidden", "true");
-		el.style.cssText = `left:${pos.origemX}px;top:${pos.origemY}px;height:${escala(overlay.thicknessPx, pos.arenaW)}px;width:0px;transform:translate(0,-50%) rotate(${pos.anguloAuto}deg);transition:width ${overlay.durationMs}ms ease-out`;
+		const arenaRect = els.arena?.getBoundingClientRect();
+		const arenaW = arenaRect?.width ?? pos.arenaW;
+		const arenaH = arenaRect?.height ?? 0;
+		const angleRad = (pos.anguloAuto * Math.PI) / 180;
+		const dirX = Math.cos(angleRad);
+		const dirY = Math.sin(angleRad);
+		const edgeDistances = [];
+
+		if (Math.abs(dirX) > 1e-6) {
+			const tX = dirX > 0 ? (arenaW - pos.origemX) / dirX : (0 - pos.origemX) / dirX;
+			if (tX > 0) edgeDistances.push(tX);
+		}
+
+		if (Math.abs(dirY) > 1e-6 && arenaH > 0) {
+			const tY = dirY > 0 ? (arenaH - pos.origemY) / dirY : (0 - pos.origemY) / dirY;
+			if (tY > 0) edgeDistances.push(tY);
+		}
+
+		const edgeReach = edgeDistances.length ? Math.min(...edgeDistances) : pos.distancia;
+		const beamEndPadding = escala(overlay.beamEndPaddingPx ?? 60, pos.arenaW);
+		const overshoot = Math.max(1, overlay.beamOvershoot ?? 1.35);
+		const beamWidth = Math.max(pos.distancia * overshoot, edgeReach + beamEndPadding);
+		const baseBeamHeight = escala(overlay.thicknessPx, pos.arenaW);
+		const targetEndCoverage = Math.max(0, Math.min(1, overlay.beamEndScreenCoverage ?? 0.3));
+		const minBeamHeightForTipCoverage = arenaH > 0 ? (arenaH * targetEndCoverage) / 2 : baseBeamHeight;
+		const beamHeight = Math.max(baseBeamHeight, minBeamHeightForTipCoverage);
+		el.style.cssText = `left:${pos.origemX}px;top:${pos.origemY}px;height:${beamHeight}px;width:0px;transform:translate(0,-50%) rotate(${pos.anguloAuto}deg);transition:width ${overlay.durationMs}ms ease-out`;
 		els.arena.appendChild(el);
 		// force reflow — garante que width:0 está committed antes de aplicar width alvo para a transição CSS
 		void el.getBoundingClientRect();
-		el.style.width = `${pos.distancia}px`;
+		el.style.width = `${beamWidth}px`;
 		return el;
 	}
 

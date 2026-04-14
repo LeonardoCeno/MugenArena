@@ -68,10 +68,10 @@ class Profe extends Personagem {
 
 	public function getDescricoesAcoes(): array {
 		return array_merge(parent::getDescricoesAcoes(), [
-			'Red bill' => 'Toma um Red Bull e recupera energia vital.' . "\n" . 'Cura: ' . self::CURA_RED_BILL . "\n" . 'Custo: ' . self::CUSTO_RED_BILL,
-			'Apelação' => 'Apela à autoridade máxima e dispara no inimigo.' . "\n" . 'Dano: ' . self::DANO_APELACAO . "\n" . 'Custo: ' . self::CUSTO_APELACAO,
-			'VibeCode' => 'Lança ferramentas de desenvolvimento como projéteis.' . "\n" . 'Dano: ' . self::DANO_VIBECODE . "\n" . 'Custo: ' . self::CUSTO_VIBECODE,
-			'DOOCKER' => 'Invoca o godDOCKER, mogando e dockerizando o beta por 1 turno.' . "\n" . 'Dano: ' . self::DANO_MYWORLD . "\n" . 'Custo: ' . self::CUSTO_MYWORLD,
+			'Red bill' => 'Toma um Red Bull e recupera energia vital.' . "\n" . 'Cura: ' . self::CURA_RED_BILL . " " . 'Custo: ' . self::CUSTO_RED_BILL,
+			'Apelação' => 'Apela à autoridade máxima e dispara no inimigo.' . "\n" . 'Dano: ' . self::DANO_APELACAO . " " . 'Custo: ' . self::CUSTO_APELACAO,
+			'VibeCode' => 'Lança ferramentas de desenvolvimento como projéteis.' . "\n" . 'Dano: ' . self::DANO_VIBECODE . " " . 'Custo: ' . self::CUSTO_VIBECODE,
+			'DOOCKER' => 'Invoca o godDOCKER, mogando e dockerizando o beta por 1 turno.' . "\n" . 'Dano: ' . self::DANO_MYWORLD . " " . 'Custo: ' . self::CUSTO_MYWORLD,
 		]);
 	}
 

@@ -66,10 +66,10 @@ class Miku extends Personagem {
 
     public function getDescricoesAcoes(): array {
         return array_merge(parent::getDescricoesAcoes(), [
-            'MAGIC!' => 'Conjura projéteis mágicos em sequência contra o inimigo.' . "\n" . 'Dano: ' . self::DANO_MAGIC . "\n" . 'Custo: ' . self::CUSTO_MAGIC,
-            'Miku BEEAM' => 'Dispara um feixe de energia rosa concentrado.' . "\n" . 'Dano: ' . self::DANO_MIKU_BEEAM . "\n" . 'Custo: ' . self::CUSTO_MIKU_BEEAM,
-            'MY VOICE' => 'Solta um grito poderoso que derruba o inimigo.' . "\n" . 'Dano: ' . self::DANO_MY_VOICE . "\n" . 'Custo: ' . self::CUSTO_MY_VOICE,
-            'mikupower' => 'Canaliza o poder da música para recuperar vida.' . "\n" . 'Cura: ' . self::CURA_MIKUPOWER . "\n" . 'Custo: ' . self::CUSTO_MIKUPOWER,
+            'MAGIC!' => 'Conjura projéteis mágicos em sequência contra o inimigo.' . "\n" . 'Dano: ' . self::DANO_MAGIC . " " . 'Custo: ' . self::CUSTO_MAGIC,
+            'Miku BEEAM' => 'Dispara um feixe de energia rosa concentrado.' . "\n" . 'Dano: ' . self::DANO_MIKU_BEEAM . " " . 'Custo: ' . self::CUSTO_MIKU_BEEAM,
+            'MY VOICE' => 'Solta um grito poderoso que derruba o inimigo.' . "\n" . 'Dano: ' . self::DANO_MY_VOICE . " " . 'Custo: ' . self::CUSTO_MY_VOICE,
+            'mikupower' => 'Canaliza o poder da música para recuperar vida.' . "\n" . 'Cura: ' . self::CURA_MIKUPOWER . " " . 'Custo: ' . self::CUSTO_MIKUPOWER,
         ]);
     }
 
@@ -152,6 +152,13 @@ class Miku extends Personagem {
                     ],
                 ],
                 'Miku BEEAM' => [
+                    'audio' => [
+                        [
+                            'file' => './assets/miku/audios/mikubeam.mp3',
+                            'startMs' => 0,
+                            'durationMs' => 3000,
+                        ],
+                    ],
                     'frames' => [
                         [
                             'sprite' => './assets/miku/sprites/MIKUBEEAM1.png',
@@ -159,7 +166,7 @@ class Miku extends Personagem {
                         ],
                          [
                             'sprite' => './assets/miku/sprites/MIKUBEEAM2.png',
-                            'durationMs' => 600,
+                            'durationMs' => 1000,
                         ],
                     ],
                     'overlays' => [

@@ -115,9 +115,9 @@ class Sans extends Personagem {
 
     public function getDescricoesAcoes(): array {
         return array_merge(parent::getDescricoesAcoes(), [
-            'bluesoul' => 'Manipule a gravidade do oponente.' . "\n" . 'Dano: ' . self::DANO_BLUESOUL . "\n" . 'Custo: ' . self::CUSTO_BLUESOUL,
-            'começou' => 'Comece bem...' . "\n" . 'Dano: ' . self::DANO_COMECOU . "\n" . 'Custo: ' . self::CUSTO_COMECOU,
-            'BADTIME' => 'Mostre ao oponente oque é passar por uns tempos ruins.' . "\n" . 'Dano: ' . self::DANO_BADTIME . "\n" . 'Custo: ' . self::CUSTO_BADTIME,
+            'bluesoul' => 'Manipule a gravidade do oponente.' . "\n" . 'Dano: ' . self::DANO_BLUESOUL . " " . 'Custo: ' . self::CUSTO_BLUESOUL,
+            'começou' => 'Comece bem...' . "\n" . 'Dano: ' . self::DANO_COMECOU . " " . 'Custo: ' . self::CUSTO_COMECOU,
+            'BADTIME' => 'Mostre ao oponente oque é passar por uns tempos ruins.' . " " . 'Dano: ' . self::DANO_BADTIME . " " . 'Custo: ' . self::CUSTO_BADTIME,
             'eh eh' => 'Recupera energia da melhor maneira.' . "\n" . 'Recupera: ' . self::RECUPERACAO_EH_EH,
         ]);
     }

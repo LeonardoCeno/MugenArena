@@ -420,7 +420,25 @@ justify-content: center;
   z-index: 5;
   pointer-events: none;
   transform-origin: left center;
+  --beam-start-top: 40%;
+  --beam-start-bottom: 60%;
+  --beam-neck-top: 28%;
+  --beam-neck-bottom: 72%;
+  --beam-mid-top: -20%;
+  --beam-mid-bottom: 120%;
+  --beam-end-top: -100%;
+  --beam-end-bottom: 3000%;
   border-radius: 999px;
+  clip-path: polygon(
+    0 var(--beam-start-top),
+    10% var(--beam-neck-top),
+    45% var(--beam-mid-top),
+    100% var(--beam-end-top),
+    100% var(--beam-end-bottom),
+    45% var(--beam-mid-bottom),
+    10% var(--beam-neck-bottom),
+    0 var(--beam-start-bottom)
+  );
   background: linear-gradient(90deg, rgba(50, 255, 120, 0.95), rgba(180, 255, 210, 0.8));
   box-shadow: 0 0 12px rgba(70, 255, 140, 0.9), 0 0 24px rgba(70, 255, 140, 0.6);
 }
@@ -494,7 +512,7 @@ justify-content: center;
 
 .skill-preview p {
   margin: 0;
-  font-size: 0.95cqw;
+  font-size: 0.85cqw;
   font-weight: 600;
   color: var(--muted);
   line-height: 1.45;

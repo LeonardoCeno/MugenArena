@@ -83,10 +83,10 @@ class Ulquiorra extends Personagem {
 
     public function getDescricoesAcoes(): array {
         return array_merge(parent::getDescricoesAcoes(), [
-            'Cero' => 'Dispara um feixe de energia espiritual concentrado.' . "\n" . 'Dano: ' . self::DANO_CERO . "\n" . 'Custo: ' . self::CUSTO_CERO,
-            'cero oscuras' => 'Forma final: dispara um cero das trevas devastador.' . "\n" . 'Dano: ' . self::DANO_TRUE_CERO . "\n" . 'Custo: ' . self::CUSTO_TRUE_CERO,
-            'Barrage' => 'Desfere uma sequência rápida de golpes que causa sangramento.' . "\n" . 'Dano: ' . self::DANO_BARRAGE . "\n" . 'Custo: ' . self::CUSTO_BARRAGE,
-            'Heal' => 'Regenera tecido usando energia espiritual.' . "\n" . 'Cura: ' . self::CURA_HEAL . "\n" . 'Custo: ' . self::CUSTO_HEAL,
+            'Cero' => 'Dispara um feixe de energia espiritual concentrado.' . "\n" . 'Dano: ' . self::DANO_CERO . " " . 'Custo: ' . self::CUSTO_CERO,
+            'cero oscuras' => 'Forma final: dispara um cero das trevas devastador.' . "\n" . 'Dano: ' . self::DANO_TRUE_CERO . " " . 'Custo: ' . self::CUSTO_TRUE_CERO,
+            'Barrage' => 'Desfere uma sequência rápida de golpes que causa sangramento.' . "\n" . 'Dano: ' . self::DANO_BARRAGE . " " . 'Custo: ' . self::CUSTO_BARRAGE,
+            'Heal' => 'Regenera tecido usando energia espiritual.' . "\n" . 'Cura: ' . self::CURA_HEAL . " " . 'Custo: ' . self::CUSTO_HEAL,
         ]);
     }
 
