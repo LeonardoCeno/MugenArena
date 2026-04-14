@@ -356,6 +356,66 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		return events;
 	}
 
+	function montarAnimacaoClash(atacanteKey, acao, defensorKey) {
+		const nomeAcao     = acao.nomeSprite || acao.nome;
+		const actionConfig = state.serverState?.[atacanteKey]?.visual?.actions?.[nomeAcao] ?? {};
+
+		const allOverlays   = overlaysDeConfig(actionConfig);
+		const projOverlay   = allOverlays.find(o => o.mode === "projectile") ?? null;
+		const otherOverlays = allOverlays.filter(o => o.mode !== "projectile");
+
+		const { events: frameEvts } = eventosFrames(atacanteKey, framesDeConfig(actionConfig));
+
+		const projArrivalMs = projOverlay
+			? (projOverlay.startMs + projOverlay.durationMs)
+			: 0;
+
+		const allAudio = eventosAudio(actionConfig);
+		const preAudio  = allAudio.filter(e => e.at < projArrivalMs);
+		const postAudio = allAudio.filter(e => e.at >= projArrivalMs)
+			.map(e => ({ ...e, at: e.at - projArrivalMs }));
+
+		const preOverlayEvts  = otherOverlays
+			.filter(o => o.startMs < projArrivalMs)
+			.flatMap(o => eventosOverlay(o, atacanteKey));
+		const postOverlayEvts = otherOverlays
+			.filter(o => o.startMs >= projArrivalMs)
+			.flatMap(o => eventosOverlay(o, atacanteKey)
+				.map(e => ({ ...e, at: e.at - projArrivalMs }))
+			);
+
+		let projectileRef = null;
+		const projCreationEvent = projOverlay ? {
+			at: projOverlay.startMs,
+			run() {
+				const arenaRect = els.arena?.getBoundingClientRect();
+				const origemEl  = els.fighters[atacanteKey]?.root;
+				const alvoEl    = els.fighters[defensorKey]?.root;
+				if (!arenaRect || !origemEl || !alvoEl) return;
+				const pos = posicoes(projOverlay, atacanteKey, origemEl, alvoEl, arenaRect);
+				const ref = criarProjetil(projOverlay, pos);
+				ref.animation.onfinish = null; // clash system manages removal
+				projectileRef = ref;
+			},
+		} : null;
+
+		const preEvents = [
+			...frameEvts,
+			...preAudio,
+			...preOverlayEvts,
+			...(projCreationEvent ? [projCreationEvent] : []),
+		];
+
+		const postEvents = [...postAudio, ...postOverlayEvts];
+
+		return {
+			preEvents,
+			postEvents,
+			projectileStartMs: projOverlay?.startMs ?? 0,
+			getProjectileRef: () => projectileRef,
+		};
+	}
+
 	// ── Criação de elementos de overlay ─────────────────────────────────
 
 	function escala(px, arenaW) {
@@ -623,6 +683,7 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		rodarTimeline,
 		cancelarAnimacao,
 		montarAnimacao,
+		montarAnimacaoClash,
 		visualPersonagem,
 		animarEsquiva,
 		animarMorte,
