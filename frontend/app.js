@@ -192,6 +192,19 @@ const NIVEL_VOLUME_BGM_PADRAO = 3;
 		animations.feedbackDano(estadoAnterior, novoEstado);
 	}
 
+	async function animarEsquivaEmTempoReal(mensagemEtapa, estadoAtual) {
+		if (!mensagemEtapa || !mensagemEtapa.includes("desviou!")) return false;
+		for (const key of ["p1", "p2"]) {
+			const nomeJogador = estadoAtual?.[key]?.nome ?? "";
+			if (nomeJogador && mensagemEtapa.includes(`${nomeJogador} desviou`)) {
+				animations.animarEsquiva(key);
+				await animations.wait(800);
+				return true;
+			}
+		}
+		return false;
+	}
+
 	async function verificarEAnimarTransformacao(estadoAnterior, estadoNovo) {
 		if (!estadoAnterior?.started || !estadoNovo?.started) return;
 		for (const chave of ["p1", "p2"]) {
@@ -250,6 +263,7 @@ const NIVEL_VOLUME_BGM_PADRAO = 3;
 
 			// Turno resolvido — toca as duas animações em ordem de execução
 			const ordem    = resposta.resolucaoOrdem ?? [atacanteKey, oposto(atacanteKey)];
+			const mensagensResolucao = Array.isArray(resposta.mensagensResolucao) ? resposta.mensagensResolucao : [];
 			const acoesMap = { [atacanteKey]: acao };
 			if (state.acaoPendente) {
 				acoesMap[state.acaoPendente.playerKey] = state.acaoPendente.acao;
@@ -268,6 +282,7 @@ const NIVEL_VOLUME_BGM_PADRAO = 3;
 				const acaoAtacante       = acoesMap[keyAtacante];
 				const keyDefensor        = oposto(keyAtacante);
 				const defensorDefendendo = acoesMap[keyDefensor]?.type === "defend";
+				const mensagemEtapa      = mensagensResolucao[i] ?? null;
 
 				await tocarAnimacao(keyAtacante, acaoAtacante, keyDefensor, defensorDefendendo);
 
@@ -278,6 +293,7 @@ const NIVEL_VOLUME_BGM_PADRAO = 3;
 					const estadoAntesDaAtualizacao = state.serverState;
 					atualizarEstado(estadoAplicar, true);
 					atualizarHUD();
+					await animarEsquivaEmTempoReal(mensagemEtapa, estadoAplicar);
 					await verificarEAnimarTransformacao(estadoAntesDaAtualizacao, estadoAplicar);
 				}
 
@@ -291,19 +307,12 @@ const NIVEL_VOLUME_BGM_PADRAO = 3;
 			if (ordemAnimada.length === 0 && estadoFinal) {
 				const estadoAntesDaAtualizacao = state.serverState;
 				atualizarEstado(estadoFinal, true);
+				await animarEsquivaEmTempoReal(mensagensResolucao[0] ?? null, estadoFinal);
 				await verificarEAnimarTransformacao(estadoAntesDaAtualizacao, estadoFinal);
 			}
 
 			if (mensagem) {
 				ui.adicionarLog(mensagem);
-				if (mensagem.includes("desviou!")) {
-					for (const key of ["p1", "p2"]) {
-						const nomeJogador = resposta.state?.[key]?.nome ?? state.serverState?.[key]?.nome ?? "";
-						if (nomeJogador && mensagem.includes(`${nomeJogador} desviou`)) {
-							animations.animarEsquiva(key);
-						}
-					}
-				}
 			}
 
 			if (resposta.state?.winner) {

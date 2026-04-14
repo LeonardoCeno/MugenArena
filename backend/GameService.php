@@ -277,6 +277,7 @@ class GameService {
             'mensagem'           => implode(' ', array_filter($mensagens)),
             'resetJogo'          => $resetJogo,
             'resolucaoOrdem'     => $resolucaoOrdem,
+            'mensagensResolucao' => $mensagens,
             'estadoIntermediario' => $estadoIntermediario,
         ];
     }
@@ -324,6 +325,7 @@ class GameService {
             'mensagem'           => implode(' ', array_filter($mensagens)),
             'resetJogo'          => $resetJogo,
             'resolucaoOrdem'     => $resolucaoOrdem,
+            'mensagensResolucao' => $resultado['mensagensResolucao'] ?? [],
             'estadoIntermediario' => $estadoIntermediario,
         ];
     }
@@ -449,6 +451,7 @@ class GameService {
                 'mensagem'           => $resultado['mensagem'],
                 'resetJogo'          => $resultado['resetJogo'],
                 'resolucaoOrdem'     => $resultado['resolucaoOrdem'],
+                'mensagensResolucao' => $resultado['mensagensResolucao'] ?? [],
                 'estadoIntermediario' => $resultado['estadoIntermediario'],
             ];
         }

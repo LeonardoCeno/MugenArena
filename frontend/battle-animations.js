@@ -496,7 +496,7 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 
 	function animarEsquiva(chave) {
 		const fighter = els.fighters[chave]?.root;
-		if (!fighter) return;
+		if (!fighter) return Promise.resolve(false);
 
 		const dodgeSprite = state.serverState?.[chave]?.visual?.dodgeSprite ?? null;
 		const spriteAnterior = state.sprites[chave];
@@ -514,6 +514,8 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 				atualizarHUD();
 			}
 		}, 1200);
+
+		return wait(500).then(() => true);
 	}
 
 	function animarMorte(chave) {

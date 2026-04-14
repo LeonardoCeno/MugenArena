@@ -81,6 +81,7 @@ function executarAcao(array $input): void {
         'ok'                  => true,
         'resolved'            => $resultado['resolved'],
         'resolucaoOrdem'      => $resultado['resolucaoOrdem'] ?? null,
+        'mensagensResolucao'  => $resultado['mensagensResolucao'] ?? [],
         'estadoIntermediario' => $resultado['estadoIntermediario'] ?? null,
         'message'             => $mensagem,
         'state'               => exportarEstadoDaSessao($mensagem),
