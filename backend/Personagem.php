@@ -14,8 +14,10 @@ abstract class Personagem {
 
     protected int $sangramentoTurnos = 0;
     protected int $sangramentoDanoPorTurno = 0;
+    protected int $sangramentoAtrasoTurnos = 0;
     protected int $queimaduraTurnos = 0;
     protected int $queimaduraDanoPorTurno = 0;
+    protected int $queimaduraAtrasoTurnos = 0;
     protected string $ultimoTipoDano = 'direct';
     protected ?string $proximoTipoDanoRecebido = null;
 
@@ -234,20 +236,27 @@ abstract class Personagem {
     public function aplicarSangramento(int $danoPorTurno, int $turnos): void {
         $this->sangramentoDanoPorTurno = max(0, $danoPorTurno);
         $this->sangramentoTurnos = max(0, $turnos);
+        $this->sangramentoAtrasoTurnos = $this->sangramentoTurnos > 0 && $this->sangramentoDanoPorTurno > 0 ? 1 : 0;
     }
 
     public function aplicarQueimadura(int $danoPorTurno, int $turnos): void {
         $this->queimaduraDanoPorTurno = max(0, $danoPorTurno);
         $this->queimaduraTurnos = max(0, $turnos);
+        $this->queimaduraAtrasoTurnos = $this->queimaduraTurnos > 0 && $this->queimaduraDanoPorTurno > 0 ? 1 : 0;
     }
 
     public function processarEfeitosContinuosFimTurno(): void {
-        $this->processarEfeitoContinuo('bleed', $this->sangramentoTurnos, $this->sangramentoDanoPorTurno);
-        $this->processarEfeitoContinuo('burn', $this->queimaduraTurnos, $this->queimaduraDanoPorTurno);
+        $this->processarEfeitoContinuo('bleed', $this->sangramentoTurnos, $this->sangramentoDanoPorTurno, $this->sangramentoAtrasoTurnos);
+        $this->processarEfeitoContinuo('burn', $this->queimaduraTurnos, $this->queimaduraDanoPorTurno, $this->queimaduraAtrasoTurnos);
     }
 
-    private function processarEfeitoContinuo(string $tipo, int &$turnos, int &$danoPorTurno): void {
+    private function processarEfeitoContinuo(string $tipo, int &$turnos, int &$danoPorTurno, int &$atrasoTurnos): void {
         if ($turnos <= 0 || $danoPorTurno <= 0) {
+            return;
+        }
+
+        if ($atrasoTurnos > 0) {
+            $atrasoTurnos--;
             return;
         }
 
@@ -257,6 +266,7 @@ abstract class Personagem {
 
         if ($turnos <= 0) {
             $danoPorTurno = 0;
+            $atrasoTurnos = 0;
         }
     }
 

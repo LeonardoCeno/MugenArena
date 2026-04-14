@@ -60,7 +60,7 @@ class Gojo extends Personagem {
             ["nome" => "Azul",          "metodo" => "azul",          "precisaAlvo" => true,  "energyCost" => self::CUSTO_AZUL],
             ["nome" => "Vazio Roxo",    "metodo" => "vazioRoxo",     "precisaAlvo" => true,  "energyCost" => self::CUSTO_VAZIO_ROXO, "priority" => true, "clashable" => true],
             ["nome" => "Reverse Energy","metodo" => "reverseEnergy", "precisaAlvo" => false, "energyCost" => self::CUSTO_REVERSE],
-            ["nome" => "Domain",        "metodo" => "infinityVoid",  "precisaAlvo" => false, "energyCost" => self::CUSTO_INFINITO, "skipTurns" => 2, "activatesDomain" => true, "priority" => true]
+            ["nome" => "Domain",        "metodo" => "infinityVoid",  "precisaAlvo" => false, "energyCost" => self::CUSTO_INFINITO, "skipTurns" => 2, "activatesDomain" => true, "domainClash" => true, "priority" => true]
         ];
     }
 
@@ -193,18 +193,15 @@ class Gojo extends Personagem {
                         [
                             'file'    => './assets/gojo/audios/domainrealgojo.mp3',
                             'startMs' => 0,
+                            'durationMs' => 2000,
                         ],
                     ],
-                    'domainDelayMs' => 6500,
+                    'domainDelayMs' => 3000,
                     'domainImage' => './assets/gojo/sprites/DomainGojo.gif',
                     'frames' => [
                         [
-                            'sprite' => './assets/gojo/sprites/GOJOBASEFINAL.png',
-                            'durationMs' => 1000,
-                        ],
-                        [
                             'sprite' => './assets/gojo/sprites/gojodomainfinal.png',
-                            'durationMs' => 7000,
+                            'durationMs' => 3400,
                         ],
                     ],
                 ],

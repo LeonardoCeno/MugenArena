@@ -48,7 +48,10 @@ export function createUIController({ state, els, onActionSelected }) {
 		const img = domainImage || state.arenaFundo;
 		if (img) {
 			const overlay = domainImage ? 'linear-gradient(rgba(20,22,32,0.25),rgba(20,22,32,0.25)), ' : '';
-			els.arena.style.backgroundImage = `${overlay}url('${img}')`;
+			const versionedImg = domainImage
+				? `${img}${img.includes("?") ? "&" : "?"}v=${state.domainImageVersion || 0}`
+				: img;
+			els.arena.style.backgroundImage = `${overlay}url('${versionedImg}')`;
 			els.arena.style.backgroundSize = 'cover';
 			els.arena.style.backgroundPosition = 'center';
 			els.arena.style.backgroundRepeat = 'no-repeat';

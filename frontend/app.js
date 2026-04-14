@@ -26,6 +26,7 @@ const NIVEL_VOLUME_BGM_PADRAO = 1	;
 		sprites: { p1: null, p2: null },
 		frameScale: { p1: null, p2: null },
 		domainImage: null,
+		domainImageVersion: 0,
 		arenaFundo: null,
 		acaoPendente: null, // { playerKey, acao } — guarda ação do 1º jogador até o turno resolver
 	};
@@ -311,16 +312,22 @@ const NIVEL_VOLUME_BGM_PADRAO = 1	;
 		const cleanupSplit = animations.mostrarPainelClashDeDomain(
 			animData1.domainImage,
 			animData2.domainImage,
-			6000
+			7000
 		);
-		await animations.wait(6000);
-		cleanupSplit();
+
+		const fadeOutMs = 1400;
+		const fadeInMs = 1400;
+		await animations.wait(7000 - fadeOutMs);
 
 		const loserKey = winnerKey === "p1" ? "p2" : "p1";
+		const winnerAnimData = winnerKey === "p1" ? animData1 : animData2;
+		const blackoutPromise = animations.mostrarTransicaoPosClashDeDomain(fadeOutMs, fadeInMs);
+
+		await animations.wait(fadeOutMs);
+		cleanupSplit();
 		state.sprites[loserKey] = null;
 		state.frameScale[loserKey] = null;
-
-		const winnerAnimData = winnerKey === "p1" ? animData1 : animData2;
+		state.domainImageVersion += 1;
 		state.domainImage = winnerAnimData.domainImage ?? null;
 		atualizarHUD();
 
@@ -328,7 +335,10 @@ const NIVEL_VOLUME_BGM_PADRAO = 1	;
 			? animations.rodarTimeline(winnerAnimData.winnerDeferredEvents)
 			: { duration: 0, cancel() {} };
 
-		await animations.wait(Math.max(clashMeta.durationMs ?? 0, winnerPostHandle.duration));
+		await blackoutPromise;
+
+		const restanteMs = Math.max(0, Math.max(clashMeta.durationMs ?? 0, winnerPostHandle.duration) - fadeOutMs);
+		await animations.wait(restanteMs);
 		animations.cancelarAnimacao();
 	}
 

@@ -136,6 +136,16 @@ class GameService {
         return (bool)($habilidade['activatesDomain'] ?? false);
     }
 
+    private static function acaoPodeEntrarEmDomainClash(Personagem $p, array $acao): bool {
+        $habilidade = self::habilidadeDaAcao($p, $acao);
+        if ($habilidade === null) {
+            return false;
+        }
+
+        return (bool)($habilidade['activatesDomain'] ?? false)
+            && (bool)($habilidade['domainClash'] ?? false);
+    }
+
     private static function decidirVencedorDoClash(bool $p1HasPriority, bool $p2HasPriority): array {
         if ($p1HasPriority && $p2HasPriority) {
             return [random_int(0, 1) === 0 ? 'p1' : 'p2', 3000];
@@ -311,7 +321,7 @@ class GameService {
         $a2 = $game['pendingActions']['p2'];
 
         // Domain clash: ambos ativaram domínio — apenas o vencedor age
-        if (self::acaoAtivaDomain($game['p1'], $a1) && self::acaoAtivaDomain($game['p2'], $a2)) {
+        if (self::acaoPodeEntrarEmDomainClash($game['p1'], $a1) && self::acaoPodeEntrarEmDomainClash($game['p2'], $a2)) {
             return self::resolverClash($game, $a1, $a2, 'domain');
         }
 

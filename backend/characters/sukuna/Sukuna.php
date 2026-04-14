@@ -161,6 +161,7 @@ class Sukuna extends Personagem {
                 "precisaAlvo"=> true,
                 "energyCost" => self::CUSTO_DOMAIN,
                 "activatesDomain" => true,
+                "domainClash" => true,
                 "priority"   => true,
             ],
         ];
@@ -243,11 +244,13 @@ class Sukuna extends Personagem {
                     'domainImage'        => './assets/sukuna/sprites/DomainSukuna.gif',
                     'domainCutsDelayMs'  => 1000,
                     'audio' => [
-                        ['file' => './assets/sukuna/audios/sukunadomain.mp3', 'startMs' => 0,    'durationMs' => 2800],
-                        ['file' => './assets/sukuna/audios/sukunatheme.mp3',  'startMs' => 1600, 'durationMs' => 9000],
+                        ['file' => './assets/sukuna/audios/sukunadomain.mp3', 'startMs' => 0,    'durationMs' => 2500],
+                    ],
+                    'domainAudio' => [
+                        ['file' => './assets/sukuna/audios/sukunatheme.mp3', 'startMs' => 0, 'durationMs' => 9000],
                     ],
                     'frames' => [
-                        ['sprite' => './assets/sukuna/sprites/DOMAINSUKUNA.png', 'durationMs' => 9000],
+                        ['sprite' => './assets/sukuna/sprites/DOMAINSUKUNA.png', 'durationMs' => 11000],
                     ],
                     'overlays' => [
                         ['target' => 'opponent', 'sprite' => './assets/sukuna/sprites/docorte2.png', 'startMs' => 100, 'durationMs' => 100, 'x' => 0, 'y' => 0,   'scale' => 1.2],

@@ -119,8 +119,9 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		state.frameScale.p1 = null;
 		state.frameScale.p2 = null;
 		state.domainImage = null;
+		state.domainImageVersion = 0;
 		els.arena
-			?.querySelectorAll(".arena-action-overlay, .arena-energy-beam, .fighter-action-overlay, .domain-clash-ring, .domain-clash-split")
+			?.querySelectorAll(".arena-action-overlay, .arena-energy-beam, .fighter-action-overlay, .domain-clash-ring, .domain-clash-split, .domain-clash-blackout")
 			.forEach(el => el.remove());
 		document.querySelectorAll(".char-transform-overlay").forEach(el => el.remove());
 		for (const chave of ["p1", "p2"]) {
@@ -237,17 +238,28 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		const delay = Number(config?.domainDelayMs) > 0 ? Number(config.domainDelayMs) : 0;
 		return [{
 			at: delay,
-			run() { state.domainImage = domainImage; atualizarHUD(); },
+			run() {
+				state.domainImageVersion += 1;
+				state.domainImage = domainImage;
+				atualizarHUD();
+			},
 		}];
 	}
 
-	function eventosAudio(config) {
-		const audios = Array.isArray(config?.audio) ? config.audio : [];
+	function listaAudio(config, campo = "audio") {
+		const valor = config?.[campo];
+		if (Array.isArray(valor)) return valor;
+		if (valor?.file) return [valor];
+		return [];
+	}
+
+	function eventosAudio(config, campo = "audio", offsetMs = 0) {
+		const audios = listaAudio(config, campo);
 		return audios
 			.filter(a => a?.file)
 			.map(a => {
 				const file      = a.file;
-				const startMs   = a.startMs ?? 0;
+				const startMs   = offsetMs + (a.startMs ?? 0);
 				const durationMs = a.durationMs ?? null;
 				return {
 					at: startMs,
@@ -347,6 +359,7 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		}
 
 		events.push(...eventosDomain(actionConfig));
+		events.push(...eventosAudio(actionConfig, "domainAudio", Number(actionConfig?.domainDelayMs) > 0 ? Number(actionConfig.domainDelayMs) : 0));
 		events.push(...eventosAudio(actionConfig));
 
 		if (acao.melee) {
@@ -436,12 +449,17 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		const { events: frameEvts } = eventosFrames(atacanteKey, framesDeConfig(actionConfig));
 		const overlayEvts = overlaysDeConfig(actionConfig).flatMap(overlay => eventosOverlay(overlay, atacanteKey));
 		const audioEvts = eventosAudio(actionConfig);
+		const domainAudioEvts = eventosAudio(actionConfig, "domainAudio");
 
-		const preExpandEvents = frameEvts.filter(event => event.at < domainExpandMs);
+		const preExpandEvents = [
+			...frameEvts.filter(event => event.at < domainExpandMs),
+			...audioEvts.filter(event => event.at < domainExpandMs),
+		];
 
 		const winnerDeferredEvents = [
 			...overlayEvts,
-			...audioEvts,
+			...domainAudioEvts,
+			...audioEvts.filter(event => event.at >= domainExpandMs),
 			...frameEvts.filter(event => event.at >= domainExpandMs),
 		].map(event => ({
 			...event,
@@ -692,7 +710,7 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		}
 	}
 
-	function mostrarPainelClashDeDomain(leftImage, rightImage, durationMs = 6000) {
+	function mostrarPainelClashDeDomain(leftImage, rightImage, durationMs = 7000) {
 		if (!els.arena || (!leftImage && !rightImage)) {
 			return () => {};
 		}
@@ -721,6 +739,25 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 
 		setTimeout(cleanup, durationMs + 100);
 		return cleanup;
+	}
+
+	function mostrarTransicaoPosClashDeDomain(fadeOutMs = 1000, fadeInMs = 1000) {
+		if (!els.arena) return wait(fadeOutMs + fadeInMs);
+
+		const overlay = document.createElement("div");
+		overlay.className = "domain-clash-blackout";
+		overlay.style.setProperty("--domain-blackout-fadeout-ms", `${fadeOutMs}ms`);
+		overlay.style.setProperty("--domain-blackout-fadein-ms", `${fadeInMs}ms`);
+		els.arena.appendChild(overlay);
+
+		return new Promise(resolve => {
+			requestAnimationFrame(() => overlay.classList.add("is-dark"));
+			setTimeout(() => overlay.classList.remove("is-dark"), fadeOutMs);
+			setTimeout(() => {
+				overlay.remove();
+				resolve();
+			}, fadeOutMs + fadeInMs + 40);
+		});
 	}
 
 	async function animarTransformacao(chave) {
@@ -782,6 +819,7 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		mostrarSplashErroInsano,
 		mostrarAnelClashDeDomain,
 		mostrarPainelClashDeDomain,
+		mostrarTransicaoPosClashDeDomain,
 		rodarTimeline,
 		cancelarAnimacao,
 		montarAnimacao,

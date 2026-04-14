@@ -1126,23 +1126,45 @@ justify-content: center;
   position: absolute;
   top: -4%;
   bottom: -4%;
-  width: 52%;
+  width: 54%;
   background-size: cover;
-  background-position: center;
+  background-position: 50% 50%;
   background-repeat: no-repeat;
   filter: saturate(1.18) contrast(1.08) brightness(1.02);
+  will-change: background-position, transform, filter, opacity;
 }
 
 .domain-clash-split-pane.is-left {
   left: 0;
-  clip-path: polygon(0 0, 100% 0, 92% 100%, 0 100%);
-  animation: domain-clash-pane-left var(--domain-clash-duration, 6000ms) ease-in-out infinite;
+  clip-path: polygon(0 0, 100% 0, 90% 100%, 0 100%);
+  transform-origin: right center;
+  animation: domain-clash-pane-left var(--domain-clash-duration, 7000ms) ease-in-out infinite;
 }
 
 .domain-clash-split-pane.is-right {
   right: 0;
-  clip-path: polygon(8% 0, 100% 0, 100% 100%, 0 100%);
-  animation: domain-clash-pane-right var(--domain-clash-duration, 6000ms) ease-in-out infinite;
+  clip-path: polygon(10% 0, 100% 0, 100% 100%, 0 100%);
+  transform-origin: left center;
+  animation: domain-clash-pane-right var(--domain-clash-duration, 7000ms) ease-in-out infinite;
+}
+
+.domain-clash-blackout {
+  position: absolute;
+  inset: 0;
+  z-index: 12;
+  pointer-events: none;
+  background: #000;
+  opacity: 0;
+  filter: blur(0px);
+  transition:
+    opacity var(--domain-blackout-fadein-ms, 1400ms) cubic-bezier(0.22, 1, 0.36, 1),
+    filter var(--domain-blackout-fadein-ms, 1400ms) cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.domain-clash-blackout.is-dark {
+  opacity: 1;
+  filter: blur(1.5px);
+  transition-duration: var(--domain-blackout-fadeout-ms, 1400ms), var(--domain-blackout-fadeout-ms, 1400ms);
 }
 
 @keyframes clash-shake {
@@ -1212,20 +1234,18 @@ justify-content: center;
 }
 
 @keyframes domain-clash-pane-left {
-  0%   { transform: translateX(-22px) scale(1.03); }
-  20%  { transform: translateX(16px) scale(1.055); }
-  40%  { transform: translateX(-14px) scale(1.02); }
-  60%  { transform: translateX(20px) scale(1.065); }
-  80%  { transform: translateX(-18px) scale(1.028); }
-  100% { transform: translateX(-20px) scale(1.04); }
+  0%   { transform: translateX(-18px) scale(1.034); background-position: 44% 50%; }
+  25%  { transform: translateX(28px) scale(1.056); background-position: 60% 50%; }
+  50%  { transform: translateX(-18px) scale(1.038); background-position: 45% 50%; }
+  75%  { transform: translateX(28px) scale(1.06);  background-position: 61% 50%; }
+  100% { transform: translateX(-18px) scale(1.034); background-position: 44% 50%; }
 }
 
 @keyframes domain-clash-pane-right {
-  0%   { transform: translateX(22px) scale(1.03); }
-  20%  { transform: translateX(-16px) scale(1.055); }
-  40%  { transform: translateX(14px) scale(1.02); }
-  60%  { transform: translateX(-20px) scale(1.065); }
-  80%  { transform: translateX(18px) scale(1.028); }
-  100% { transform: translateX(20px) scale(1.04); }
+  0%   { transform: translateX(-18px) scale(1.034); background-position: 56% 50%; }
+  25%  { transform: translateX(28px) scale(1.056); background-position: 40% 50%; }
+  50%  { transform: translateX(-18px) scale(1.038); background-position: 55% 50%; }
+  75%  { transform: translateX(28px) scale(1.06);  background-position: 39% 50%; }
+  100% { transform: translateX(-18px) scale(1.034); background-position: 56% 50%; }
 }
 
