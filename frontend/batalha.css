@@ -450,6 +450,20 @@ justify-content: center;
   background: linear-gradient(90deg, rgba(255, 88, 189, 0.96), rgba(255, 179, 227, 0.82));
   box-shadow: 0 0 12px rgba(255, 79, 182, 0.92), 0 0 24px rgba(255, 79, 182, 0.62);
 }
+.domain-break-background {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  opacity: 0;
+  pointer-events: none;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  transition: opacity 220ms ease;
+}
+.domain-break-background.is-visible {
+  opacity: 0.95;
+}
 
 /* ===== HUD INFERIOR ===== */
 .hud {
@@ -700,10 +714,27 @@ justify-content: center;
 .damage-float.damage-heal  { color: #00ff88; }
 .damage-float.damage-float-critical { font-size: 3rem; }
 .damage-float.show { animation: damage-rise 1200ms ease-out forwards; }
+.sprite-float-text {
+  inset: auto;
+  left: 50%;
+  top: 16%;
+  width: max-content;
+  max-width: 92%;
+  justify-content: center;
+  text-align: center;
+  white-space: nowrap;
+  transform: translateX(-50%) translateY(0) scale(0.9);
+}
+.sprite-float-text.show { animation: sprite-text-rise 1200ms ease-out forwards; }
 @keyframes damage-rise {
   0% { opacity: 0; transform: translateX(var(--damage-x)) translateY(8px) scale(0.9); }
   20% { opacity: 1;    transform: translateX(var(--damage-x)) translateY(0) scale(1); }
   100% { opacity: 0; transform: translateX(var(--damage-x)) translateY(-18px) scale(1.04); }
+}
+@keyframes sprite-text-rise {
+  0% { opacity: 0; transform: translateX(-50%) translateY(8px) scale(0.9); }
+  20% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-18px) scale(1.04); }
 }
 
 /* Fighters (personagens em campo) */
@@ -811,6 +842,15 @@ justify-content: center;
 .fighter.action-casting {
   box-shadow: none;
   filter: saturate(1.15) brightness(1.05);
+}
+.fighter.preparing-domain {
+  filter: saturate(1.18) brightness(1.08);
+}
+.fighter.preparing-domain .fighter-img,
+.fighter.preparing-domain span {
+  filter:
+    drop-shadow(0 0 6px rgba(255, 255, 255, 0.82))
+    drop-shadow(0 0 14px rgba(255, 255, 255, 0.42));
 }
 .fighter.enemy {
   right: 8%;
@@ -1050,7 +1090,7 @@ justify-content: center;
 }
 
 .arena.clash-arena-shaking {
-  animation: clash-arena-shake 0.05s infinite steps(2, end);
+  animation: clash-arena-shake 0.085s infinite steps(2, end);
 }
 
 .clash-impact-flash {
@@ -1177,11 +1217,11 @@ justify-content: center;
 }
 
 @keyframes clash-arena-shake {
-  0%   { translate: -5px -3px; }
-  25%  { translate:  4px  4px; }
-  50%  { translate: -4px  4px; }
-  75%  { translate:  5px -3px; }
-  100% { translate: -3px -2px; }
+  0%   { translate: -2px -1px; }
+  25%  { translate:  2px  2px; }
+  50%  { translate: -2px  2px; }
+  75%  { translate:  2px -1px; }
+  100% { translate: -1px -1px; }
 }
 
 @keyframes clash-light-pulse {

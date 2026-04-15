@@ -361,10 +361,12 @@ export function createClashSystem() {
                 ? primaryTarget
                 : calcularPosicaoNaFilaDeClash(group, primaryRef, ref, primaryTarget);
 
+            const currentPoint = getCenterInArena(ref);
+
             ref.animation.cancel();
             ref.el.classList.remove("clash-shaking");
             ref.el.style.transition = `left ${remainingMs}ms linear, top ${remainingMs}ms linear`;
-            setProjectilePosition(ref, getCenterInArena(ref));
+            setProjectilePosition(ref, currentPoint);
             void ref.el.getBoundingClientRect();
             setProjectilePosition(ref, targetPoint);
         }

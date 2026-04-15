@@ -109,7 +109,7 @@ class GameService {
 
     // ── Ordem de turno (sistema de prioridade + velocidade) ──────────────
 
-    private static function acaoTemPrioridade(Personagem $p, array $acao): bool {
+    private static function acaoTemPrioridadeBruta(Personagem $p, array $acao): bool {
         $tipo = $acao['actionType'];
 
         if ($tipo === 'skip') return false;
@@ -124,6 +124,14 @@ class GameService {
         }
 
         return false;
+    }
+
+    private static function acaoTemPrioridade(Personagem $p, array $acao): bool {
+        if (self::acaoDeveExecutarPorUltimo($p, $acao)) {
+            return false;
+        }
+
+        return self::acaoTemPrioridadeBruta($p, $acao);
     }
 
     private static function acaoEhClashavel(Personagem $p, array $acao): bool {
@@ -146,20 +154,69 @@ class GameService {
             && (bool)($habilidade['domainClash'] ?? false);
     }
 
-    private static function decidirVencedorDoClash(bool $p1HasPriority, bool $p2HasPriority): array {
+    private static function acaoDeveExecutarPorUltimo(Personagem $p, array $acao): bool {
+        return self::acaoAtivaDomain($p, $acao) && self::acaoTemPrioridadeBruta($p, $acao);
+    }
+
+    private static function acaoPodeAtingirOponente(Personagem $p, array $acao): bool {
+        $tipo = $acao['actionType'] ?? null;
+
+        if ($tipo === 'attack') {
+            return true;
+        }
+
+        if ($tipo !== 'skill') {
+            return false;
+        }
+
+        $habilidade = self::habilidadeDaAcao($p, $acao);
+        return (bool)($habilidade['precisaAlvo'] ?? false);
+    }
+
+    private static function domainFoiInterrompido(array $game, string $attackerKey, string $defenderKey, int $vidaAntesDoAtaque): bool {
+        $acaoDefensor = $game['pendingActions'][$defenderKey] ?? null;
+        if ($acaoDefensor === null || !self::acaoAtivaDomain($game[$defenderKey], $acaoDefensor)) {
+            return false;
+        }
+
+        $acaoAtacante = $game['pendingActions'][$attackerKey] ?? null;
+        if ($acaoAtacante === null || !self::acaoPodeAtingirOponente($game[$attackerKey], $acaoAtacante)) {
+            return false;
+        }
+
+        if ($game[$defenderKey]->getVidaAtual() >= $vidaAntesDoAtaque) {
+            return false;
+        }
+
+        return random_int(1, 100) <= 60;
+    }
+
+    private static function decidirVencedorDoClash(bool $p1HasPriority, bool $p2HasPriority, string $kind = 'projectile'): array {
+        if ($kind === 'domain' && $p1HasPriority === $p2HasPriority) {
+            $roll = random_int(1, 100);
+            if ($roll <= 40) {
+                return ['p1', 3000, false];
+            }
+            if ($roll <= 80) {
+                return ['p2', 3000, false];
+            }
+
+            return [null, 3000, true];
+        }
+
         if ($p1HasPriority && $p2HasPriority) {
-            return [random_int(0, 1) === 0 ? 'p1' : 'p2', 3000];
+            return [random_int(0, 1) === 0 ? 'p1' : 'p2', 3000, false];
         }
 
         if ($p1HasPriority) {
-            return ['p1', 1000];
+            return ['p1', 1000, false];
         }
 
         if ($p2HasPriority) {
-            return ['p2', 1000];
+            return ['p2', 1000, false];
         }
 
-        return [random_int(0, 1) === 0 ? 'p1' : 'p2', 3000];
+        return [random_int(0, 1) === 0 ? 'p1' : 'p2', 3000, false];
     }
 
     /**
@@ -168,10 +225,42 @@ class GameService {
      * Retorna o array de resultado padrão + chave 'clash'.
      */
     private static function resolverClash(array &$game, array $a1, array $a2, string $kind): array {
-        [$winnerKey, $durationMs] = self::decidirVencedorDoClash(
-            self::acaoTemPrioridade($game['p1'], $a1),
-            self::acaoTemPrioridade($game['p2'], $a2)
+        [$winnerKey, $durationMs, $bothFailed] = self::decidirVencedorDoClash(
+            self::acaoTemPrioridadeBruta($game['p1'], $a1),
+            self::acaoTemPrioridadeBruta($game['p2'], $a2),
+            $kind
         );
+
+        if ($bothFailed) {
+            $game['p1']->receberDano(20);
+            $game['p2']->receberDano(20);
+
+            if ($game['p1']->estaVivo()) $game['p1']->processarEfeitosContinuosFimTurno();
+            if ($game['p2']->estaVivo()) $game['p2']->processarEfeitosContinuosFimTurno();
+
+            $game['turno']++;
+            $game['pendingActions'] = ['p1' => null, 'p2' => null];
+            $game['p1']->iniciarTurno();
+            $game['p2']->iniciarTurno();
+
+            return [
+                'mensagem'            => 'Os dois domains colapsaram. Ambos sofreram 20 de dano.',
+                'resetJogo'           => false,
+                'resolucaoOrdem'      => [],
+                'mensagensResolucao'  => ['Os dois domains colapsaram. Ambos sofreram 20 de dano.'],
+                'estadoIntermediario' => null,
+                'domainCancel'        => null,
+                'clash' => [
+                    'occurred'    => true,
+                    'winner'      => null,
+                    'durationMs'  => $durationMs,
+                    'kind'        => $kind,
+                    'bothFailed'  => true,
+                    'damageEach'  => 20,
+                    'effectGif'   => './assets/efeitos/domainbreak.gif',
+                ],
+            ];
+        }
 
         $loserKey = $winnerKey === 'p1' ? 'p2' : 'p1';
 
@@ -196,20 +285,28 @@ class GameService {
             'resolucaoOrdem'      => [$winnerKey, $loserKey],
             'mensagensResolucao'  => [$mensagem],
             'estadoIntermediario' => null,
+            'domainCancel'        => null,
             'clash' => [
                 'occurred'   => true,
                 'winner'     => $winnerKey,
                 'durationMs' => $durationMs,
                 'kind'       => $kind,
+                'bothFailed' => false,
             ],
         ];
     }
 
     /**
      * Retorna true se p1 age antes de p2.
-     * Regras: prioridade > velocidade > aleatório.
+     * Regras: domains prioritários agem por último > prioridade > velocidade > aleatório.
      */
     private static function determinarOrdem(Personagem $p1, array $a1, Personagem $p2, array $a2): bool {
+        $p1Last = self::acaoDeveExecutarPorUltimo($p1, $a1);
+        $p2Last = self::acaoDeveExecutarPorUltimo($p2, $a2);
+
+        if ($p1Last && !$p2Last) return false;
+        if ($p2Last && !$p1Last) return true;
+
         $p1Prio = self::acaoTemPrioridade($p1, $a1);
         $p2Prio = self::acaoTemPrioridade($p2, $a2);
 
@@ -340,6 +437,7 @@ class GameService {
         $estadoIntermediario = null;
 
         // Primeiro a agir
+        $vidaSegundoAntesDoPrimeiroAtaque = $game[$secondKey]->getVidaAtual();
         $msg1 = self::executarAcaoPendente($game, $firstKey);
         $mensagens[] = $msg1;
 
@@ -348,8 +446,15 @@ class GameService {
             $resetJogo = true;
         }
 
-        // Segundo só age se o jogo não acabou
-        if (self::determinarVencedor($game) === null) {
+        $domainCancelado = false;
+        if (self::determinarVencedor($game) === null && self::domainFoiInterrompido($game, $firstKey, $secondKey, $vidaSegundoAntesDoPrimeiroAtaque)) {
+            $domainCancelado = true;
+            $mensagens[] = $game[$secondKey]->getNome() . ' teve o domain cancelado ao ser interrompido antes da execução.';
+            $resolucaoOrdem = [$firstKey];
+        }
+
+        // Segundo só age se o jogo não acabou nem teve o domain cancelado
+        if (!$domainCancelado && self::determinarVencedor($game) === null) {
             // Snapshot do estado após o 1º ataque (antes do 2º)
             $estadoIntermediario = self::exportarEstado($game);
 
@@ -382,6 +487,11 @@ class GameService {
             'resolucaoOrdem'     => $resolucaoOrdem,
             'mensagensResolucao' => $mensagens,
             'estadoIntermediario' => $estadoIntermediario,
+            'domainCancel'       => $domainCancelado ? [
+                'cancelled' => true,
+                'playerKey' => $secondKey,
+                'text'      => 'domain failed',
+            ] : null,
             'clash'              => null,
         ];
     }
@@ -432,6 +542,7 @@ class GameService {
             'resolucaoOrdem'     => $resolucaoOrdem,
             'mensagensResolucao' => $resultado['mensagensResolucao'] ?? [],
             'estadoIntermediario' => $estadoIntermediario,
+            'domainCancel'       => $resultado['domainCancel'] ?? null,
             'clash'              => $clashResultado,
         ];
     }
@@ -559,6 +670,7 @@ class GameService {
                 'resolucaoOrdem'     => $resultado['resolucaoOrdem'],
                 'mensagensResolucao' => $resultado['mensagensResolucao'] ?? [],
                 'estadoIntermediario' => $resultado['estadoIntermediario'],
+                'domainCancel'       => $resultado['domainCancel'] ?? null,
                 'clash'              => $resultado['clash'] ?? null,
             ];
         }
@@ -585,6 +697,8 @@ class GameService {
                 'disabled'        => false,
                 'melee'           => true,
                 'priority'        => false,
+                'activatesDomain' => false,
+                'domainClash'     => false,
             ];
             $actions[] = [
                 'type'            => 'defend',
@@ -595,6 +709,8 @@ class GameService {
                 'energyCost'      => 0,
                 'disabled'        => false,
                 'priority'        => true,
+                'activatesDomain' => false,
+                'domainClash'     => false,
             ];
         }
 
@@ -611,6 +727,8 @@ class GameService {
                 'disabled'        => $current->getEnergiaAtual() < $custoEnergia,
                 'melee'           => (bool)($habilidade['melee'] ?? false),
                 'priority'        => (bool)($habilidade['priority'] ?? false),
+                'activatesDomain' => (bool)($habilidade['activatesDomain'] ?? false),
+                'domainClash'     => (bool)($habilidade['domainClash'] ?? false),
             ];
         }
 

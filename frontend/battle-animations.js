@@ -46,6 +46,21 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		setTimeout(() => el.remove(), 1250);
 	}
 
+	function textoFlutuante(chave, texto, tipo = "direct") {
+		if (!texto) return;
+		const fighter = els.fighters[chave]?.root;
+		if (!fighter) return;
+
+		const t = TIPOS_FLUTUANTES.has(tipo) ? tipo : "direct";
+		const el = document.createElement("div");
+		el.className = `damage-float damage-${t} sprite-float-text`;
+		el.textContent = texto;
+		fighter.appendChild(el);
+
+		requestAnimationFrame(() => el.classList.add("show"));
+		setTimeout(() => el.remove(), 1250);
+	}
+
 	// ── Feedback de dano ─────────────────────────────────────────────────
 
 	function feedbackDano(anterior, novo) {
@@ -121,7 +136,7 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		state.domainImage = null;
 		state.domainImageVersion = 0;
 		els.arena
-			?.querySelectorAll(".arena-action-overlay, .arena-energy-beam, .fighter-action-overlay, .domain-clash-ring, .domain-clash-split, .domain-clash-blackout")
+			?.querySelectorAll(".arena-action-overlay, .arena-energy-beam, .fighter-action-overlay, .domain-clash-ring, .domain-clash-split, .domain-clash-blackout, .domain-break-background")
 			.forEach(el => el.remove());
 		document.querySelectorAll(".char-transform-overlay").forEach(el => el.remove());
 		for (const chave of ["p1", "p2"]) {
@@ -147,6 +162,15 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 				cssClass: f.cssClass || null,
 				scale: f.scale ?? null,
 			}));
+	}
+
+	function obterPrimeiroFrameDaAcao(chave, acao) {
+		const nomeAcao = acao?.nomeSprite || acao?.nome;
+		if (!nomeAcao) return null;
+
+		const actionConfig = state.serverState?.[chave]?.visual?.actions?.[nomeAcao] ?? {};
+		const frames = framesDeConfig(actionConfig);
+		return frames[0] ?? null;
 	}
 
 	function overlaysDeConfig(config) {
@@ -622,7 +646,7 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 	// ── Renderização de personagens ──────────────────────────────────────
 
 	function escalaFighter(fighterEl, chave, personagem) {
-		const s = state.frameScale?.[chave] ?? personagem?.visual?.spriteScale ?? null;
+		const s = state.frameScale?.[chave] ?? state.pendingFrameScale?.[chave] ?? personagem?.visual?.spriteScale ?? null;
 		if (s != null) fighterEl.style.setProperty("--fighter-scale", s);
 		else           fighterEl.style.removeProperty("--fighter-scale");
 	}
@@ -630,19 +654,21 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 	function visualPersonagem(chave, personagem, refs) {
 		if (!refs?.root || !refs.img) return;
 
-		const spriteTemp = state.sprites[chave];
+		const spriteTemp = state.sprites[chave] ?? state.pendingSprites?.[chave] ?? null;
+		const preparandoDomain = !state.sprites[chave] && !!state.pendingSprites?.[chave];
 		const nomeClasse = personagem?.classeNome || personagem?.classe || "?";
 		const spriteBase = personagem?.visual?.baseSprite || null;
 		const fighterEl  = refs.root;
 		const img        = refs.img;
 		const initial    = refs.initial;
 
-		fighterEl.classList.remove("has-image", "is-flipped", "action-casting", "true-cero-sized", "true-cero-plus-sized", "ubuntu-base-smaller");
+		fighterEl.classList.remove("has-image", "is-flipped", "action-casting", "preparing-domain", "true-cero-sized", "true-cero-plus-sized", "ubuntu-base-smaller");
 		img.removeAttribute("src");
 
 		if (spriteTemp) {
 			img.src = spriteTemp;
 			fighterEl.classList.add("has-image", "action-casting");
+			if (preparandoDomain) fighterEl.classList.add("preparing-domain");
 			flipFighter(fighterEl);
 			img.onerror = () => fighterEl.classList.remove("has-image", "is-flipped", "action-casting");
 		} else if (spriteBase) {
@@ -760,6 +786,26 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		});
 	}
 
+	function mostrarFundoDomainBreak(gifSrc, durationMs = 1800) {
+		if (!els.arena || !gifSrc) return wait(durationMs);
+
+		const overlay = document.createElement("div");
+		overlay.className = "domain-break-background";
+		overlay.style.backgroundImage = `url('${gifSrc}')`;
+		els.arena.appendChild(overlay);
+
+		return new Promise(resolve => {
+			requestAnimationFrame(() => overlay.classList.add("is-visible"));
+			setTimeout(() => {
+				overlay.classList.remove("is-visible");
+				setTimeout(() => {
+					overlay.remove();
+					resolve();
+				}, 260);
+			}, durationMs);
+		});
+	}
+
 	async function animarTransformacao(chave) {
 		const fighter       = els.fighters[chave]?.root;
 		const transformCfg  = state.serverState?.[chave]?.visual?.transformation ?? {};
@@ -815,11 +861,14 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 
 	return {
 		feedbackDano,
+		textoFlutuante,
+		obterPrimeiroFrameDaAcao,
 		wait,
 		mostrarSplashErroInsano,
 		mostrarAnelClashDeDomain,
 		mostrarPainelClashDeDomain,
 		mostrarTransicaoPosClashDeDomain,
+		mostrarFundoDomainBreak,
 		rodarTimeline,
 		cancelarAnimacao,
 		montarAnimacao,

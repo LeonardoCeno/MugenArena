@@ -10,6 +10,7 @@ const MUSICAS_FUNDO = [
 	"./assets/audiosdefundo/HERO.mp3",
 	"./assets/audiosdefundo/monsterskillet.mp3",
 ];
+const AUDIO_CLASH_DOMAIN = "./assets/audiosgerais/clashaudio.mp3";
 const NIVEL_VOLUME_BGM_PADRAO = 1	;
 
 (() => {
@@ -21,10 +22,13 @@ const NIVEL_VOLUME_BGM_PADRAO = 1	;
 		actionPage: 0,
 		anim: null,
 		bgMusic: null,
+		domainClashAudio: null,
 		bgMusicVolumeLevel: NIVEL_VOLUME_BGM_PADRAO,
 		bgMusicMuted: false,
 		sprites: { p1: null, p2: null },
 		frameScale: { p1: null, p2: null },
+		pendingSprites: { p1: null, p2: null },
+		pendingFrameScale: { p1: null, p2: null },
 		domainImage: null,
 		domainImageVersion: 0,
 		arenaFundo: null,
@@ -103,8 +107,8 @@ const NIVEL_VOLUME_BGM_PADRAO = 1	;
 	}
 
 	function aplicarVolumeNaMusicaAtual() {
-		if (!state.bgMusic) return;
-		state.bgMusic.volume = obterVolumeBgm();
+		if (state.bgMusic) state.bgMusic.volume = obterVolumeBgm();
+		if (state.domainClashAudio) state.domainClashAudio.volume = obterVolumeBgm();
 	}
 
 	function ajustarNivelVolumeBgm(valorCru) {
@@ -129,8 +133,59 @@ const NIVEL_VOLUME_BGM_PADRAO = 1	;
 	}
 
 	function aplicarMuteNaMusicaAtual() {
-		if (!state.bgMusic) return;
-		state.bgMusic.muted = state.bgMusicMuted;
+		if (state.bgMusic) state.bgMusic.muted = state.bgMusicMuted;
+	}
+
+	function pararAudioClashDomain() {
+		if (!state.domainClashAudio) return;
+		state.domainClashAudio.pause();
+		state.domainClashAudio.currentTime = 0;
+		state.domainClashAudio = null;
+	}
+
+	function encerrarAudioClashDomainComFade(durationMs = 1000) {
+		const audio = state.domainClashAudio;
+		if (!audio) return Promise.resolve();
+		if (durationMs <= 0) {
+			pararAudioClashDomain();
+			return Promise.resolve();
+		}
+
+		const initialVolume = audio.volume;
+		const stepMs = 50;
+		const totalSteps = Math.max(1, Math.ceil(durationMs / stepMs));
+		let currentStep = 0;
+
+		return new Promise(resolve => {
+			const timer = setInterval(() => {
+				if (state.domainClashAudio !== audio) {
+					clearInterval(timer);
+					resolve();
+					return;
+				}
+
+				currentStep += 1;
+				const progress = Math.min(1, currentStep / totalSteps);
+				audio.volume = Math.max(0, initialVolume * (1 - progress));
+
+				if (progress >= 1) {
+					clearInterval(timer);
+					pararAudioClashDomain();
+					resolve();
+				}
+			}, stepMs);
+		});
+	}
+
+	function tocarAudioClashDomain() {
+		pararAudioClashDomain();
+		const audio = new Audio(AUDIO_CLASH_DOMAIN);
+		audio.loop = true;
+		audio.volume = obterVolumeBgm();
+		audio.currentTime = 0;
+		audio.muted = false;
+		audio.play().catch(() => {});
+		state.domainClashAudio = audio;
 	}
 
 	function alternarMuteMusicaFundo() {
@@ -192,6 +247,35 @@ const NIVEL_VOLUME_BGM_PADRAO = 1	;
 
 		if (!mostrarDano || !estadoAnterior?.started || !novoEstado?.started) return;
 		animations.feedbackDano(estadoAnterior, novoEstado);
+	}
+
+	function limparPosePendente(chave = null) {
+		if (chave) {
+			state.pendingSprites[chave] = null;
+			state.pendingFrameScale[chave] = null;
+			return;
+		}
+
+		state.pendingSprites.p1 = null;
+		state.pendingSprites.p2 = null;
+		state.pendingFrameScale.p1 = null;
+		state.pendingFrameScale.p2 = null;
+	}
+
+	function aplicarPosePendenteDeDomain(chave, acao) {
+		if (!acao?.activatesDomain || !acao?.domainClash) {
+			limparPosePendente(chave);
+			return;
+		}
+
+		const frame = animations.obterPrimeiroFrameDaAcao(chave, acao);
+		if (!frame?.sprite) {
+			limparPosePendente(chave);
+			return;
+		}
+
+		state.pendingSprites[chave] = frame.sprite;
+		state.pendingFrameScale[chave] = frame.scale ?? null;
 	}
 
 	async function animarEsquivaEmTempoReal(mensagemEtapa, estadoAtual) {
@@ -297,6 +381,43 @@ const NIVEL_VOLUME_BGM_PADRAO = 1	;
 	}
 
 	async function executarTurnoDomainClash(acoesMap, clashMeta) {
+		if (clashMeta?.bothFailed) {
+			animations.mostrarAnelClashDeDomain();
+			const rawAnimData1 = animations.montarAnimacaoDomainClash("p1", acoesMap["p1"], "p2");
+			const rawAnimData2 = animations.montarAnimacaoDomainClash("p2", acoesMap["p2"], "p1");
+			const [animData1, animData2] = sincronizarExpansaoDeDomains(rawAnimData1, rawAnimData2);
+
+			const preEvents = [...animData1.preExpandEvents, ...animData2.preExpandEvents];
+			const handle = animations.rodarTimeline(preEvents);
+			state.anim = handle;
+
+			await animations.wait(Math.max(animData1.syncedExpandMs, animData2.syncedExpandMs));
+
+			const cleanupSplit = animations.mostrarPainelClashDeDomain(
+				animData1.domainImage,
+				animData2.domainImage,
+				7000
+			);
+			tocarAudioClashDomain();
+
+			await animations.wait(6000);
+			await encerrarAudioClashDomainComFade(1000);
+			cleanupSplit();
+			state.sprites.p1 = null;
+			state.sprites.p2 = null;
+			state.frameScale.p1 = null;
+			state.frameScale.p2 = null;
+			limparPosePendente();
+			atualizarHUD();
+			animations.textoFlutuante("p1", "domain break");
+			animations.textoFlutuante("p2", "domain break");
+
+			const breakPromise = animations.mostrarFundoDomainBreak(clashMeta.effectGif || "./assets/efeitos/domainbreak.gif", 2200);
+			await breakPromise;
+			animations.cancelarAnimacao();
+			return { bothFailed: true };
+		}
+
 		const winnerKey = clashMeta.winner;
 		animations.mostrarAnelClashDeDomain();
 		const rawAnimData1 = animations.montarAnimacaoDomainClash("p1", acoesMap["p1"], "p2");
@@ -314,6 +435,7 @@ const NIVEL_VOLUME_BGM_PADRAO = 1	;
 			animData2.domainImage,
 			7000
 		);
+		tocarAudioClashDomain();
 
 		const fadeOutMs = 1400;
 		const fadeInMs = 1400;
@@ -323,10 +445,14 @@ const NIVEL_VOLUME_BGM_PADRAO = 1	;
 		const winnerAnimData = winnerKey === "p1" ? animData1 : animData2;
 		const blackoutPromise = animations.mostrarTransicaoPosClashDeDomain(fadeOutMs, fadeInMs);
 
-		await animations.wait(fadeOutMs);
+		await animations.wait(Math.max(0, fadeOutMs - 1000));
+		const fadeAudioPromise = encerrarAudioClashDomainComFade(1000);
+		await animations.wait(1000);
+		await fadeAudioPromise;
 		cleanupSplit();
 		state.sprites[loserKey] = null;
 		state.frameScale[loserKey] = null;
+		limparPosePendente(loserKey);
 		state.domainImageVersion += 1;
 		state.domainImage = winnerAnimData.domainImage ?? null;
 		atualizarHUD();
@@ -340,6 +466,7 @@ const NIVEL_VOLUME_BGM_PADRAO = 1	;
 		const restanteMs = Math.max(0, Math.max(clashMeta.durationMs ?? 0, winnerPostHandle.duration) - fadeOutMs);
 		await animations.wait(restanteMs);
 		animations.cancelarAnimacao();
+		return { bothFailed: false };
 	}
 
 	async function processarAcao(acao) {
@@ -364,6 +491,7 @@ const NIVEL_VOLUME_BGM_PADRAO = 1	;
 			const mensagem = resposta.message || null;
 
 			if (resposta.state?.started === false) {
+				limparPosePendente();
 				if (errorSplash) await animations.mostrarSplashErroInsano(errorSplash, 3000);
 				resetarParaSetup();
 				if (mensagem) ui.adicionarLog(mensagem);
@@ -373,6 +501,7 @@ const NIVEL_VOLUME_BGM_PADRAO = 1	;
 			// Turno ainda não resolvido — 1º jogador escolheu, aguarda o 2º
 			if (!resposta.resolved) {
 				state.acaoPendente = { playerKey: atacanteKey, acao };
+				aplicarPosePendenteDeDomain(atacanteKey, acao);
 				if (resposta.state) atualizarEstado(resposta.state, false);
 				atualizarHUD();
 				const proximo = resposta.state?.currentKey;
@@ -384,11 +513,14 @@ const NIVEL_VOLUME_BGM_PADRAO = 1	;
 			// Turno resolvido — toca as duas animações em ordem de execução
 			const ordem    = resposta.resolucaoOrdem ?? [atacanteKey, oposto(atacanteKey)];
 			const mensagensResolucao = Array.isArray(resposta.mensagensResolucao) ? resposta.mensagensResolucao : [];
+			const domainCancel = resposta.domainCancel?.cancelled ? resposta.domainCancel : null;
 			const acoesMap = { [atacanteKey]: acao };
+			aplicarPosePendenteDeDomain(atacanteKey, acao);
 			if (state.acaoPendente) {
 				acoesMap[state.acaoPendente.playerKey] = state.acaoPendente.acao;
 			}
 			state.acaoPendente = null;
+			atualizarHUD();
 
 			// Estados intermediário e final para aplicar dano em tempo real
 			const estadoIntermediario = resposta.estadoIntermediario ?? null;
@@ -401,6 +533,7 @@ const NIVEL_VOLUME_BGM_PADRAO = 1	;
 				} else {
 					await executarTurnoClash(acoesMap, resposta.clash, estadoFinal);
 				}
+				limparPosePendente();
 				const estadoAntesDaAtualizacao = state.serverState;
 				atualizarEstado(estadoFinal, true);
 				atualizarHUD();
@@ -424,6 +557,7 @@ const NIVEL_VOLUME_BGM_PADRAO = 1	;
 				const defensorDefendendo = acoesMap[keyDefensor]?.type === "defend";
 				const mensagemEtapa      = mensagensResolucao[i] ?? null;
 
+				limparPosePendente(keyAtacante);
 				await tocarAnimacao(keyAtacante, acaoAtacante, keyDefensor, defensorDefendendo);
 
 				// Aplica dano ao vivo após cada animação
@@ -446,9 +580,16 @@ const NIVEL_VOLUME_BGM_PADRAO = 1	;
 			// Garante estado final aplicado caso nenhuma animação tenha tocado
 			if (ordemAnimada.length === 0 && estadoFinal) {
 				const estadoAntesDaAtualizacao = state.serverState;
+				limparPosePendente();
 				atualizarEstado(estadoFinal, true);
 				await animarEsquivaEmTempoReal(mensagensResolucao[0] ?? null, estadoFinal);
 				await verificarEAnimarTransformacao(estadoAntesDaAtualizacao, estadoFinal);
+			}
+
+			limparPosePendente();
+
+			if (domainCancel?.playerKey) {
+				animations.textoFlutuante(domainCancel.playerKey, String(domainCancel.text || "domain failed"));
 			}
 
 			if (mensagem) {
@@ -462,6 +603,8 @@ const NIVEL_VOLUME_BGM_PADRAO = 1	;
 			atualizarHUD();
 		} catch (erro) {
 			state.acaoPendente = null;
+			limparPosePendente();
+			pararAudioClashDomain();
 			animations.cancelarAnimacao();
 			atualizarHUD();
 			ui.adicionarLog(`Erro ao executar ação: ${erro.message || "falha desconhecida."}`);
@@ -474,7 +617,9 @@ const NIVEL_VOLUME_BGM_PADRAO = 1	;
 	}
 
 	function resetarParaSetup() {
+		pararAudioClashDomain();
 		pararMusicaFundo();
+		limparPosePendente();
 		ui.resetarParaSetup(animations.cancelarAnimacao);
 	}
 
@@ -510,6 +655,7 @@ const NIVEL_VOLUME_BGM_PADRAO = 1	;
 			atualizarEstado(resposta.state, false);
 			state.resolvendoAcao = false;
 			state.actionPage = 0;
+			limparPosePendente();
 			animations.cancelarAnimacao();
 			tocarMusicaFundoAleatoria();
 			ui.esconderPreview();
