@@ -210,114 +210,6 @@ class GameService {
         return random_int(1, 100) <= 60;
     }
 
-    private static function decidirVencedorDoClash(bool $p1HasPriority, bool $p2HasPriority, string $kind = 'projectile'): array {
-        if ($kind === 'domain' && $p1HasPriority === $p2HasPriority) {
-            $roll = random_int(1, 100);
-            if ($roll <= 40) {
-                return ['p1', 3000, false];
-            }
-            if ($roll <= 80) {
-                return ['p2', 3000, false];
-            }
-
-            return [null, 3000, true];
-        }
-
-        if ($p1HasPriority && $p2HasPriority) {
-            return [random_int(0, 1) === 0 ? 'p1' : 'p2', 3000, false];
-        }
-
-        if ($p1HasPriority) {
-            return ['p1', 1000, false];
-        }
-
-        if ($p2HasPriority) {
-            return ['p2', 1000, false];
-        }
-
-        return [random_int(0, 1) === 0 ? 'p1' : 'p2', 3000, false];
-    }
-
-    /**
-     * Resolve um turno onde ambas as ações são clashable.
-     * Apenas o vencedor executa sua ação; o perdedor é cancelado.
-     * Retorna o array de resultado padrão + chave 'clash'.
-     */
-    private static function resolverClash(array &$game, array $a1, array $a2, string $kind): array {
-        [$winnerKey, $durationMs, $bothFailed] = self::decidirVencedorDoClash(
-            self::acaoTemPrioridadeBruta($game['p1'], $a1),
-            self::acaoTemPrioridadeBruta($game['p2'], $a2),
-            $kind
-        );
-
-        if ($bothFailed) {
-            $game['p1']->receberDano(20);
-            $game['p2']->receberDano(20);
-
-            if ($game['p1']->estaVivo()) $game['p1']->processarEfeitosContinuosFimTurno();
-            if ($game['p2']->estaVivo()) $game['p2']->processarEfeitosContinuosFimTurno();
-
-            $game['turno']++;
-            $game['pendingActions'] = ['p1' => null, 'p2' => null];
-            $game['p1']->iniciarTurno();
-            $game['p2']->iniciarTurno();
-
-            self::aplicarPenalidadeEnergiaDeDomain($game, 'p1', $a1);
-            self::aplicarPenalidadeEnergiaDeDomain($game, 'p2', $a2);
-
-            return [
-                'mensagem'            => 'Os dois domains colapsaram. Ambos sofreram 20 de dano.',
-                'resetJogo'           => false,
-                'resolucaoOrdem'      => [],
-                'mensagensResolucao'  => ['Os dois domains colapsaram. Ambos sofreram 20 de dano.'],
-                'estadoIntermediario' => null,
-                'domainCancel'        => null,
-                'clash' => [
-                    'occurred'    => true,
-                    'winner'      => null,
-                    'durationMs'  => $durationMs,
-                    'kind'        => $kind,
-                    'bothFailed'  => true,
-                    'damageEach'  => 20,
-                    'effectGif'   => './assets/efeitos/domainbreak.gif',
-                ],
-            ];
-        }
-
-        $loserKey = $winnerKey === 'p1' ? 'p2' : 'p1';
-
-        // Execute only winner's action
-        $mensagem = self::executarAcaoPendente($game, $winnerKey);
-
-        // Clear loser without executing
-        $game['pendingActions'][$loserKey] = null;
-
-        // Continuous effects, turn advance, energy regen
-        if ($game['p1']->estaVivo()) $game['p1']->processarEfeitosContinuosFimTurno();
-        if ($game['p2']->estaVivo()) $game['p2']->processarEfeitosContinuosFimTurno();
-
-        $game['turno']++;
-        $game['pendingActions'] = ['p1' => null, 'p2' => null];
-        $game['p1']->iniciarTurno();
-        $game['p2']->iniciarTurno();
-
-        return [
-            'mensagem'            => $mensagem,
-            'resetJogo'           => false,
-            'resolucaoOrdem'      => [$winnerKey, $loserKey],
-            'mensagensResolucao'  => [$mensagem],
-            'estadoIntermediario' => null,
-            'domainCancel'        => null,
-            'clash' => [
-                'occurred'   => true,
-                'winner'     => $winnerKey,
-                'durationMs' => $durationMs,
-                'kind'       => $kind,
-                'bothFailed' => false,
-            ],
-        ];
-    }
-
     /**
      * Retorna true se p1 age antes de p2.
      * Regras: domains prioritários agem por último > prioridade > velocidade > aleatório.
@@ -392,10 +284,10 @@ class GameService {
      * Retorna a mensagem resultante.
      */
     private static function executarAcaoPendente(array &$game, string $playerKey): string {
-        $acao       = $game['pendingActions'][$playerKey];
-        $player     = $game[$playerKey];
+        $acao        = $game['pendingActions'][$playerKey];
+        $player      = $game[$playerKey];
         $opponentKey = self::chaveOposta($playerKey);
-        $opponent   = $game[$opponentKey];
+        $opponent    = $game[$opponentKey];
 
         if ($acao['actionType'] === 'skip') {
             $game['skipTurns'][$playerKey] = max(0, (int)($game['skipTurns'][$playerKey] ?? 0) - 1);
@@ -430,6 +322,117 @@ class GameService {
 
     // ── Resolução do turno simultâneo ────────────────────────────────────
 
+    private static function deveResetarJogo(Personagem $player, array $acao): bool {
+        if ($acao['actionType'] !== 'skill') return false;
+        $metodo = self::metodoSkill($player, $acao['skillIndex'] ?? null);
+        return $metodo !== null && $player->retornaAoSetup($metodo);
+    }
+
+    private static function decidirVencedorDoClash(bool $p1HasPriority, bool $p2HasPriority, string $kind = 'projectile'): array {
+        if ($kind === 'domain' && $p1HasPriority === $p2HasPriority) {
+            $roll = random_int(1, 100);
+            if ($roll <= 40) {
+                return ['p1', 3000, false];
+            }
+            if ($roll <= 80) {
+                return ['p2', 3000, false];
+            }
+
+            return [null, 3000, true];
+        }
+
+        if ($p1HasPriority && $p2HasPriority) {
+            return [random_int(0, 1) === 0 ? 'p1' : 'p2', 3000, false];
+        }
+
+        if ($p1HasPriority) {
+            return ['p1', 1000, false];
+        }
+
+        if ($p2HasPriority) {
+            return ['p2', 1000, false];
+        }
+
+        return [random_int(0, 1) === 0 ? 'p1' : 'p2', 3000, false];
+    }
+
+    /**
+     * Processa efeitos contínuos, avança o turno e reinicia ambos os jogadores.
+     */
+    private static function avancarTurno(array &$game): void {
+        if ($game['p1']->estaVivo()) $game['p1']->processarEfeitosContinuosFimTurno();
+        if ($game['p2']->estaVivo()) $game['p2']->processarEfeitosContinuosFimTurno();
+
+        $game['turno']++;
+        $game['pendingActions'] = ['p1' => null, 'p2' => null];
+        $game['p1']->iniciarTurno();
+        $game['p2']->iniciarTurno();
+    }
+
+    /**
+     * Resolve um turno onde ambas as ações são clashable.
+     * Apenas o vencedor executa sua ação; o perdedor é cancelado.
+     * Retorna o array de resultado padrão + chave 'clash'.
+     */
+    private static function resolverClash(array &$game, array $a1, array $a2, string $kind): array {
+        [$winnerKey, $durationMs, $bothFailed] = self::decidirVencedorDoClash(
+            self::acaoTemPrioridadeBruta($game['p1'], $a1),
+            self::acaoTemPrioridadeBruta($game['p2'], $a2),
+            $kind
+        );
+
+        if ($bothFailed) {
+            $game['p1']->receberDano(20);
+            $game['p2']->receberDano(20);
+
+            self::avancarTurno($game);
+
+            self::aplicarPenalidadeEnergiaDeDomain($game, 'p1', $a1);
+            self::aplicarPenalidadeEnergiaDeDomain($game, 'p2', $a2);
+
+            return [
+                'mensagem'            => 'Os dois domains colapsaram. Ambos sofreram 20 de dano.',
+                'resetJogo'           => false,
+                'resolucaoOrdem'      => [],
+                'mensagensResolucao'  => ['Os dois domains colapsaram. Ambos sofreram 20 de dano.'],
+                'estadoIntermediario' => null,
+                'domainCancel'        => null,
+                'clash' => [
+                    'occurred'    => true,
+                    'winner'      => null,
+                    'durationMs'  => $durationMs,
+                    'kind'        => $kind,
+                    'bothFailed'  => true,
+                    'damageEach'  => 20,
+                    'effectGif'   => './assets/efeitos/domainbreak.gif',
+                ],
+            ];
+        }
+
+        $loserKey = $winnerKey === 'p1' ? 'p2' : 'p1';
+
+        $mensagem = self::executarAcaoPendente($game, $winnerKey);
+        $game['pendingActions'][$loserKey] = null;
+
+        self::avancarTurno($game);
+
+        return [
+            'mensagem'            => $mensagem,
+            'resetJogo'           => false,
+            'resolucaoOrdem'      => [$winnerKey, $loserKey],
+            'mensagensResolucao'  => [$mensagem],
+            'estadoIntermediario' => null,
+            'domainCancel'        => null,
+            'clash' => [
+                'occurred'   => true,
+                'winner'     => $winnerKey,
+                'durationMs' => $durationMs,
+                'kind'       => $kind,
+                'bothFailed' => false,
+            ],
+        ];
+    }
+
     /**
      * Executa as duas ações pendentes em ordem (prioridade + velocidade),
      * processa efeitos contínuos, avança o turno.
@@ -454,16 +457,14 @@ class GameService {
         $secondKey      = $p1First ? 'p2' : 'p1';
         $resolucaoOrdem = [$firstKey, $secondKey];
 
-        $mensagens          = [];
-        $resetJogo          = false;
+        $mensagens           = [];
+        $resetJogo           = false;
         $estadoIntermediario = null;
 
-        // Primeiro a agir
         $vidaSegundoAntesDoPrimeiroAtaque = $game[$secondKey]->getVidaAtual();
         $msg1 = self::executarAcaoPendente($game, $firstKey);
         $mensagens[] = $msg1;
 
-        // Checa reset (Ubuntu sudo apt install)
         if (self::deveResetarJogo($game[$firstKey], $game['pendingActions'][$firstKey])) {
             $resetJogo = true;
         }
@@ -475,9 +476,7 @@ class GameService {
             $resolucaoOrdem = [$firstKey];
         }
 
-        // Segundo só age se o jogo não acabou nem teve o domain cancelado
         if (!$domainCancelado && self::determinarVencedor($game) === null) {
-            // Snapshot do estado após o 1º ataque (antes do 2º)
             $estadoIntermediario = self::exportarEstado($game);
 
             $msg2 = self::executarAcaoPendente($game, $secondKey);
@@ -488,20 +487,7 @@ class GameService {
             }
         }
 
-        // Efeitos contínuos (sangramento/queimadura) ao fim do turno
-        if ($game['p1']->estaVivo()) {
-            $game['p1']->processarEfeitosContinuosFimTurno();
-        }
-        if ($game['p2']->estaVivo()) {
-            $game['p2']->processarEfeitosContinuosFimTurno();
-        }
-
-        // Avança turno e regenera energia
-        $game['turno']++;
-        $game['pendingActions'] = ['p1' => null, 'p2' => null];
-
-        $game['p1']->iniciarTurno();
-        $game['p2']->iniciarTurno();
+        self::avancarTurno($game);
 
         if ($domainCancelado) {
             $acaoCancelada = $secondKey === 'p1' ? $a1 : $a2;
@@ -509,24 +495,18 @@ class GameService {
         }
 
         return [
-            'mensagem'           => implode(' ', array_filter($mensagens)),
-            'resetJogo'          => $resetJogo,
-            'resolucaoOrdem'     => $resolucaoOrdem,
-            'mensagensResolucao' => $mensagens,
+            'mensagem'            => implode(' ', array_filter($mensagens)),
+            'resetJogo'           => $resetJogo,
+            'resolucaoOrdem'      => $resolucaoOrdem,
+            'mensagensResolucao'  => $mensagens,
             'estadoIntermediario' => $estadoIntermediario,
-            'domainCancel'       => $domainCancelado ? [
+            'domainCancel'        => $domainCancelado ? [
                 'cancelled' => true,
                 'playerKey' => $secondKey,
                 'text'      => 'domain failed',
             ] : null,
-            'clash'              => null,
+            'clash'               => null,
         ];
-    }
-
-    private static function deveResetarJogo(Personagem $player, array $acao): bool {
-        if ($acao['actionType'] !== 'skill') return false;
-        $metodo = self::metodoSkill($player, $acao['skillIndex'] ?? null);
-        return $metodo !== null && $player->retornaAoSetup($metodo);
     }
 
     /**
@@ -564,13 +544,13 @@ class GameService {
         }
 
         return [
-            'mensagem'           => implode(' ', array_filter($mensagens)),
-            'resetJogo'          => $resetJogo,
-            'resolucaoOrdem'     => $resolucaoOrdem,
-            'mensagensResolucao' => $resultado['mensagensResolucao'] ?? [],
+            'mensagem'            => implode(' ', array_filter($mensagens)),
+            'resetJogo'           => $resetJogo,
+            'resolucaoOrdem'      => $resolucaoOrdem,
+            'mensagensResolucao'  => $resultado['mensagensResolucao'] ?? [],
             'estadoIntermediario' => $estadoIntermediario,
-            'domainCancel'       => $resultado['domainCancel'] ?? null,
-            'clash'              => $clashResultado,
+            'domainCancel'        => $resultado['domainCancel'] ?? null,
+            'clash'               => $clashResultado,
         ];
     }
 
@@ -631,7 +611,6 @@ class GameService {
             'domain'         => self::domainVazio(),
         ];
 
-        // Auto-fill skip se algum começar paralisado (improvável, mas seguro)
         self::preencherAcoesSkip($game);
 
         return $game;
@@ -660,14 +639,12 @@ class GameService {
             throw new EntradaInvalidaException();
         }
 
-        // Já submeteu neste turno
         if ($game['pendingActions'][$playerKey] !== null) {
             throw new EntradaInvalidaException();
         }
 
         $player = $game[$playerKey];
 
-        // Valida skill
         if ($actionType === 'skill') {
             $habilidades = $player->getHabilidades();
             if ($skillIndex === null || !isset($habilidades[$skillIndex])) {
@@ -684,21 +661,19 @@ class GameService {
             'skillIndex' => $skillIndex,
         ];
 
-        // Preenche skip do oponente se necessário
         self::preencherAcoesSkip($game);
 
-        // Se ambos prontos, resolve
         if ($game['pendingActions']['p1'] !== null && $game['pendingActions']['p2'] !== null) {
             $resultado = self::resolverRodada($game);
             return [
-                'resolved'           => true,
-                'mensagem'           => $resultado['mensagem'],
-                'resetJogo'          => $resultado['resetJogo'],
-                'resolucaoOrdem'     => $resultado['resolucaoOrdem'],
-                'mensagensResolucao' => $resultado['mensagensResolucao'] ?? [],
+                'resolved'            => true,
+                'mensagem'            => $resultado['mensagem'],
+                'resetJogo'           => $resultado['resetJogo'],
+                'resolucaoOrdem'      => $resultado['resolucaoOrdem'],
+                'mensagensResolucao'  => $resultado['mensagensResolucao'] ?? [],
                 'estadoIntermediario' => $resultado['estadoIntermediario'],
-                'domainCancel'       => $resultado['domainCancel'] ?? null,
-                'clash'              => $resultado['clash'] ?? null,
+                'domainCancel'        => $resultado['domainCancel'] ?? null,
+                'clash'               => $resultado['clash'] ?? null,
             ];
         }
 
@@ -810,11 +785,11 @@ class GameService {
         // currentKey = quem ainda precisa escolher (compat com frontend)
         $currentKey = count($waitingFor) > 0 ? $waitingFor[0] : null;
 
-        // availableActions flat = ações do jogador atual (compat com frontend)
         $availableActionsFlat = [];
         if (!$vencedor && $currentKey !== null) {
             $availableActionsFlat = self::acoesDisponiveis($game[$currentKey], false);
         }
+
         return [
             'started'              => true,
             'turno'                => (int)$game['turno'],
