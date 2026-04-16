@@ -480,6 +480,10 @@ class GameService {
             $resolucaoOrdem = [$firstKey];
         }
 
+        if (self::determinarVencedor($game) !== null) {
+            $resolucaoOrdem = [$firstKey];
+        }
+
         if (!$domainCancelado && self::determinarVencedor($game) === null) {
             $estadoIntermediario = self::exportarEstado($game);
 

@@ -547,6 +547,10 @@ const FUNDOS_ARENA = ["BEACH 2.png","BEACH NIGHT.png","BEACH.png","CAVE 2.png","
 					atualizarEstado(estadoAplicar, true);
 					atualizarHUD();
 					await animarEsquivaEmTempoReal(mensagemEtapa, estadoAplicar);
+
+					if (estadoAplicar.winner) {
+						break;
+					}
 				}
 
 				if (!isUltimo) {
