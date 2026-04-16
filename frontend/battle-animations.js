@@ -277,6 +277,12 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		return [];
 	}
 
+	function volumePorNivel(volumeLevel, fallbackVolume = 1) {
+		const nivel = Number.parseInt(String(volumeLevel), 10);
+		if (Number.isNaN(nivel)) return fallbackVolume;
+		return Math.max(1, Math.min(10, nivel)) / 10;
+	}
+
 	function eventosAudio(config, campo = "audio", offsetMs = 0) {
 		const audios = listaAudio(config, campo);
 		return audios
@@ -285,10 +291,12 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 				const file      = a.file;
 				const startMs   = offsetMs + (a.startMs ?? 0);
 				const durationMs = a.durationMs ?? null;
+				const volume = volumePorNivel(a.volumeLevel, 1);
 				return {
 					at: startMs,
 					run() {
 						const audio = new Audio(file);
+						audio.volume = volume;
 						audio.currentTime = 0;
 						audio.play().catch(() => {});
 						if (durationMs != null) {
@@ -810,7 +818,12 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		const fighter       = els.fighters[chave]?.root;
 		const transformCfg  = state.serverState?.[chave]?.visual?.transformation ?? {};
 		const spriteTransf  = transformCfg.sprite ?? null;
-		const audioFile     = transformCfg.audio  ?? null;
+		const audioConfig   = typeof transformCfg.audio === "string"
+			? { file: transformCfg.audio }
+			: (transformCfg.audio ?? null);
+		const audioFile     = audioConfig?.file ?? null;
+		const audioVolume   = volumePorNivel(audioConfig?.volumeLevel, 0.75);
+		const audioDurationMs = Number(audioConfig?.durationMs) > 0 ? Number(audioConfig.durationMs) : 3600;
 
 		// Overlay escuro
 		const overlay = document.createElement("div");
@@ -820,9 +833,9 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		// Audio
 		if (audioFile) {
 			const audio = new Audio(audioFile);
-			audio.volume = 0.75;
+			audio.volume = audioVolume;
 			audio.play().catch(() => {});
-			setTimeout(() => { try { audio.pause(); audio.currentTime = 0; } catch (_) {} }, 3600);
+			setTimeout(() => { try { audio.pause(); audio.currentTime = 0; } catch (_) {} }, audioDurationMs);
 		}
 
 		// Fase 1: pulso no sprite do fighter

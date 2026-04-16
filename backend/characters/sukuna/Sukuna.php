@@ -247,7 +247,7 @@ class Sukuna extends Personagem {
                         ['file' => './assets/sukuna/audios/sukunadomain.mp3', 'startMs' => 0,    'durationMs' => 2500],
                     ],
                     'domainAudio' => [
-                        ['file' => './assets/sukuna/audios/sukunatheme.mp3', 'startMs' => 0, 'durationMs' => 9000],
+                        ['file' => './assets/sukuna/audios/sukunatheme.mp3', 'startMs' => 0, 'durationMs' => 9000, 'volumeLevel' => 0.6],
                     ],
                     'frames' => [
                         ['sprite' => './assets/sukuna/sprites/DOMAINSUKUNA.png', 'durationMs' => 11000],
@@ -260,7 +260,7 @@ class Sukuna extends Personagem {
                         ['target' => 'opponent', 'sprite' => './assets/sukuna/sprites/docorte3.png', 'startMs' => 200, 'durationMs' => 100, 'x' => 0, 'y' => 0,   'scale' => 1.2],
                     ],
                     'repeatOverlaysStartMs' => 2000,
-                    'repeatOverlays'        => 18,
+                    'repeatOverlays'        => 22,
                 ],
             ],
             'reactions' => [

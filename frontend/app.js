@@ -11,6 +11,7 @@ const MUSICAS_FUNDO = [
 	"./assets/audiosdefundo/monsterskillet.mp3",
 ];
 const AUDIO_CLASH_DOMAIN = "./assets/audiosgerais/clashaudio.mp3";
+const AUDIO_DOMAIN_BREAK = "./assets/audiosgerais/domainfailed.mp3";
 const NIVEL_VOLUME_BGM_PADRAO = 1	;
 
 (() => {
@@ -411,9 +412,41 @@ const NIVEL_VOLUME_BGM_PADRAO = 1	;
 			atualizarHUD();
 			animations.textoFlutuante("p1", "domain break");
 			animations.textoFlutuante("p2", "domain break");
+			const breakDurationMs = 2200;
+			const breakAudioExtraMs = 1200;
+			const breakAudioDurationMs = breakDurationMs + breakAudioExtraMs;
+			const breakFadeMs = 1000;
+			const breakAudio = new Audio(AUDIO_DOMAIN_BREAK);
+			breakAudio.volume = obterVolumeBgm();
+			breakAudio.muted = false;
+			breakAudio.play().catch(() => {});
+			let breakFadeTimer = null;
+			const breakFadeStartTimer = window.setTimeout(() => {
+				const initialVolume = breakAudio.volume;
+				const stepMs = 50;
+				let elapsedMs = 0;
 
-			const breakPromise = animations.mostrarFundoDomainBreak(clashMeta.effectGif || "./assets/efeitos/domainbreak.gif", 2200);
+				breakFadeTimer = window.setInterval(() => {
+					elapsedMs += stepMs;
+					const progress = Math.min(1, elapsedMs / breakFadeMs);
+					breakAudio.volume = Math.max(0, initialVolume * (1 - progress));
+
+					if (progress >= 1) {
+						window.clearInterval(breakFadeTimer);
+						breakFadeTimer = null;
+						breakAudio.pause();
+						breakAudio.currentTime = 0;
+					}
+				}, stepMs);
+			}, Math.max(0, breakAudioDurationMs - breakFadeMs));
+
+			const breakPromise = animations.mostrarFundoDomainBreak(clashMeta.effectGif || "./assets/efeitos/domainbreak.gif", breakDurationMs);
 			await breakPromise;
+			await animations.wait(breakAudioExtraMs);
+			window.clearTimeout(breakFadeStartTimer);
+			if (breakFadeTimer) window.clearInterval(breakFadeTimer);
+			breakAudio.pause();
+			breakAudio.currentTime = 0;
 			animations.cancelarAnimacao();
 			return { bothFailed: true };
 		}
