@@ -48,6 +48,10 @@ class GameService {
         }
     }
 
+    private static function existeDomainAtivo(array $game): bool {
+        return (int)($game['domain']['turnsRemaining'] ?? 0) > 0;
+    }
+
     private static function metodoSkill(Personagem $current, ?int $skillIndex): ?string {
         if ($skillIndex === null) {
             return null;
@@ -650,6 +654,11 @@ class GameService {
             if ($skillIndex === null || !isset($habilidades[$skillIndex])) {
                 throw new EntradaInvalidaException();
             }
+
+            if (self::existeDomainAtivo($game) && (bool)($habilidades[$skillIndex]['activatesDomain'] ?? false)) {
+                throw new EntradaInvalidaException();
+            }
+
             $custo = (int)($habilidades[$skillIndex]['energyCost'] ?? 0);
             if ($custo > 0 && $player->getEnergiaAtual() < $custo) {
                 throw new EntradaInvalidaException();
@@ -680,7 +689,7 @@ class GameService {
         return ['resolved' => false, 'mensagem' => null, 'resetJogo' => false];
     }
 
-    public static function acoesDisponiveis(Personagem $current, bool $jaSubmeteu = false): array {
+    public static function acoesDisponiveis(Personagem $current, bool $jaSubmeteu = false, bool $domainAtivo = false): array {
         if ($jaSubmeteu) {
             return [];
         }
@@ -718,6 +727,7 @@ class GameService {
 
         foreach ($current->getHabilidades() as $index => $habilidade) {
             $custoEnergia = (int)($habilidade['energyCost'] ?? 0);
+            $bloqueadaPorDomain = $domainAtivo && (bool)($habilidade['activatesDomain'] ?? false);
             $actions[] = [
                 'type'            => 'skill',
                 'label'           => strtoupper((string)$habilidade['nome']),
@@ -726,7 +736,7 @@ class GameService {
                 'skillIndex'      => $index,
                 'targetsOpponent' => (bool)$habilidade['precisaAlvo'],
                 'energyCost'      => $custoEnergia,
-                'disabled'        => $current->getEnergiaAtual() < $custoEnergia,
+                'disabled'        => $current->getEnergiaAtual() < $custoEnergia || $bloqueadaPorDomain,
                 'melee'           => (bool)($habilidade['melee'] ?? false),
                 'priority'        => (bool)($habilidade['priority'] ?? false),
                 'activatesDomain' => (bool)($habilidade['activatesDomain'] ?? false),
@@ -786,8 +796,9 @@ class GameService {
         $currentKey = count($waitingFor) > 0 ? $waitingFor[0] : null;
 
         $availableActionsFlat = [];
+        $domainAtivo = self::existeDomainAtivo($game);
         if (!$vencedor && $currentKey !== null) {
-            $availableActionsFlat = self::acoesDisponiveis($game[$currentKey], false);
+            $availableActionsFlat = self::acoesDisponiveis($game[$currentKey], false, $domainAtivo);
         }
 
         return [
@@ -804,8 +815,8 @@ class GameService {
             'p2'                   => self::exportarPersonagem($game['p2'], 'Jogador 2'),
             'availableActions'     => $availableActionsFlat,
             'availableActionsPorJogador' => $vencedor ? [] : [
-                'p1' => self::acoesDisponiveis($game['p1'], $p1Submeteu),
-                'p2' => self::acoesDisponiveis($game['p2'], $p2Submeteu),
+                'p1' => self::acoesDisponiveis($game['p1'], $p1Submeteu, $domainAtivo),
+                'p2' => self::acoesDisponiveis($game['p2'], $p2Submeteu, $domainAtivo),
             ],
             'message'              => $mensagem,
         ];

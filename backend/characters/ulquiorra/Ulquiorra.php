@@ -123,7 +123,7 @@ class Ulquiorra extends Personagem {
                         [
                             'mode' => 'beam',
                             'target' => 'opponent',
-                            'startMs' => 1000,
+                            'startMs' => 1200,
                             'durationMs' => 650,
                             'thicknessPx' => 38,
                             'frontOffsetPx' => 90,
@@ -147,7 +147,7 @@ class Ulquiorra extends Personagem {
                         ],
                         [
                             'sprite' => './assets/ulquiorra/sprites/ciferfinalcero.png',
-                            'durationMs' => 1100,
+                            'durationMs' => 3100,
                             'scale' => 1.5,
                         ],
                     ],
@@ -156,7 +156,7 @@ class Ulquiorra extends Personagem {
                             'mode' => 'beam',
                             'target' => 'opponent',
                             'startMs' => 2700,
-                            'durationMs' => 750,
+                            'durationMs' => 1000,
                             'thicknessPx' => 44,
                             'frontOffsetPx' => 90,
                             'startOffsetX' => 0,

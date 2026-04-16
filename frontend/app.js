@@ -13,6 +13,7 @@ const FUNDOS_ARENA = ["BEACH 2.png","BEACH NIGHT.png","BEACH.png","CAVE 2.png","
 		serverState: null,
 		resolvendoAcao: false,
 		actionPage: 0,
+		introTransitioning: false,
 		anim: null,
 		tutorialLoaded: false,
 		tutorialLoadingPromise: null,
@@ -31,6 +32,10 @@ const FUNDOS_ARENA = ["BEACH 2.png","BEACH NIGHT.png","BEACH.png","CAVE 2.png","
 
 	const els = {
 		turnInfo:         document.getElementById("turn-info"),
+		topbar:           document.querySelector(".topbar"),
+		introScreen:      document.getElementById("intro-screen"),
+		introStartBtn:    document.getElementById("intro-start-btn"),
+		introTutorialBtn: document.getElementById("intro-tutorial-btn"),
 		tutorialOpenBtn:  document.getElementById("tutorial-open-btn"),
 		tutorialModal:    document.getElementById("tutorial-modal"),
 		tutorialOverlay:  document.getElementById("tutorial-overlay"),
@@ -168,6 +173,42 @@ const FUNDOS_ARENA = ["BEACH 2.png","BEACH NIGHT.png","BEACH.png","CAVE 2.png","
 		if (!els.tutorialModal) return;
 		els.tutorialModal.classList.add("is-hidden");
 		els.tutorialModal.setAttribute("aria-hidden", "true");
+	}
+
+	function wait(ms) {
+		return new Promise(resolve => setTimeout(resolve, ms));
+	}
+
+	async function abrirSelecaoInicial() {
+		if (state.introTransitioning) return;
+		state.introTransitioning = true;
+
+		if (els.introStartBtn) els.introStartBtn.disabled = true;
+		if (els.introTutorialBtn) els.introTutorialBtn.disabled = true;
+
+		els.setupPanel?.classList.remove("is-hidden");
+		els.setupPanel?.classList.add("is-transition-ready");
+
+		requestAnimationFrame(() => {
+			els.battleApp?.classList.add("is-entering-setup");
+			els.battleApp?.classList.remove("is-intro");
+			els.introScreen?.classList.add("is-leaving");
+		});
+
+		await wait(820);
+
+		els.introScreen?.classList.add("is-hidden");
+		els.introScreen?.classList.remove("is-leaving");
+		els.setupPanel?.classList.remove("is-transition-ready");
+		els.battleApp?.classList.remove("is-entering-setup");
+
+		if (els.turnInfo) {
+			els.turnInfo.textContent = "Prepare a partida";
+		}
+
+		if (els.introStartBtn) els.introStartBtn.disabled = false;
+		if (els.introTutorialBtn) els.introTutorialBtn.disabled = false;
+		state.introTransitioning = false;
 	}
 
 	const atualizarHUD = () => {
@@ -692,6 +733,8 @@ const FUNDOS_ARENA = ["BEACH 2.png","BEACH NIGHT.png","BEACH.png","CAVE 2.png","
 
 	els.startBtn.addEventListener("click", iniciar);
 	els.playAgainBtn.addEventListener("click", resetarParaSetup);
+	els.introStartBtn?.addEventListener("click", abrirSelecaoInicial);
+	els.introTutorialBtn?.addEventListener("click", abrirTutorial);
 	els.tutorialOpenBtn?.addEventListener("click", abrirTutorial);
 	els.tutorialOverlay?.addEventListener("click", fecharTutorial);
 	els.tutorialModal?.addEventListener("click", (e) => {

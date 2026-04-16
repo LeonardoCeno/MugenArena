@@ -242,15 +242,16 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		return { events, duration: t };
 	}
 
-	function eventosOverlay(overlay, atacanteKey) {
+	function eventosOverlay(overlay, atacanteKey, minEndMs = 0) {
 		let el = null;
+		const endAt = Math.max(overlay.startMs + overlay.durationMs, minEndMs);
 		return [
 			{
 				at: overlay.startMs,
 				run() { el = criarOverlay(overlay, atacanteKey); },
 			},
 			{
-				at: overlay.startMs + overlay.durationMs,
+				at: endAt,
 				run() { el?.remove(); el = null; },
 			},
 		];
@@ -387,7 +388,8 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		}
 
 		for (const overlay of overlaysDeConfig(actionConfig)) {
-			events.push(...eventosOverlay(overlay, atacanteKey));
+			const minEndMs = overlay.mode === "beam" ? frameDuration : 0;
+			events.push(...eventosOverlay(overlay, atacanteKey, minEndMs));
 		}
 
 		events.push(...eventosDomain(actionConfig));

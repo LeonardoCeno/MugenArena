@@ -36,20 +36,17 @@
   <script>
     document.getElementById('bg-video').playbackRate = 1.5;
   </script>
-  <main class="battle-app">
+  <main class="battle-app is-intro">
     <header class="topbar">
-      <div class="topbar-brand">
-        <h1> Arena MUGEN </h1>
-        <button id="tutorial-open-btn" type="button" class="tutorial-toggle-btn">Tutorial</button>
-      </div>
-      <div class="topbar-actions">
-        <p id="turn-info">Prepare a partida</p>
+      <p id="turn-info">Prepare a partida</p>
+      <div class="topbar-audio">
         <button id="bgm-toggle-btn" type="button" class="bgm-toggle-btn" aria-pressed="false">MUSICA: ON</button>
         <label class="bgm-volume-wrap" for="bgm-volume-input">
           VOL
           <input id="bgm-volume-input" class="bgm-volume-input" type="number" min="1" max="10" step="1" value="3" />
         </label>
       </div>
+      <button id="tutorial-open-btn" type="button" class="tutorial-toggle-btn">Tutorial</button>
     </header>
     <div id="tutorial-modal" class="tutorial-modal is-hidden" aria-hidden="true">
       <div id="tutorial-overlay" class="tutorial-modal__overlay"></div>
@@ -61,7 +58,48 @@
       <canvas id="black-hole-canvas"></canvas>
     </div>
 
-    <section class="setup-screen" id="setup-panel">
+    <section class="intro-screen" id="intro-screen" aria-label="Menu inicial">
+      <div class="intro-shell">
+        <div class="intro-hero">
+          <h2 class="intro-title">ARENA<br />MUGEN</h2>
+          <p class="intro-copy">
+            Entre em uma arena de duelos exagerados, escolha os lutadores e prepare confrontos com domains, beams, projeteis e impacto visual forte.
+          </p>
+          <div class="intro-actions">
+            <button id="intro-start-btn" class="intro-start-btn" type="button">INICIAR JOGO</button>
+            <button id="intro-tutorial-btn" class="intro-secondary-btn" type="button">VER TUTORIAL</button>
+          </div>
+        </div>
+
+        <div class="intro-showcase" aria-hidden="true">
+          <article class="intro-panel intro-panel--spotlight">
+            <img class="intro-panel__image" src="./assets/fundos/market1.jpg" alt="Confronto de dominios" />
+            <div class="intro-panel__content">
+              <strong class="intro-panel__title">Confronto de Egos.</strong>
+              <p class="intro-panel__text">Que sobreviva a mais forte</p>
+            </div>
+          </article>
+
+          <div class="intro-panel-grid">
+            <article class="intro-panel intro-panel--spotlight intro-panel--characters">
+              <img class="intro-panel__image" src="./assets/fundos/market3.jpg" alt="Todos os personagens" />
+              <div class="intro-panel__content intro-panel__content--top">
+                <strong class="intro-panel__title">Todos os personagens</strong>
+              </div>
+            </article>
+
+            <article class="intro-panel intro-panel--image-only" aria-label="Painel ilustrativo">
+              <img class="intro-panel__image intro-panel__image--plain" src="./assets/fundos/market2.jpg" alt="Arena ilustrativa" />
+              <div class="intro-panel__content intro-panel__content--top intro-panel__content--light">
+                <strong class="intro-panel__title">MIKU Update! 1.2</strong>
+              </div>
+            </article>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="setup-screen is-hidden" id="setup-panel">
       <div class="setup-stage">
         <p class="setup-subtitle">Escolha os lutadores e inicie o duelo</p>
 
