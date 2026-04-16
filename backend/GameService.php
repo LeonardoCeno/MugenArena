@@ -158,6 +158,25 @@ class GameService {
         return self::acaoAtivaDomain($p, $acao) && self::acaoTemPrioridadeBruta($p, $acao);
     }
 
+    private static function obterPenalidadeEnergiaDeDomain(Personagem $p, array $acao): int {
+        $habilidade = self::habilidadeDaAcao($p, $acao);
+        if ($habilidade === null || !(bool)($habilidade['activatesDomain'] ?? false)) {
+            return 0;
+        }
+
+        $custoEnergia = (int)($habilidade['energyCost'] ?? 0);
+        return (int) ceil(max(0, $custoEnergia) * 0.5);
+    }
+
+    private static function aplicarPenalidadeEnergiaDeDomain(array &$game, string $playerKey, array $acao): void {
+        $penalidade = self::obterPenalidadeEnergiaDeDomain($game[$playerKey], $acao);
+        if ($penalidade <= 0) {
+            return;
+        }
+
+        $game[$playerKey]->drenarEnergia($penalidade);
+    }
+
     private static function acaoPodeAtingirOponente(Personagem $p, array $acao): bool {
         $tipo = $acao['actionType'] ?? null;
 
@@ -242,6 +261,9 @@ class GameService {
             $game['pendingActions'] = ['p1' => null, 'p2' => null];
             $game['p1']->iniciarTurno();
             $game['p2']->iniciarTurno();
+
+            self::aplicarPenalidadeEnergiaDeDomain($game, 'p1', $a1);
+            self::aplicarPenalidadeEnergiaDeDomain($game, 'p2', $a2);
 
             return [
                 'mensagem'            => 'Os dois domains colapsaram. Ambos sofreram 20 de dano.',
@@ -480,6 +502,11 @@ class GameService {
 
         $game['p1']->iniciarTurno();
         $game['p2']->iniciarTurno();
+
+        if ($domainCancelado) {
+            $acaoCancelada = $secondKey === 'p1' ? $a1 : $a2;
+            self::aplicarPenalidadeEnergiaDeDomain($game, $secondKey, $acaoCancelada);
+        }
 
         return [
             'mensagem'           => implode(' ', array_filter($mensagens)),

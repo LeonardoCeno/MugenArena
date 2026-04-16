@@ -22,6 +22,8 @@ const NIVEL_VOLUME_BGM_PADRAO = 1	;
 		resolvendoAcao: false,
 		actionPage: 0,
 		anim: null,
+		tutorialLoaded: false,
+		tutorialLoadingPromise: null,
 		bgMusic: null,
 		domainClashAudio: null,
 		bgMusicVolumeLevel: NIVEL_VOLUME_BGM_PADRAO,
@@ -41,6 +43,10 @@ const NIVEL_VOLUME_BGM_PADRAO = 1	;
 
 	const els = {
 		turnInfo:         document.getElementById("turn-info"),
+		tutorialOpenBtn:  document.getElementById("tutorial-open-btn"),
+		tutorialModal:    document.getElementById("tutorial-modal"),
+		tutorialOverlay:  document.getElementById("tutorial-overlay"),
+		tutorialContentHost: document.getElementById("tutorial-content-host"),
 		bgmToggleBtn:     document.getElementById("bgm-toggle-btn"),
 		bgmVolumeInput:   document.getElementById("bgm-volume-input"),
 		log:              document.getElementById("battle-log"),
@@ -131,6 +137,79 @@ const NIVEL_VOLUME_BGM_PADRAO = 1	;
 		els.bgmToggleBtn.textContent = state.bgMusicMuted ? "MUSICA: OFF" : "MUSICA: ON";
 		els.bgmToggleBtn.classList.toggle("is-muted", state.bgMusicMuted);
 		els.bgmToggleBtn.setAttribute("aria-pressed", String(state.bgMusicMuted));
+	}
+
+	function obterElementosTutorial() {
+		const host = els.tutorialContentHost;
+		if (!host) return null;
+
+		return {
+			host,
+			closeBtn: host.querySelector("[data-tutorial-close]"),
+			nav: host.querySelector("[data-tutorial-nav]"),
+			buttons: [...host.querySelectorAll(".tutorial-modal__topic-btn")],
+			panels: [...host.querySelectorAll(".tutorial-modal__topic-panel")],
+		};
+	}
+
+	function renderizarTopicoTutorial(topicId = null) {
+		const refs = obterElementosTutorial();
+		if (!refs) return;
+
+		const targetId = topicId ?? refs.buttons[0]?.dataset.topicId ?? null;
+		if (!targetId) return;
+
+		refs.buttons.forEach(btn => {
+			btn.classList.toggle("is-active", btn.dataset.topicId === targetId);
+		});
+
+		refs.panels.forEach(panel => {
+			panel.classList.toggle("is-active", panel.dataset.topicPanel === targetId);
+		});
+	}
+
+	async function carregarTutorialSeNecessario() {
+		if (state.tutorialLoaded || !els.tutorialContentHost) return;
+		if (state.tutorialLoadingPromise) {
+			await state.tutorialLoadingPromise;
+			return;
+		}
+
+		els.tutorialContentHost.innerHTML = '<div class="tutorial-modal__loading">CARREGANDO TUTORIAL...</div>';
+		state.tutorialLoadingPromise = fetch("./tutorial-content.html")
+			.then(async response => {
+				if (!response.ok) {
+					throw new Error(`Falha ao carregar tutorial (${response.status}).`);
+				}
+				const html = await response.text();
+				els.tutorialContentHost.innerHTML = html;
+				state.tutorialLoaded = true;
+				renderizarTopicoTutorial();
+			})
+			.catch(erro => {
+				els.tutorialContentHost.innerHTML = '<div class="tutorial-modal__loading">Nao foi possivel carregar o tutorial.</div>';
+				throw erro;
+			})
+			.finally(() => {
+				state.tutorialLoadingPromise = null;
+			});
+
+		await state.tutorialLoadingPromise;
+	}
+
+	async function abrirTutorial() {
+		if (!els.tutorialModal) return;
+		try {
+			await carregarTutorialSeNecessario();
+		} catch (_) {}
+		els.tutorialModal.classList.remove("is-hidden");
+		els.tutorialModal.setAttribute("aria-hidden", "false");
+	}
+
+	function fecharTutorial() {
+		if (!els.tutorialModal) return;
+		els.tutorialModal.classList.add("is-hidden");
+		els.tutorialModal.setAttribute("aria-hidden", "true");
 	}
 
 	function aplicarMuteNaMusicaAtual() {
@@ -776,6 +855,23 @@ const NIVEL_VOLUME_BGM_PADRAO = 1	;
 
 	els.startBtn.addEventListener("click", iniciar);
 	els.playAgainBtn.addEventListener("click", resetarParaSetup);
+	els.tutorialOpenBtn?.addEventListener("click", abrirTutorial);
+	els.tutorialOverlay?.addEventListener("click", fecharTutorial);
+	els.tutorialModal?.addEventListener("click", (e) => {
+		if (e.target.closest("[data-tutorial-close]")) {
+			fecharTutorial();
+			return;
+		}
+
+		const botao = e.target.closest(".tutorial-modal__topic-btn");
+		if (!botao) return;
+		renderizarTopicoTutorial(botao.dataset.topicId);
+	});
+	document.addEventListener("keydown", (e) => {
+		if (e.key === "Escape" && !els.tutorialModal?.classList.contains("is-hidden")) {
+			fecharTutorial();
+		}
+	});
 	els.bgmToggleBtn?.addEventListener("click", alternarMuteMusicaFundo);
 	els.bgmVolumeInput?.addEventListener("input", (e) => ajustarNivelVolumeBgm(e.target.value));
 	els.bgmVolumeInput?.addEventListener("change", (e) => ajustarNivelVolumeBgm(e.target.value));

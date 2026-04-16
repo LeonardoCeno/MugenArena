@@ -110,6 +110,11 @@ abstract class Personagem {
         $this->energiaAtual -= $custo;
     }
 
+    public function drenarEnergia(int $quantidade): void {
+        $quantidade = max(0, $quantidade);
+        $this->energiaAtual = max(0, $this->energiaAtual - $quantidade);
+    }
+
     protected function curarVida(int $cura): void {
         if ($cura <= 0) {
             return;
@@ -124,8 +129,8 @@ abstract class Personagem {
 
     // ── Engine de combate ────────────────────────────────────────────────
 
-    protected function executarAtaqueDireto(Personagem $alvo, string $nomeAcao, int $dano): array {
-        if ($alvo->sorteouDesvio()) {
+    protected function executarAtaqueDireto(Personagem $alvo, string $nomeAcao, int $dano, bool $permiteDesvio = true): array {
+        if ($permiteDesvio && $alvo->sorteouDesvio()) {
             return [
                 'acertou'    => false,
                 'vidaAntes'  => $alvo->getVidaAtual(),
@@ -158,6 +163,10 @@ abstract class Personagem {
             'foiCritico' => $foiCritico,
             'mensagem'   => $mensagem,
         ];
+    }
+
+    protected function executarAtaqueDeDomain(Personagem $alvo, string $nomeAcao, int $dano): array {
+        return $this->executarAtaqueDireto($alvo, $nomeAcao, $dano, false);
     }
 
     protected function sorteouDesvio(): bool {

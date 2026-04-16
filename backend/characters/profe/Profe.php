@@ -52,7 +52,7 @@ class Profe extends Personagem {
 
 	    public function MyWorld(Personagem $alvo): string {
         $this->consumirEnergia(self::CUSTO_MYWORLD);
-        $resultado = $this->executarAtaqueDireto($alvo, "DOOCKER", self::DANO_MYWORLD);
+	        $resultado = $this->executarAtaqueDeDomain($alvo, "DOOCKER", self::DANO_MYWORLD);
 
         return $resultado['mensagem'];
     }

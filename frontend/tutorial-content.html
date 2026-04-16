@@ -1,0 +1,60 @@
+<button type="button" class="tutorial-modal__close" data-tutorial-close aria-label="Fechar tutorial">X</button>
+<div class="tutorial-modal__header">
+  <p class="tutorial-modal__eyebrow">Guia Rápido</p>
+  <h2 id="tutorial-title">Tutorial Arena Mugen</h2>
+</div>
+<div class="tutorial-modal__body">
+  <nav class="tutorial-modal__nav" data-tutorial-nav aria-label="Tópicos do tutorial">
+    <button type="button" class="tutorial-modal__topic-btn is-active" data-topic-id="basico">Como funciona</button>
+    <button type="button" class="tutorial-modal__topic-btn" data-topic-id="acoes">Acoes</button>
+    <button type="button" class="tutorial-modal__topic-btn" data-topic-id="energia">Energia e Status</button>
+    <button type="button" class="tutorial-modal__topic-btn" data-topic-id="desvio-critico">Desvio e Critico</button>
+    <button type="button" class="tutorial-modal__topic-btn" data-topic-id="clash">Clash de ataques</button>
+    <button type="button" class="tutorial-modal__topic-btn" data-topic-id="domains">Domains</button>
+  </nav>
+  <article class="tutorial-modal__content">
+    <section class="tutorial-modal__topic-panel is-active" data-topic-panel="basico">
+      <h3>Como funciona:</h3>
+      <div class="tutorial-modal__text">
+        <p>Cada partida alterna entre dois jogadores escolhendo uma acao por turno. Os dois player escolhem sua ação e então o turno é executado.</p>
+        <p>O objetivo e zerar o HP do oponente. Algumas habilidades causam dano direto, outras aplicam efeitos, curam ou abrem dominio.</p>
+      </div>
+    </section>
+    <section class="tutorial-modal__topic-panel" data-topic-panel="acoes">
+      <h3>Acoes</h3>
+      <div class="tutorial-modal__text">
+        <p>Algumas ações são mais rapidas que outras ou tem prioridade de execução, ataques de longa distância, por exemplo: vazio roxo, kaminofuga, etc. Tendem a serem executador primeiro, se ambos ataques escolhidos pelos player for um ataque de perto, o primeiro que ataca é o com a maior velocidade.</p>
+        <p>Passe o mouse nas habilidades para ver a descricao. O jogo usa essa informacao para mostrar custo, efeitos e nome da acao antes da escolha.</p>
+      </div>
+    </section>
+    <section class="tutorial-modal__topic-panel" data-topic-panel="energia">
+      <h3>Energia e Status</h3>
+      <div class="tutorial-modal__text">
+        <p>A barra de energia limita o uso de habilidades mais fortes. Se faltar energia, a acao nao executa como esperado e voce precisa administrar melhor os turnos.</p>
+        <p>Status como burn e bleed se ativos em seu personagem serão indicados através dos icones nas HUDs, que mostram quais efeitos estao ativos em cada personagem.</p>
+      </div>
+    </section>
+    <section class="tutorial-modal__topic-panel" data-topic-panel="desvio-critico">
+      <h3>Desvio e Critico</h3>
+      <div class="tutorial-modal__text">
+        <p>Todo ataque direto pode ser desviado. Atualmente, a chance base de desvio e de 10%, entao em alguns turnos um golpe pode falhar completamente mesmo tendo sido executado (tirando os domains).</p>
+        <p>A chance de acerto crítico é de 7%, e quando ocorre o dano do golpe é dobrado.</p>
+      </div>
+    </section>
+    <section class="tutorial-modal__topic-panel" data-topic-panel="clash">
+      <h3>Clash de ataques</h3>
+      <div class="tutorial-modal__text">
+        <p>Se dois player usam skills pesadas de longa distância, um clash será iniciado, após seu inicio ambos player tem 50% de chance de vence-lo, o que perder o clash terá seu ataque anulado.</p>
+      </div>
+    </section>
+    <section class="tutorial-modal__topic-panel" data-topic-panel="domains">
+      <h3>Domains</h3>
+      <div class="tutorial-modal__text">
+        <p>Os domains funcionam da seguinte forma, se apenas um player usar um domain, garantidamente ele será o último a executar sua ação que nesse caso é o domain, se ele receber dano no turno em que deveria expandir seu domain cria uma chance de 60% de falha, se falhar você perderá 50% da energia que seu domain gastaria para expandir.</p>
+        <h1>Domain Clash</h1>
+        <p>Se ambos players usarem um domain, um clash será iniciado, ambos tem 40% de chance de vencer, assim anulando o domain inimigo e expandindo o seu. Ambos em clash de domain tem uma chance de 20% de falha, se falharem então ambos domains se partem, fazendo eles perderem 50% da energia que seria gasta na tentativa de expandir e receberem 20 de dano.</p>
+        <p>É possível defender domains, anulando seu dano em 50% (se o domain causar dano).</p>
+      </div>
+    </section>
+  </article>
+</div>

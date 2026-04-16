@@ -630,6 +630,22 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		const yPx     = escala(overlay.y ?? 0, arenaW);
 		el.style.transform = `translate(calc(-50% + ${xPx}px), calc(-50% + ${yPx}px)) scale(${overlay.scale ?? 1})`;
 		if (overlay.sizePx != null) el.style.width = `${escala(overlay.sizePx, arenaW)}px`;
+
+		const renderizarNaArena = fighter.classList.contains("preparing-domain") && !!els.arena;
+		if (renderizarNaArena) {
+			const arenaRect = els.arena.getBoundingClientRect();
+			const fighterRect = fighter.getBoundingClientRect();
+			el.classList.add("fighter-action-overlay--arena");
+			el.style.left = `${fighterRect.left + fighterRect.width / 2 - arenaRect.left}px`;
+			el.style.top = `${fighterRect.top + fighterRect.height / 2 - arenaRect.top}px`;
+			if (overlay.sizePx == null) {
+				el.style.width = `${fighterRect.width}px`;
+				el.style.height = `${fighterRect.height}px`;
+			}
+			els.arena.appendChild(el);
+			return el;
+		}
+
 		fighter.appendChild(el);
 		return el;
 	}

@@ -92,12 +92,32 @@ body {
   width: auto;
   margin-left: 0;
 }
+.topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
 .topbar h1 { margin: 0; font-size: 1cqw; letter-spacing: 0.16em; }
 .topbar p { margin: 0; color: var(--muted); font-size: 1.1cqw; }
 .topbar-actions {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+.tutorial-toggle-btn {
+  border: 1px solid rgba(126, 214, 198, 0.18);
+  background: linear-gradient(180deg, rgba(10, 12, 17, 0.92), rgba(18, 22, 32, 0.92));
+  color: var(--text);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 0.8cqw;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04), 0 8px 18px rgba(0, 0, 0, 0.28);
+}
+.tutorial-toggle-btn:hover {
+  background: linear-gradient(180deg, rgba(14, 18, 26, 0.98), rgba(24, 29, 41, 0.98));
+  border-color: rgba(126, 214, 198, 0.34);
 }
 .bgm-toggle-btn {
   border: 1px solid var(--line);
@@ -131,6 +151,173 @@ body {
   border-radius: 6px;
   padding: 4px 6px;
   text-align: center;
+}
+
+.tutorial-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+.tutorial-modal__overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(4, 8, 14, 0.72);
+  backdrop-filter: blur(8px);
+}
+.tutorial-modal__panel {
+  position: relative;
+  width: min(920px, 92vw);
+  min-height: min(560px, 78vh);
+  max-height: 78vh;
+  border: 1px solid rgba(126, 214, 198, 0.16);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(57, 64, 95, 0.42), rgba(0, 0, 0, 0.92));
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.48), inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.tutorial-modal__host {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+.tutorial-modal__close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.tutorial-modal__close:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+.tutorial-modal__header {
+  padding: 22px 58px 18px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  background: linear-gradient(180deg, rgba(126, 214, 198, 0.08), rgba(126, 214, 198, 0));
+}
+.tutorial-modal__eyebrow {
+  margin: 0 0 6px;
+  color: var(--accent);
+  font-size: 0.95rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.tutorial-modal__header h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.2rem, 2vw, 1.8rem);
+  letter-spacing: 0.08em;
+}
+.tutorial-modal__body {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  min-height: 0;
+  flex: 1;
+}
+.tutorial-modal__nav {
+  padding: 18px;
+  border-right: 1px solid rgba(255, 255, 255, 0.07);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: auto;
+  background: rgba(255, 255, 255, 0.025);
+}
+.tutorial-modal__topic-btn {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, rgba(57, 64, 95, 0.7), rgba(0, 0, 0, 1));
+  color: var(--muted);
+  border-radius: 10px;
+  padding: 10px 12px;
+  text-align: left;
+  font: inherit;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+.tutorial-modal__topic-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+  transform: translateX(2px);
+}
+.tutorial-modal__topic-btn.is-active {
+  background: linear-gradient(180deg, rgba(126, 214, 198, 0.18), rgba(126, 214, 198, 0.08));
+  border-color: rgba(126, 214, 198, 0.28);
+  color: var(--text);
+}
+.tutorial-modal__content {
+  padding: 26px 28px 28px;
+  overflow: auto;
+  background: linear-gradient(180deg, rgb(57, 64, 95), rgb(0, 0, 0));
+}
+.tutorial-modal__content h3 {
+  margin: 0 0 16px;
+  font-family: var(--font-display);
+  font-size: clamp(1.1rem, 1.7vw, 1.5rem);
+  letter-spacing: 0.06em;
+}
+.tutorial-modal__topic-panel {
+  display: none;
+}
+.tutorial-modal__topic-panel.is-active {
+  display: block;
+}
+.tutorial-modal__text {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1.65;
+}
+.tutorial-modal__text p {
+  margin: 0;
+}
+.tutorial-modal__loading {
+  display: grid;
+  place-items: center;
+  min-height: min(560px, 78vh);
+  padding: 24px;
+  color: var(--muted);
+  font-size: 1rem;
+  letter-spacing: 0.08em;
+}
+
+@media (max-width: 860px) {
+  .topbar-brand {
+    gap: 8px;
+  }
+  .tutorial-toggle-btn {
+    font-size: 0.9rem;
+    padding: 6px 10px;
+  }
+  .tutorial-modal__panel {
+    width: min(96vw, 96vw);
+    min-height: 78vh;
+    max-height: 86vh;
+  }
+  .tutorial-modal__body {
+    grid-template-columns: 1fr;
+  }
+  .tutorial-modal__nav {
+    border-right: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  }
 }
 
 /* ===== SETUP SCREEN (SELEÇÃO) ===== */
@@ -752,6 +939,15 @@ justify-content: center;
   box-shadow: none;
   background: transparent;
 }
+.fighter::after {
+  content: "";
+  position: absolute;
+  inset: 14% 18% 8%;
+  border-radius: 50%;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 1;
+}
 .fighter-shadow {
   position: absolute;
   width: var(--fighter-size);
@@ -814,6 +1010,9 @@ justify-content: center;
   z-index: 6;
   pointer-events: none;
 }
+.fighter-action-overlay--arena {
+  object-position: center center;
+}
 .fighter.has-image .fighter-img { display: block; }
 .fighter.has-image span { display: none; }
 .fighter.is-flipped { --fighter-flip: -1; }
@@ -846,11 +1045,10 @@ justify-content: center;
 .fighter.preparing-domain {
   filter: saturate(1.18) brightness(1.08);
 }
-.fighter.preparing-domain .fighter-img,
-.fighter.preparing-domain span {
-  filter:
-    drop-shadow(0 0 6px rgba(255, 255, 255, 0.82))
-    drop-shadow(0 0 14px rgba(255, 255, 255, 0.42));
+.fighter.preparing-domain::after {
+  opacity: 1;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.24) 0%, rgba(255, 255, 255, 0.12) 40%, rgba(255, 255, 255, 0) 72%);
+  filter: blur(16px);
 }
 .fighter.enemy {
   right: 8%;

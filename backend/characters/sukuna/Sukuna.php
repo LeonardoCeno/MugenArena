@@ -111,7 +111,7 @@ class Sukuna extends Personagem {
     public function santuarioMalevolente(Personagem $alvo): string {
         $dano = $this->transformado ? self::DANO_DOMAIN_T : self::DANO_DOMAIN;
         $this->consumirEnergia(self::CUSTO_DOMAIN);
-        $resultado = $this->executarAtaqueDireto($alvo, "Domain", $dano);
+        $resultado = $this->executarAtaqueDeDomain($alvo, "Domain", $dano);
 
         if (!$resultado['acertou']) {
             return $resultado['mensagem'];
