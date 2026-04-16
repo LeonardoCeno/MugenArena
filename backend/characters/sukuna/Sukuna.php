@@ -14,51 +14,23 @@ class Sukuna extends Personagem {
     const DANO_DOMAIN = 70;
     const CURA_REVERSE = 100;
     const REGENERACAO_PROPRIA = 70;
-    const LIMIAR_TRANSFORMACAO = 0.40; // % de HP para transformar
-
-    // Valores boosted na forma transformada
-    const DANO_DESMANTELAR_T = 65;
-    const DANO_KAMINO_FUGA_T = 80;
-    const DANO_DOMAIN_T = 110;
-    const CURA_REVERSE_T = 180;
-    const VELOCIDADE_T = 95;
-
-    protected bool $transformado = false;
 
     public function __construct(string $nome) {
         parent::__construct($nome, 300, 25, 4000);
     }
 
-    // ── Transformação ────────────────────────────────────────────────────
-
-    public function receberDano(int $danoReal): void {
-        parent::receberDano($danoReal);
-        $this->verificarTransformacao();
-    }
-
-    private function verificarTransformacao(): void {
-        if ($this->transformado || $this->vidaMaxima <= 0) return;
-        if ($this->vidaAtual / $this->vidaMaxima <= self::LIMIAR_TRANSFORMACAO) {
-            $this->transformado = true;
-        }
-    }
-
-    public function estaTransformado(): bool {
-        return $this->transformado;
-    }
-
     public function getVelocidade(): int {
-        return $this->transformado ? self::VELOCIDADE_T : self::VELOCIDADE;
+        return self::VELOCIDADE;
     }
 
     // ── Habilidades ──────────────────────────────────────────────────────
 
     public static function getDescricao(): string {
-        return "Sukuna (Alto HP, ataque médio, habilidades: Desmantelar, Kamino Fuga, Reverse Energy e Domain. Transforma ao atingir 40% de HP)";
+        return "Sukuna (Alto HP, ataque médio, habilidades: Desmantelar, Kamino Fuga, Reverse Energy e Domain)";
     }
 
     public function usarHabilidadeEspecial(Personagem $alvo): string {
-        $dano = $this->transformado ? self::DANO_DESMANTELAR_T : self::DANO_DESMANTELAR;
+        $dano = self::DANO_DESMANTELAR;
         $this->consumirEnergia(self::CUSTO_DESMANTELAR);
         $resultado = $this->executarAtaqueDireto($alvo, "Desmantelar", $dano);
 
@@ -80,7 +52,7 @@ class Sukuna extends Personagem {
     }
 
     public function kaminoFuga(Personagem $alvo): string {
-        $dano = $this->transformado ? self::DANO_KAMINO_FUGA_T : self::DANO_KAMINO_FUGA;
+        $dano = self::DANO_KAMINO_FUGA;
         $this->consumirEnergia(self::CUSTO_KAMINO_FUGA);
         $resultado = $this->executarAtaqueDireto($alvo, "Kamino Fuga", $dano);
 
@@ -102,14 +74,14 @@ class Sukuna extends Personagem {
     }
 
     public function reverseEnergy(): string {
-        $cura = $this->transformado ? self::CURA_REVERSE_T : self::CURA_REVERSE;
+        $cura = self::CURA_REVERSE;
         $this->consumirEnergia(self::CUSTO_REVERSE);
         $this->curarVida($cura);
         return $this->formatarMensagemAcaoSemAlvo("Reverse Energy");
     }
 
     public function santuarioMalevolente(Personagem $alvo): string {
-        $dano = $this->transformado ? self::DANO_DOMAIN_T : self::DANO_DOMAIN;
+        $dano = self::DANO_DOMAIN;
         $this->consumirEnergia(self::CUSTO_DOMAIN);
         $resultado = $this->executarAtaqueDeDomain($alvo, "Domain", $dano);
 
@@ -117,7 +89,7 @@ class Sukuna extends Personagem {
             return $resultado['mensagem'];
         }
 
-        $turnos = $this->transformado ? 4 : 3;
+        $turnos = 3;
         $danoBleed = (int) ceil($dano * 0.50);
         if ($danoBleed > 0) {
             $alvo->aplicarSangramento($danoBleed, 1);
@@ -132,7 +104,6 @@ class Sukuna extends Personagem {
     }
 
     public function getHabilidades(): array {
-        $t = $this->transformado;
         return [
             [
                 "nome"       => "Desmantelar",
@@ -168,29 +139,19 @@ class Sukuna extends Personagem {
     }
 
     public function getDescricoesAcoes(): array {
-        $danoDesm  = $this->transformado ? self::DANO_DESMANTELAR_T : self::DANO_DESMANTELAR;
-        $danoFuga  = $this->transformado ? self::DANO_KAMINO_FUGA_T : self::DANO_KAMINO_FUGA;
-        $curaRev   = $this->transformado ? self::CURA_REVERSE_T     : self::CURA_REVERSE;
-        $danoDomain= $this->transformado ? self::DANO_DOMAIN_T      : self::DANO_DOMAIN;
-        $prefixo   = $this->transformado ? '[TRANSFORMADO] '        : '';
-
         return array_merge(parent::getDescricoesAcoes(), [
-            'Desmantelar'  => "{$prefixo}Cria cortes contínuos no inimigo, causando sangramento.\nDano: {$danoDesm}  Custo: " . self::CUSTO_DESMANTELAR,
-            'Kamino Fuga'  => "{$prefixo}Lança uma flecha de fogo que queima o inimigo por 1 turno.\nDano: {$danoFuga}  Custo: " . self::CUSTO_KAMINO_FUGA,
-            'Reverse Energy'=> "{$prefixo}Inverte a energia amaldiçoada para regenerar vida.\nCura: {$curaRev}  Custo: " . self::CUSTO_REVERSE,
-            'Domain'       => "{$prefixo}Expande o Santuário Malevolente, cortando o inimigo repetidamente.\nDano: {$danoDomain}  Custo: " . self::CUSTO_DOMAIN,
+            'Desmantelar'  => "Cria cortes contínuos no inimigo, causando sangramento.\nDano: " . self::DANO_DESMANTELAR . "  Custo: " . self::CUSTO_DESMANTELAR,
+            'Kamino Fuga'  => "Lança uma flecha de fogo que queima o inimigo por 1 turno.\nDano: " . self::DANO_KAMINO_FUGA . "  Custo: " . self::CUSTO_KAMINO_FUGA,
+            'Reverse Energy'=> "Inverte a energia amaldiçoada para regenerar vida.\nCura: " . self::CURA_REVERSE . "  Custo: " . self::CUSTO_REVERSE,
+            'Domain'       => "Expande o Santuário Malevolente, cortando o inimigo repetidamente.\nDano: " . self::DANO_DOMAIN . "  Custo: " . self::CUSTO_DOMAIN,
         ]);
     }
 
     // ── Visual ───────────────────────────────────────────────────────────
 
     public function getConfiguracaoVisual(): array {
-        $baseSprite = $this->transformado
-            ? './assets/sukuna/sprites/sprite_8.png'
-            : './assets/sukuna/sprites/sukunabasefinal.png';
-
         return [
-            'baseSprite' => $baseSprite,
+            'baseSprite' => './assets/sukuna/sprites/sukunabasefinal.png',
             'winMessage' => 'Até que é forte, mas não o mais forte',
             'winImage'   => './assets/sukuna/sprites/sukunawin.jpg',
             'actions'    => [
@@ -270,17 +231,7 @@ class Sukuna extends Personagem {
                     ],
                 ],
             ],
-            'transformation' => [
-                'sprite' => './assets/sukuna/sprites/sprite_8.png',
-                ],
-
         ];
-    }
-
-    // ── Export extra ─────────────────────────────────────────────────────
-
-    public function getEstadoExtra(): array {
-        return ['transformado' => $this->transformado];
     }
 
     // ── Energia ──────────────────────────────────────────────────────────

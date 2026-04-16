@@ -285,15 +285,6 @@ const FUNDOS_ARENA = ["BEACH 2.png","BEACH NIGHT.png","BEACH.png","CAVE 2.png","
 		return false;
 	}
 
-	async function verificarEAnimarTransformacao(estadoAnterior, estadoNovo) {
-		if (!estadoAnterior?.started || !estadoNovo?.started) return;
-		for (const chave of ["p1", "p2"]) {
-			if (!estadoAnterior[chave]?.transformado && estadoNovo[chave]?.transformado) {
-				await animations.animarTransformacao(chave);
-			}
-		}
-	}
-
 	async function tocarAnimacao(atacanteKey, acao, defensorKey, defensorEstaDefendendo) {
 		const timeline      = animations.montarAnimacao(atacanteKey, acao, defensorKey, defensorEstaDefendendo);
 		const animacaoAtiva = animations.rodarTimeline(timeline);
@@ -529,7 +520,6 @@ const FUNDOS_ARENA = ["BEACH 2.png","BEACH NIGHT.png","BEACH.png","CAVE 2.png","
 				const estadoAntesDaAtualizacao = state.serverState;
 				atualizarEstado(estadoFinal, true);
 				atualizarHUD();
-				await verificarEAnimarTransformacao(estadoAntesDaAtualizacao, estadoFinal);
 				if (mensagem) ui.adicionarLog(mensagem);
 				if (resposta.state?.winner) {
 					await animations.animarMorte(oposto(resposta.state.winner));
@@ -554,11 +544,9 @@ const FUNDOS_ARENA = ["BEACH 2.png","BEACH NIGHT.png","BEACH.png","CAVE 2.png","
 				const isUltimo      = i === ordemAnimada.length - 1;
 				const estadoAplicar = (!isUltimo && estadoIntermediario) ? estadoIntermediario : estadoFinal;
 				if (estadoAplicar) {
-					const estadoAntesDaAtualizacao = state.serverState;
 					atualizarEstado(estadoAplicar, true);
 					atualizarHUD();
 					await animarEsquivaEmTempoReal(mensagemEtapa, estadoAplicar);
-					await verificarEAnimarTransformacao(estadoAntesDaAtualizacao, estadoAplicar);
 				}
 
 				if (!isUltimo) {
@@ -568,11 +556,9 @@ const FUNDOS_ARENA = ["BEACH 2.png","BEACH NIGHT.png","BEACH.png","CAVE 2.png","
 
 			// Garante estado final aplicado caso nenhuma animação tenha tocado
 			if (ordemAnimada.length === 0 && estadoFinal) {
-				const estadoAntesDaAtualizacao = state.serverState;
 				limparPosePendente();
 				atualizarEstado(estadoFinal, true);
 				await animarEsquivaEmTempoReal(mensagensResolucao[0] ?? null, estadoFinal);
-				await verificarEAnimarTransformacao(estadoAntesDaAtualizacao, estadoFinal);
 			}
 
 			limparPosePendente();

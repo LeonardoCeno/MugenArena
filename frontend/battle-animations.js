@@ -138,10 +138,6 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		els.arena
 			?.querySelectorAll(".arena-action-overlay, .arena-energy-beam, .fighter-action-overlay, .domain-clash-ring, .domain-clash-split, .domain-clash-blackout, .domain-break-background")
 			.forEach(el => el.remove());
-		document.querySelectorAll(".char-transform-overlay").forEach(el => el.remove());
-		for (const chave of ["p1", "p2"]) {
-			els.fighters[chave]?.root?.classList.remove("char-transforming", "char-transformed");
-		}
 		if (meleeAttackerKey) resetMelee(meleeAttackerKey);
 	}
 
@@ -832,64 +828,6 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		});
 	}
 
-	async function animarTransformacao(chave) {
-		const fighter       = els.fighters[chave]?.root;
-		const transformCfg  = state.serverState?.[chave]?.visual?.transformation ?? {};
-		const spriteTransf  = transformCfg.sprite ?? null;
-		const audioConfig   = typeof transformCfg.audio === "string"
-			? { file: transformCfg.audio }
-			: (transformCfg.audio ?? null);
-		const audioFile     = audioConfig?.file ?? null;
-		const audioVolume   = volumePorNivel(audioConfig?.volumeLevel, 0.75);
-		const audioDurationMs = Number(audioConfig?.durationMs) > 0 ? Number(audioConfig.durationMs) : 3600;
-
-		// Overlay escuro
-		const overlay = document.createElement("div");
-		overlay.className = "char-transform-overlay";
-		document.body.appendChild(overlay);
-
-		// Audio
-		if (audioFile) {
-			const audio = new Audio(audioFile);
-			audio.volume = audioVolume;
-			audio.play().catch(() => {});
-			setTimeout(() => { try { audio.pause(); audio.currentTime = 0; } catch (_) {} }, audioDurationMs);
-		}
-
-		// Fase 1: pulso no sprite do fighter
-		if (fighter) fighter.classList.add("char-transforming");
-
-		await wait(200);
-		overlay.classList.add("active"); // escurece a tela
-
-		// Fase 2: troca o sprite para a forma transformada
-		await wait(900);
-		if (spriteTransf) { state.sprites[chave] = spriteTransf; atualizarHUD(); }
-
-		// Fase 3: flash
-		await wait(300);
-		overlay.classList.add("flash");
-
-		await wait(280);
-		overlay.classList.remove("flash");
-		overlay.classList.add("fade-out"); // tela volta ao normal
-
-		// Fase 4: limpa animação de pulso, aplica idle de transformado
-		await wait(500);
-		if (fighter) {
-			fighter.classList.remove("char-transforming");
-			fighter.classList.add("char-transformed");
-		}
-
-		// Fase 5: solta o sprite temporário (baseSprite já é DOMAINSUKUNA.png via servidor)
-		await wait(600);
-		state.sprites[chave] = null;
-		atualizarHUD();
-
-		await wait(300);
-		overlay.remove();
-	}
-
 	return {
 		feedbackDano,
 		textoFlutuante,
@@ -908,6 +846,5 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		visualPersonagem,
 		animarEsquiva,
 		animarMorte,
-		animarTransformacao,
 	};
 }

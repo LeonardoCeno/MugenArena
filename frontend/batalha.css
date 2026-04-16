@@ -1749,46 +1749,6 @@ justify-content: center;
   height: 100%;
   display: block;
 }
-/* ===== TRANSFORMAÇÃO ===== */
-.char-transform-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 8000;
-  pointer-events: none;
-  background: transparent;
-  transition: background 0.55s ease;
-}
-.char-transform-overlay.active {
-  background: rgba(0, 0, 0, 0.90);
-}
-.char-transform-overlay.flash {
-  background: rgba(255, 255, 255, 0.75);
-  transition: background 0.12s;
-}
-.char-transform-overlay.fade-out {
-  background: transparent;
-  transition: background 0.85s ease-out;
-}
-
-@keyframes char-transform-pulse {
-  0%   { filter: brightness(1)   saturate(1)   drop-shadow(0 0 0px #fff); }
-  40%  { filter: brightness(3.5) saturate(0.1) drop-shadow(0 0 32px #fff); }
-  100% { filter: brightness(6)   saturate(0)   drop-shadow(0 0 64px #fff); }
-}
-
-.fighter.char-transforming .fighter-img {
-  animation: char-transform-pulse 1.6s ease-in-out forwards;
-}
-
-@keyframes char-transformed-idle {
-  0%, 100% { filter: brightness(1)   drop-shadow(0 0  8px rgba(255,255,255,0.4)); }
-  50%       { filter: brightness(1.2) drop-shadow(0 0 22px rgba(255,255,255,0.7)); }
-}
-
-.fighter.char-transformed .fighter-img {
-  animation: char-transformed-idle 2.4s ease-in-out infinite;
-}
-
 /* ── Clash system ──────────────────────────────────────────────────── */
 
 /* Uses standalone `translate` (CSS Transforms Level 2) so it composes
