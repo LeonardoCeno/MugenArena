@@ -20,6 +20,7 @@ abstract class Personagem {
     protected int $queimaduraAtrasoTurnos = 0;
     protected string $ultimoTipoDano = 'direct';
     protected ?string $proximoTipoDanoRecebido = null;
+    protected bool $ignorarDesvioNoProximoAtaque = false;
 
     const REGENERACAO_ENERGIA = 10;
     const VELOCIDADE = 50;
@@ -130,7 +131,10 @@ abstract class Personagem {
     // ── Engine de combate ────────────────────────────────────────────────
 
     protected function executarAtaqueDireto(Personagem $alvo, string $nomeAcao, int $dano, bool $permiteDesvio = true): array {
-        if ($permiteDesvio && $alvo->sorteouDesvio()) {
+        $ignorarDesvio = $this->ignorarDesvioNoProximoAtaque;
+        $this->ignorarDesvioNoProximoAtaque = false;
+
+        if (!$ignorarDesvio && $permiteDesvio && $alvo->sorteouDesvio()) {
             return [
                 'acertou'    => false,
                 'vidaAntes'  => $alvo->getVidaAtual(),
@@ -163,6 +167,10 @@ abstract class Personagem {
             'foiCritico' => $foiCritico,
             'mensagem'   => $mensagem,
         ];
+    }
+
+    public function forcarAcertoNoProximoAtaque(): void {
+        $this->ignorarDesvioNoProximoAtaque = true;
     }
 
     protected function executarAtaqueDeDomain(Personagem $alvo, string $nomeAcao, int $dano): array {

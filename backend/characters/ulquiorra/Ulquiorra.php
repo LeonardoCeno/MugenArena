@@ -75,7 +75,7 @@ class Ulquiorra extends Personagem {
     public function getHabilidades(): array {
         return [
             ["nome" => "Cero",        "metodo" => "cero",     "precisaAlvo" => true,  "energyCost" => self::CUSTO_CERO],
-            ["nome" => "cero oscuras","metodo" => "trueCero", "precisaAlvo" => true,  "energyCost" => self::CUSTO_TRUE_CERO, "priority" => true],
+            ["nome" => "cero oscuras","metodo" => "trueCero", "precisaAlvo" => true,  "energyCost" => self::CUSTO_TRUE_CERO, "priority" => true, "clashable" => true],
             ["nome" => "Barrage",     "metodo" => "barrage",  "precisaAlvo" => true,  "energyCost" => self::CUSTO_BARRAGE, "melee" => true],
             ["nome" => "Heal",        "metodo" => "heal",     "precisaAlvo" => false, "energyCost" => self::CUSTO_HEAL]
         ];

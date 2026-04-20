@@ -176,6 +176,10 @@ trait TurnExecution
 
         $loserKey = $winnerKey === 'p1' ? 'p2' : 'p1';
 
+        if ($kind === 'projectile') {
+            $game[$winnerKey]->forcarAcertoNoProximoAtaque();
+        }
+
         $mensagem = self::executarAcaoPendente($game, $winnerKey);
         $game['pendingActions'][$loserKey] = null;
 

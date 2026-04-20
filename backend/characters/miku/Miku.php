@@ -58,7 +58,7 @@ class Miku extends Personagem {
     public function getHabilidades(): array {
         return [
             ["nome" => "MAGIC!",    "metodo" => "magic",      "precisaAlvo" => true,  "energyCost" => self::CUSTO_MAGIC, "clashable" => true    ],
-            ["nome" => "Miku BEEAM","metodo" => "mikuBeeam",  "precisaAlvo" => true,  "energyCost" => self::CUSTO_MIKU_BEEAM, "priority" => true],
+            ["nome" => "Miku BEEAM","metodo" => "mikuBeeam",  "precisaAlvo" => true,  "energyCost" => self::CUSTO_MIKU_BEEAM, "priority" => true, "clashable" => true],
             ["nome" => "MY VOICE",  "metodo" => "myVoice",    "precisaAlvo" => true,  "energyCost" => self::CUSTO_MY_VOICE],
             ["nome" => "mikupower", "metodo" => "mikupower",  "precisaAlvo" => false, "energyCost" => self::CUSTO_MIKUPOWER]
         ];
@@ -178,9 +178,7 @@ class Miku extends Personagem {
                             'thicknessPx' => 38,
                             'frontOffsetPx' => 90,
                             'startOffsetX' => -60,
-                            'startOffsetY' => 15,
-                            'endOffsetX' => 0,
-                            'endOffsetY' => 10,
+                            'startOffsetY' => 10,
                             'beamTone' => 'pink',
                         ],
                     ],

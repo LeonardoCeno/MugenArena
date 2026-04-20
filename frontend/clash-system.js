@@ -9,6 +9,9 @@
  *   anim           — animation controller ({ wait, rodarTimeline })
  */
 export function createClashSystem() {
+    const BEAM_TOUCH_EARLY_MULTIPLIER = 1.35;
+    const BEAM_FRONT_REACH_RATIO = 0.82;
+
     return { runClash };
 
     async function runClash(ref1, ref2, clashMeta, postEvents1, postEvents2, anim, refs1 = [], refs2 = []) {
@@ -65,6 +68,7 @@ export function createClashSystem() {
             loserRef.el.remove();
         }
         loserRef.animation.cancel();
+        loserRef.beamEl?.remove();
 
         if (winnerRef.el.isConnected) {
             await continuarFormacaoAteAlvo(winnerRefs, winnerRef, anim);
@@ -84,6 +88,12 @@ export function createClashSystem() {
      */
     function freezeAtCurrentPosition(ref) {
         ref.animation.pause();
+        if (ref.tipo === "beam" && ref.beamEl) {
+            const w = parseFloat(getComputedStyle(ref.beamEl).width) || 0;
+            ref.beamEl.style.transition = "none";
+            ref.beamEl.style.width = `${w}px`;
+            void ref.beamEl.getBoundingClientRect();
+        }
     }
 
     function calcularTimeoutDeClash(ref1, ref2) {
@@ -226,6 +236,7 @@ export function createClashSystem() {
             ref.animation.cancel();
             ref.el.classList.remove("clash-shaking");
             if (ref.el.isConnected) ref.el.remove();
+            ref.beamEl?.remove();
         }
     }
 
@@ -363,12 +374,29 @@ export function createClashSystem() {
 
             const currentPoint = getCenterInArena(ref);
 
+            if (ref === primaryRef && ref.tipo === "beam" && ref.animation?.playState === "paused") {
+                ref.el.classList.remove("clash-shaking");
+                if (ref.beamEl?.isConnected) {
+                    ref.beamEl.style.transition = `width ${remainingMs}ms ease-out`;
+                    void ref.beamEl.getBoundingClientRect();
+                    ref.beamEl.style.width = `${ref.targetWidth}px`;
+                }
+                ref.animation.play();
+                continue;
+            }
+
             ref.animation.cancel();
             ref.el.classList.remove("clash-shaking");
             ref.el.style.transition = `left ${remainingMs}ms linear, top ${remainingMs}ms linear`;
             setProjectilePosition(ref, currentPoint);
             void ref.el.getBoundingClientRect();
             setProjectilePosition(ref, targetPoint);
+
+            if (ref.tipo === "beam" && ref.beamEl?.isConnected) {
+                ref.beamEl.style.transition = `width ${remainingMs}ms linear`;
+                void ref.beamEl.getBoundingClientRect();
+                ref.beamEl.style.width = `${ref.targetWidth}px`;
+            }
         }
 
         await anim.wait(remainingMs);
@@ -381,6 +409,7 @@ export function createClashSystem() {
             ref.animation.cancel();
             ref.el.classList.remove("clash-shaking");
             if (ref.el.isConnected) ref.el.remove();
+            ref.beamEl?.remove();
         }
     }
 
@@ -427,6 +456,16 @@ export function createClashSystem() {
                 }
 
                 if (!el1.isConnected || !el2.isConnected) { resolve(); return; }
+
+                if (isBeamRef(ref1) && isBeamRef(ref2)) {
+                    if (beamPairTouched(ref1, ref2) || beamFrontsReached(ref1, ref2)) {
+                        resolve("overlap");
+                        return;
+                    }
+                    requestAnimationFrame(check);
+                    return;
+                }
+
                 const r1 = el1.getBoundingClientRect();
                 const r2 = el2.getBoundingClientRect();
                 const overlapW = Math.max(0,
@@ -441,5 +480,109 @@ export function createClashSystem() {
             }
             requestAnimationFrame(check);
         });
+    }
+
+    function isBeamRef(ref) {
+        return ref?.tipo === "beam" || ref?.overlay?.mode === "beam" || !!ref?.beamEl;
+    }
+
+    function beamPairTouched(ref1, ref2) {
+        const seg1 = getBeamSegmentFromTip(ref1);
+        const seg2 = getBeamSegmentFromTip(ref2);
+        if (!seg1 || !seg2) return false;
+
+        const tolerance = (getBeamHalfThickness(ref1) + getBeamHalfThickness(ref2)) * BEAM_TOUCH_EARLY_MULTIPLIER;
+        return segmentsDistance(seg1.start, seg1.end, seg2.start, seg2.end) <= tolerance;
+    }
+
+    function beamFrontsReached(ref1, ref2) {
+        const seg1 = getBeamSegmentFromTip(ref1);
+        const seg2 = getBeamSegmentFromTip(ref2);
+        if (!seg1 || !seg2) return false;
+
+        const tipDist1 = Math.hypot(seg1.end.x - seg1.start.x, seg1.end.y - seg1.start.y);
+        const tipDist2 = Math.hypot(seg2.end.x - seg2.start.x, seg2.end.y - seg2.start.y);
+        const originDist = Math.hypot(seg2.start.x - seg1.start.x, seg2.start.y - seg1.start.y);
+
+        if (originDist <= 1) return true;
+
+        // Safety trigger: if both beam fronts already advanced to meeting distance,
+        // force clash immediately to avoid pass-through until opponent side.
+        return (tipDist1 + tipDist2) >= (originDist * BEAM_FRONT_REACH_RATIO);
+    }
+
+    function getBeamSegmentFromTip(ref) {
+        const pos = ref?.pos;
+        if (!pos || !ref?.el?.isConnected) return null;
+
+        const tip = getCenterInArena(ref);
+        return {
+            start: {
+                x: Number(pos.origemX ?? 0),
+                y: Number(pos.origemY ?? 0),
+            },
+            end: tip,
+        };
+    }
+
+    function getBeamHalfThickness(ref) {
+        return Math.max(8, Number(ref?.overlay?.thicknessPx ?? 26) / 2);
+    }
+
+    function pointToSegmentDistance(point, start, end) {
+        const segX = end.x - start.x;
+        const segY = end.y - start.y;
+        const ptX = point.x - start.x;
+        const ptY = point.y - start.y;
+        const len2 = (segX * segX) + (segY * segY);
+
+        if (len2 <= 1e-9) {
+            return Math.hypot(ptX, ptY);
+        }
+
+        const t = clamp(0, ((ptX * segX) + (ptY * segY)) / len2, 1);
+        const projX = start.x + (segX * t);
+        const projY = start.y + (segY * t);
+        return Math.hypot(point.x - projX, point.y - projY);
+    }
+
+    function segmentsDistance(a1, a2, b1, b2) {
+        if (segmentsIntersect(a1, a2, b1, b2)) {
+            return 0;
+        }
+
+        return Math.min(
+            pointToSegmentDistance(a1, b1, b2),
+            pointToSegmentDistance(a2, b1, b2),
+            pointToSegmentDistance(b1, a1, a2),
+            pointToSegmentDistance(b2, a1, a2)
+        );
+    }
+
+    function segmentsIntersect(a1, a2, b1, b2) {
+        const o1 = orientation(a1, a2, b1);
+        const o2 = orientation(a1, a2, b2);
+        const o3 = orientation(b1, b2, a1);
+        const o4 = orientation(b1, b2, a2);
+
+        if (o1 === 0 && onSegment(a1, b1, a2)) return true;
+        if (o2 === 0 && onSegment(a1, b2, a2)) return true;
+        if (o3 === 0 && onSegment(b1, a1, b2)) return true;
+        if (o4 === 0 && onSegment(b1, a2, b2)) return true;
+
+        return (o1 > 0) !== (o2 > 0) && (o3 > 0) !== (o4 > 0);
+    }
+
+    function orientation(a, b, c) {
+        const value = (b.y - a.y) * (c.x - b.x) - (b.x - a.x) * (c.y - b.y);
+        if (Math.abs(value) < 1e-6) return 0;
+        return value > 0 ? 1 : -1;
+    }
+
+    function onSegment(a, b, c) {
+        return b.x <= Math.max(a.x, c.x) + 1e-6
+            && b.x + 1e-6 >= Math.min(a.x, c.x)
+            && b.y <= Math.max(a.y, c.y) + 1e-6
+            && b.y + 1e-6 >= Math.min(a.y, c.y);
     }
 }

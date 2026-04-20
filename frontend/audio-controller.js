@@ -116,7 +116,7 @@ export function createAudioController({ els }) {
 		audio.loop = true;
 		audio.volume = getVolume();
 		audio.currentTime = 0;
-		audio.muted = false;
+		audio.muted = !muted;
 		audio.play().catch(() => {});
 		domainClashAudio = audio;
 	}

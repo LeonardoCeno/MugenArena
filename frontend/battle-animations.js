@@ -403,45 +403,53 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		const nomeAcao     = acao.nomeSprite || acao.nome;
 		const actionConfig = state.serverState?.[atacanteKey]?.visual?.actions?.[nomeAcao] ?? {};
 
-		const allOverlays   = overlaysDeConfig(actionConfig);
-		const projectileOverlays = allOverlays.filter(o => o.mode === "projectile");
-		const otherOverlays = allOverlays.filter(o => o.mode !== "projectile");
-		const primaryProjectileOverlay = projectileOverlays[0] ?? null;
-		const projectileStartMs = primaryProjectileOverlay?.startMs ?? 0;
+		const allOverlays    = overlaysDeConfig(actionConfig);
+		const clashOverlays  = allOverlays.filter(o => o.mode === "projectile" || o.mode === "beam");
+		const otherOverlays  = allOverlays.filter(o => o.mode !== "projectile" && o.mode !== "beam");
+		const primaryClashOverlay = clashOverlays[0] ?? null;
+		const primaryBeamOverlay = clashOverlays.find(o => o.mode === "beam") ?? null;
+		const projectileStartMs = primaryClashOverlay?.startMs ?? 0;
 
 		const { events: frameEvts } = eventosFrames(atacanteKey, framesDeConfig(actionConfig));
 
-		const projArrivalMs = projectileOverlays.length > 0
-			? Math.max(...projectileOverlays.map(overlay => overlay.startMs + overlay.durationMs))
+		const clashArrivalMs = clashOverlays.length > 0
+			? Math.max(...clashOverlays.map(o => o.startMs + o.durationMs))
 			: 0;
 
 		const allAudio = eventosAudio(actionConfig);
-		const preAudio  = allAudio.filter(e => e.at < projectileStartMs);
-		const launchAudio = allAudio.filter(e => e.at >= projectileStartMs && e.at < projArrivalMs);
-		const postAudio = allAudio.filter(e => e.at >= projArrivalMs)
-			.map(e => ({ ...e, at: e.at - projArrivalMs }));
+		const preAudio    = allAudio.filter(e => e.at < projectileStartMs);
+		const launchAudio = allAudio.filter(e => e.at >= projectileStartMs && e.at < clashArrivalMs);
+		const postAudio   = allAudio.filter(e => e.at >= clashArrivalMs)
+			.map(e => ({ ...e, at: e.at - clashArrivalMs }));
 
 		const allOtherOverlayEvts = otherOverlays.flatMap(o => eventosOverlay(o, atacanteKey));
-		const preOverlayEvts = allOtherOverlayEvts.filter(e => e.at < projectileStartMs);
-		const launchOverlayEvts = allOtherOverlayEvts.filter(e => e.at >= projectileStartMs && e.at < projArrivalMs);
-		const postOverlayEvts = allOtherOverlayEvts
-			.filter(e => e.at >= projArrivalMs)
-			.map(e => ({ ...e, at: e.at - projArrivalMs }));
+		const preOverlayEvts    = allOtherOverlayEvts.filter(e => e.at < projectileStartMs);
+		const launchOverlayEvts = allOtherOverlayEvts.filter(e => e.at >= projectileStartMs && e.at < clashArrivalMs);
+		const postOverlayEvts   = allOtherOverlayEvts
+			.filter(e => e.at >= clashArrivalMs)
+			.map(e => ({ ...e, at: e.at - clashArrivalMs }));
 
-		let projectileRef = null;
-		const projectileRefs = [];
-		const projectileCreationEvents = projectileOverlays.map((overlay, index) => ({
+		let clashRef = null;
+		const clashRefs = [];
+		let beamAimOverride = null;
+		const clashCreationEvents = clashOverlays.map((overlay, index) => ({
 			at: overlay.startMs,
 			run() {
 				const arenaRect = els.arena?.getBoundingClientRect();
 				const origemEl  = els.fighters[atacanteKey]?.root;
 				const alvoEl    = els.fighters[defensorKey]?.root;
 				if (!arenaRect || !origemEl || !alvoEl) return;
-				const pos = posicoes(overlay, atacanteKey, origemEl, alvoEl, arenaRect);
-				const ref = criarProjetil(overlay, pos, atacanteKey);
-				ref.animation.onfinish = null; // clash system manages removal
-				projectileRefs.push(ref);
-				if (index === 0) projectileRef = ref;
+				const beamOverride = overlay.mode === "beam" ? beamAimOverride : null;
+				const pos = posicoes(overlay, atacanteKey, defensorKey, origemEl, alvoEl, arenaRect, beamOverride);
+				let ref;
+				if (overlay.mode === "beam") {
+					ref = criarBeamParaClash(overlay, pos, atacanteKey);
+				} else {
+					ref = criarProjetil(overlay, pos, atacanteKey);
+					ref.animation.onfinish = null;
+				}
+				clashRefs.push(ref);
+				if (index === 0) clashRef = ref;
 			},
 		}));
 
@@ -452,10 +460,10 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		];
 
 		const launchEvents = [
-			...frameEvts.filter(e => e.at >= projectileStartMs && e.at < projArrivalMs),
+			...frameEvts.filter(e => e.at >= projectileStartMs && e.at < clashArrivalMs),
 			...launchAudio,
 			...launchOverlayEvts,
-			...projectileCreationEvents,
+			...clashCreationEvents,
 		];
 
 		const postEvents = [...postAudio, ...postOverlayEvts];
@@ -465,8 +473,20 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 			launchEvents,
 			postEvents,
 			projectileStartMs,
-			getProjectileRef: () => projectileRef,
-			getProjectileRefs: () => projectileRefs,
+			setBeamAimOverride(point) {
+				beamAimOverride = point && Number.isFinite(point.x) && Number.isFinite(point.y)
+					? { x: point.x, y: point.y }
+					: null;
+			},
+			getPrimaryBeamSourcePoint() {
+				if (!primaryBeamOverlay) return null;
+				const arenaRect = els.arena?.getBoundingClientRect();
+				const origemEl = els.fighters[atacanteKey]?.root;
+				if (!arenaRect || !origemEl) return null;
+				return calcularOrigemVisual(primaryBeamOverlay, atacanteKey, origemEl, arenaRect);
+			},
+			getProjectileRef: () => clashRef,
+			getProjectileRefs: () => clashRefs,
 		};
 	}
 
@@ -510,21 +530,48 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		return px * ((arenaW ?? els.arena?.getBoundingClientRect().width ?? 1000) / 1000);
 	}
 
-	function posicoes(overlay, atacanteKey, origemEl, alvoEl, arenaRect) {
-		const direcaoFrente    = atacanteKey === "p1" ? 1 : -1;
+	function calcularOrigemVisual(overlay, fighterKey, fighterEl, arenaRect) {
+		const direcaoFrente = fighterKey === "p1" ? 1 : -1;
+		const arenaW = arenaRect.width;
+		const fighterRect = fighterEl.getBoundingClientRect();
+		const startOffsetYEscalado = escala(overlay.startOffsetY, arenaW);
+		const startOffsetYAjustado = overlay.mode === "projectile"
+			? direcaoFrente * startOffsetYEscalado
+			: startOffsetYEscalado;
+
+		return {
+			x: (fighterRect.left + fighterRect.width / 2) - arenaRect.left
+				+ direcaoFrente * escala(overlay.frontOffsetPx, arenaW)
+				+ direcaoFrente * escala(overlay.startOffsetX, arenaW),
+			y: (fighterRect.top + fighterRect.height / 2) - arenaRect.top
+				+ startOffsetYAjustado,
+		};
+	}
+
+	function posicoes(overlay, atacanteKey, defensorKey, origemEl, alvoEl, arenaRect, beamAimOverride = null) {
 		const escalaHorizontal = atacanteKey === "p2" ? -1 : 1;
 		const anguloProjetil   = atacanteKey === "p2" ? -overlay.projectileAngleDeg : overlay.projectileAngleDeg;
 		const arenaW           = arenaRect.width;
-		const origemRect       = origemEl.getBoundingClientRect();
 		const alvoRect         = alvoEl.getBoundingClientRect();
+		const origem = calcularOrigemVisual(overlay, atacanteKey, origemEl, arenaRect);
+		const origemX = origem.x;
+		const origemY = origem.y;
+		let alvoX;
+		let alvoY;
 
-		const origemX = (origemRect.left + origemRect.width  / 2) - arenaRect.left
-			+ direcaoFrente * escala(overlay.frontOffsetPx, arenaW)
-			+ direcaoFrente * escala(overlay.startOffsetX, arenaW);
-		const origemY = (origemRect.top  + origemRect.height / 2) - arenaRect.top
-			+ escala(overlay.startOffsetY, arenaW);
-		const alvoX = (alvoRect.left + alvoRect.width  / 2) - arenaRect.left + escala(overlay.endOffsetX, arenaW);
-		const alvoY = (alvoRect.top  + alvoRect.height / 2) - arenaRect.top  + escala(overlay.endOffsetY, arenaW);
+		if (overlay.mode === "beam") {
+			if (beamAimOverride) {
+				alvoX = beamAimOverride.x;
+				alvoY = beamAimOverride.y;
+			} else {
+				const alvoOrigem = calcularOrigemVisual(overlay, defensorKey, alvoEl, arenaRect);
+				alvoX = alvoOrigem.x;
+				alvoY = alvoOrigem.y;
+			}
+		} else {
+			alvoX = (alvoRect.left + alvoRect.width / 2) - arenaRect.left + escala(overlay.endOffsetX, arenaW);
+			alvoY = (alvoRect.top + alvoRect.height / 2) - arenaRect.top + escala(overlay.endOffsetY, arenaW);
+		}
 		const deltaX = alvoX - origemX;
 		const deltaY = alvoY - origemY;
 
@@ -613,6 +660,36 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		};
 	}
 
+	function criarBeamParaClash(overlay, pos, atacanteKey) {
+		const beamEl = criarBeam(overlay, pos);
+		const targetWidth = parseFloat(beamEl.style.width) || pos.distancia;
+
+		const tipEl = document.createElement("div");
+		tipEl.style.cssText = `position:absolute;width:20px;height:20px;left:${pos.origemX}px;top:${pos.origemY}px;transform:translate(-50%,-50%);pointer-events:none;opacity:0;`;
+		els.arena.appendChild(tipEl);
+		void tipEl.getBoundingClientRect();
+
+		const tipAnimation = tipEl.animate(
+			[
+				{ left: `${pos.origemX}px`, top: `${pos.origemY}px` },
+				{ left: `${pos.alvoX}px`,   top: `${pos.alvoY}px`   },
+			],
+			{ duration: overlay.durationMs, fill: "forwards", easing: "ease-out" }
+		);
+		tipAnimation.onfinish = null; // clash system manages removal
+
+		return {
+			el: tipEl,
+			beamEl,
+			animation: tipAnimation,
+			pos: { origemX: pos.origemX, origemY: pos.origemY, alvoX: pos.alvoX, alvoY: pos.alvoY, arenaW: pos.arenaW },
+			overlay,
+			atacanteKey,
+			tipo: "beam",
+			targetWidth,
+		};
+	}
+
 	function criarAttached(overlay, alvoKey) {
 		const fighter = els.fighters[alvoKey]?.root;
 		if (!fighter) return null;
@@ -660,7 +737,7 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		const alvoEl    = els.fighters[alvoKey]?.root;
 		if (!arenaRect || !origemEl || !alvoEl) return null;
 
-		const pos = posicoes(overlay, atacanteKey, origemEl, alvoEl, arenaRect);
+		const pos = posicoes(overlay, atacanteKey, alvoKey, origemEl, alvoEl, arenaRect);
 		if (overlay.mode === "beam") return criarBeam(overlay, pos);
 		return criarProjetil(overlay, pos, atacanteKey).el;
 	}

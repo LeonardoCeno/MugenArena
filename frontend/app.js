@@ -328,6 +328,14 @@ const FUNDOS_ARENA = ["BEACH 2.png","BEACH NIGHT.png","BEACH.png","CAVE 2.png","
 	async function executarTurnoClash(acoesMap, clashMeta, estadoFinal) {
 		const rawAnimData1 = animations.montarAnimacaoClash("p1", acoesMap["p1"], "p2");
 		const rawAnimData2 = animations.montarAnimacaoClash("p2", acoesMap["p2"], "p1");
+		const p1BeamSource = rawAnimData1.getPrimaryBeamSourcePoint?.();
+		const p2BeamSource = rawAnimData2.getPrimaryBeamSourcePoint?.();
+
+		if (p1BeamSource && p2BeamSource) {
+			rawAnimData1.setBeamAimOverride?.(p2BeamSource);
+			rawAnimData2.setBeamAimOverride?.(p1BeamSource);
+		}
+
 		const [animData1, animData2] = sincronizarLancamentoDeProjeteis(rawAnimData1, rawAnimData2);
 
 		const allPreEvents = [...animData1.preEvents, ...animData2.preEvents];
