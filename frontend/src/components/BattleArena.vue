@@ -89,7 +89,7 @@ const props = defineProps({
   domainImageVersion: { type: Number,  default: 0 },
   pendingStartArgs:   { type: Object,  default: null },
 })
-const emit = defineEmits(['reset', 'ready'])
+const emit = defineEmits(['reset', 'ready', 'battle-setup'])
 
 const arenaEl        = ref(null)
 const fighterPlayerEl = ref(null)
@@ -205,6 +205,7 @@ watch(() => props.pendingStartArgs, async (args) => {
         logEntries.value = []
         atualizarHUD()
         montarAcoes()
+        emit('battle-setup')
       },
     })
     adicionarLog(`Partida iniciada: ${result.state.p1.classeNome} vs ${result.state.p2.classeNome}.`)

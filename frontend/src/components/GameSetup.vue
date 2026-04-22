@@ -57,7 +57,7 @@
         </div>
       </div>
 
-      <button id="start-btn" class="start-btn" :disabled="starting" @click="onStart">INICIAR BATALHA</button>
+      <button id="start-btn" class="start-btn" :disabled="starting || !p1Class || !p2Class" @click="onStart">INICIAR BATALHA</button>
     </div>
   </section>
 </template>

@@ -54,13 +54,14 @@
     />
 
     <GameSetup
-      v-else-if="phase === 'setup'"
+      v-if="phase === 'setup' || transitioningToBattle"
+      :style="transitioningToBattle ? 'pointer-events:none' : ''"
       :catalog="catalog"
       @start-game="onStartGame"
     />
 
     <BattleArena
-      v-else-if="phase === 'battle'"
+      v-if="phase === 'battle'"
       :server-state="state.serverState"
       :action-page="state.actionPage"
       :resolving="state.resolvendoAcao"
@@ -69,6 +70,7 @@
       :domain-image-version="state.domainImageVersion"
       :pending-start-args="pendingStartArgs"
       @ready="pendingStartArgs = null"
+      @battle-setup="transitioningToBattle = false"
       @reset="onReset"
     />
   </main>
@@ -85,6 +87,7 @@ const phase = ref('intro')
 const appClass = ref('is-intro')
 const catalog = ref([])
 const pendingStartArgs = ref(null)
+const transitioningToBattle = ref(false)
 const tutorialOpen = ref(false)
 const tutorialHtml = ref('')
 const tutorialLoaded = ref(false)
@@ -159,6 +162,7 @@ async function onStartGame({ p1Name, p2Name, p1Class, p2Class }) {
   state.arenaFundo = `./assets/fundosdojogo/${encodeURIComponent(
     FUNDOS_ARENA[Math.floor(Math.random() * FUNDOS_ARENA.length)]
   )}`
+  transitioningToBattle.value = true
   pendingStartArgs.value = { p1Name, p2Name, p1Class, p2Class }
   phase.value = 'battle'
   appClass.value = 'is-playing'
@@ -166,6 +170,7 @@ async function onStartGame({ p1Name, p2Name, p1Class, p2Class }) {
 
 function onReset() {
   resetarEstado()
+  transitioningToBattle.value = false
   phase.value = 'setup'
   appClass.value = ''
 }
