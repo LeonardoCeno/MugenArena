@@ -152,8 +152,8 @@ function atualizarHUD() {
   if (!animations) return
   const s = state.serverState
   if (!s) return
-  animations.visualPersonagem('p2', s.p2, makeRefs(fighterEnemyEl.value))
   animations.visualPersonagem('p1', s.p1, makeRefs(fighterPlayerEl.value))
+  animations.visualPersonagem('p2', s.p2, makeRefs(fighterEnemyEl.value))
 }
 
 function onActionSelected(acao) {
@@ -161,6 +161,7 @@ function onActionSelected(acao) {
     .then(result => {
       if (result?.reset) emit('reset')
     })
+    .catch(erro => adicionarLog(`Erro inesperado: ${erro.message || 'falha desconhecida.'}`))
 }
 
 function onPageChange(newPage) { state.actionPage = newPage }
@@ -211,6 +212,7 @@ watch(() => props.pendingStartArgs, async (args) => {
   } catch (erro) {
     adicionarLog(`Erro ao iniciar: ${erro.message || 'falha de conexão com a API.'}`)
     adicionarLog('Confirme se o servidor está rodando em http://127.0.0.1:8080')
+    emit('reset')
   }
 })
 </script>
