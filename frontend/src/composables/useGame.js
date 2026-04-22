@@ -1,8 +1,8 @@
 import { reactive } from 'vue'
-import { createAnimationController } from '../../battle-animations.js'
-import { createClashSystem } from '../../clash-system.js'
-import { createAudioController, AUDIO_DOMAIN_BREAK } from '../../audio-controller.js'
-import { startBlackHoleAnimation } from '../../black-hole-animation.js'
+import { createAnimationController } from '../libs/battle-animations.js'
+import { createClashSystem } from '../libs/clash-system.js'
+import { createAudioController, AUDIO_DOMAIN_BREAK } from '../libs/audio-controller.js'
+import { startBlackHoleAnimation } from '../libs/black-hole-animation.js'
 
 const API_URL = '../backend/web_api.php'
 
