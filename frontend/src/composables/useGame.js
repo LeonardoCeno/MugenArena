@@ -393,4 +393,8 @@ export function resetarEstado() {
   state.domainImage = null
   state.domainImageVersion = 0
   state.acaoPendente = null
+  state.sprites.p1 = null
+  state.sprites.p2 = null
+  state.frameScale.p1 = null
+  state.frameScale.p2 = null
 }
