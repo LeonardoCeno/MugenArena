@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "cp index.src.html index.html && node -e \"import('fs').then(fs=>fs.rmSync('src/assets-built',{recursive:true,force:true}))\" && vite build",
     "preview": "vite preview"
   },
   "dependencies": {

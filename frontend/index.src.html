@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Arena Mugen</title>
+</head>
+<body>
+  <video id="bg-video" autoplay muted loop playsinline preload="auto" style="position:fixed;inset:0;width:100%;height:100%;object-fit:cover;z-index:-1;pointer-events:none"></video>
+  <script>
+    const v = document.getElementById('bg-video');
+    if (v) {
+      const s = document.createElement('source');
+      s.src = './assets/fundos/Aura Infinito do Buraco Negro_720p-ezremove.mp4';
+      s.type = 'video/mp4';
+      v.appendChild(s);
+      v.playbackRate = 1.5;
+    }
+  </script>
+  <div id="app"></div>
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
