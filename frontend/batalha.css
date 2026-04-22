@@ -907,7 +907,24 @@ justify-content: center;
   --beam-edge: rgba(70, 255, 200, 0.96);
   --beam-edge-soft: rgba(120, 255, 225, 0.72);
   --beam-core: rgba(255, 255, 255, 0.98);
-  --beam-halo: rgba(28, 255, 168, 0.88);
+  --beam-core-hot: rgba(255, 255, 255, 1);
+  --beam-flow-start: rgba(180, 255, 235, 0.28);
+  --beam-flow-mid-left: rgba(255, 255, 255, 0.92);
+  --beam-flow-mid: rgba(255, 255, 255, 1);
+  --beam-flow-mid-right: rgba(210, 255, 244, 0.92);
+  --beam-flow-end: rgba(80, 255, 205, 0.24);
+  --beam-shell-glow-start: rgba(70, 255, 210, 0.18);
+  --beam-shell-glow-mid: rgba(85, 255, 214, 0.56);
+  --beam-tip-core: rgba(255, 255, 255, 1);
+  --beam-tip-mid: rgba(210, 255, 248, 0.98);
+  --beam-tip-outer: rgba(75, 255, 208, 0.84);
+  --beam-tip-fade: rgba(75, 255, 208, 0.18);
+  --beam-glow-strong: rgba(70, 255, 200, 0.98);
+  --beam-glow-medium: rgba(70, 255, 200, 0.72);
+  --beam-glow-wide: rgba(20, 255, 170, 0.45);
+  --beam-tip-shadow-strong: rgba(110, 255, 228, 0.95);
+  --beam-tip-shadow-soft: rgba(70, 255, 210, 0.54);
+  --beam-filter: saturate(1.18) brightness(1.08);
   --beam-shell-top: 12%;
   --beam-shell-bottom: 88%;
   --beam-core-top: 28%;
@@ -918,21 +935,21 @@ justify-content: center;
       transparent 0%,
       var(--beam-edge) var(--beam-shell-top),
       var(--beam-core) var(--beam-core-top),
-      #fff 50%,
+      var(--beam-core-hot) 50%,
       var(--beam-core) var(--beam-core-bottom),
       var(--beam-edge-soft) var(--beam-shell-bottom),
       transparent 100%),
     linear-gradient(90deg,
-      rgba(180, 255, 235, 0.28) 0%,
-      rgba(255, 255, 255, 0.92) 18%,
-      rgba(255, 255, 255, 1) 52%,
-      rgba(210, 255, 244, 0.92) 78%,
-      rgba(80, 255, 205, 0.24) 100%);
+      var(--beam-flow-start) 0%,
+      var(--beam-flow-mid-left) 18%,
+      var(--beam-flow-mid) 52%,
+      var(--beam-flow-mid-right) 78%,
+      var(--beam-flow-end) 100%);
   box-shadow:
-    0 0 18px rgba(70, 255, 200, 0.98),
-    0 0 38px rgba(70, 255, 200, 0.72),
-    0 0 68px rgba(20, 255, 170, 0.45);
-  filter: saturate(1.18) brightness(1.08);
+    0 0 18px var(--beam-glow-strong),
+    0 0 38px var(--beam-glow-medium),
+    0 0 68px var(--beam-glow-wide);
+  filter: var(--beam-filter);
   animation: beam-breathe 733ms ease-in-out infinite;
 }
 .arena-energy-beam::before,
@@ -947,9 +964,9 @@ justify-content: center;
   inset: -24% -2%;
   background: linear-gradient(180deg,
     transparent 0%,
-    rgba(70, 255, 210, 0.18) 18%,
-    rgba(85, 255, 214, 0.56) 50%,
-    rgba(70, 255, 210, 0.18) 82%,
+    var(--beam-shell-glow-start) 18%,
+    var(--beam-shell-glow-mid) 50%,
+    var(--beam-shell-glow-start) 82%,
     transparent 100%);
   filter: blur(10px);
   opacity: 0.95;
@@ -964,32 +981,46 @@ justify-content: center;
   transform: translate(26%, -50%);
   border-radius: 50%;
   background: radial-gradient(circle,
-    rgba(255, 255, 255, 1) 0%,
-    rgba(210, 255, 248, 0.98) 34%,
-    rgba(75, 255, 208, 0.84) 58%,
-    rgba(75, 255, 208, 0.18) 100%);
+    var(--beam-tip-core) 0%,
+    var(--beam-tip-mid) 34%,
+    var(--beam-tip-outer) 58%,
+    var(--beam-tip-fade) 100%);
   filter: blur(2px);
   box-shadow:
-    0 0 22px rgba(110, 255, 228, 0.95),
-    0 0 54px rgba(70, 255, 210, 0.54);
+    0 0 22px var(--beam-tip-shadow-strong),
+    0 0 54px var(--beam-tip-shadow-soft);
   animation: beam-tip-breathe 733ms ease-in-out infinite;
 }
 .arena-energy-beam-dark {
   --beam-edge: rgba(74, 255, 195, 0.92);
   --beam-edge-soft: rgba(48, 211, 157, 0.7);
   --beam-core: rgba(240, 255, 250, 0.98);
-  --beam-halo: rgba(22, 126, 83, 0.9);
-  filter: saturate(1.08) brightness(0.98);
+  --beam-shell-glow-start: rgba(36, 180, 137, 0.18);
+  --beam-shell-glow-mid: rgba(58, 214, 165, 0.5);
+  --beam-tip-mid: rgba(214, 255, 244, 0.98);
+  --beam-tip-outer: rgba(74, 255, 195, 0.82);
+  --beam-tip-fade: rgba(74, 255, 195, 0.18);
+  --beam-glow-strong: rgba(74, 255, 195, 0.92);
+  --beam-glow-medium: rgba(48, 211, 157, 0.7);
+  --beam-glow-wide: rgba(22, 126, 83, 0.45);
+  --beam-tip-shadow-strong: rgba(96, 255, 219, 0.9);
+  --beam-tip-shadow-soft: rgba(32, 180, 131, 0.48);
+  --beam-filter: saturate(1.08) brightness(0.98);
 }
 .arena-energy-beam-pink {
   --beam-edge: rgba(255, 112, 218, 0.95);
   --beam-edge-soft: rgba(255, 169, 232, 0.72);
   --beam-core: rgba(255, 246, 252, 0.98);
-  --beam-halo: rgba(255, 81, 197, 0.88);
-  box-shadow:
-    0 0 18px rgba(255, 96, 214, 0.95),
-    0 0 38px rgba(255, 96, 214, 0.68),
-    0 0 68px rgba(255, 96, 214, 0.42);
+  --beam-shell-glow-start: rgba(255, 145, 224, 0.18);
+  --beam-shell-glow-mid: rgba(255, 132, 220, 0.56);
+  --beam-tip-mid: rgba(255, 221, 244, 0.98);
+  --beam-tip-outer: rgba(255, 96, 214, 0.84);
+  --beam-tip-fade: rgba(255, 96, 214, 0.18);
+  --beam-glow-strong: rgba(255, 96, 214, 0.95);
+  --beam-glow-medium: rgba(255, 96, 214, 0.68);
+  --beam-glow-wide: rgba(255, 96, 214, 0.42);
+  --beam-tip-shadow-strong: rgba(255, 157, 232, 0.95);
+  --beam-tip-shadow-soft: rgba(255, 96, 214, 0.54);
 }
 @keyframes beam-breathe {
   0%, 100% {

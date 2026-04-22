@@ -9,6 +9,7 @@ const STATUS_EFFECT_VISUALS = {
 export function createAnimationController({ state, els, atualizarHUD }) {
 
 	let meleeAttackerKey = null;
+	let beamColorParserCtx = null;
 
 	// ── Helpers visuais ──────────────────────────────────────────────────
 
@@ -98,6 +99,164 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 	function wait(ms) {
 		if (ms <= 0) return Promise.resolve();
 		return new Promise(r => setTimeout(r, ms));
+	}
+
+	function clampByte(value) {
+		return Math.max(0, Math.min(255, Math.round(value)));
+	}
+
+	function mixRgb(base, target, amount) {
+		return base.map((channel, index) => clampByte(channel + ((target[index] ?? channel) - channel) * amount));
+	}
+
+	function rgba(rgb, alpha) {
+		return `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${alpha})`;
+	}
+
+	function parseHexColor(value) {
+		const hex = value.replace("#", "").trim();
+		if (hex.length === 3 || hex.length === 4) {
+			return [
+				parseInt(hex[0] + hex[0], 16),
+				parseInt(hex[1] + hex[1], 16),
+				parseInt(hex[2] + hex[2], 16),
+			];
+		}
+		if (hex.length === 6 || hex.length === 8) {
+			return [
+				parseInt(hex.slice(0, 2), 16),
+				parseInt(hex.slice(2, 4), 16),
+				parseInt(hex.slice(4, 6), 16),
+			];
+		}
+		return null;
+	}
+
+	function parseCssColor(value) {
+		if (typeof value !== "string") return null;
+		const tone = value.trim();
+		if (!tone) return null;
+		if (typeof CSS !== "undefined" && typeof CSS.supports === "function" && !CSS.supports("color", tone)) {
+			return null;
+		}
+		if (!beamColorParserCtx) {
+			beamColorParserCtx = document.createElement("canvas").getContext("2d");
+		}
+		if (!beamColorParserCtx) return null;
+		beamColorParserCtx.fillStyle = "#000000";
+		beamColorParserCtx.fillStyle = tone;
+		const normalized = String(beamColorParserCtx.fillStyle || "").trim();
+		if (!normalized) return null;
+		if (normalized.startsWith("#")) return parseHexColor(normalized);
+		const match = normalized.match(/^rgba?\(([^)]+)\)$/i);
+		if (!match) return null;
+		const channels = match[1].split(",").slice(0, 3).map(part => Number.parseFloat(part.trim()));
+		if (channels.length !== 3 || channels.some(Number.isNaN)) return null;
+		return channels.map(clampByte);
+	}
+
+	function resolveBeamPalette(beamTone) {
+		const legacyTone = String(beamTone ?? "normal").trim().toLowerCase();
+		if (legacyTone === "dark") {
+			return {
+				"--beam-edge": "rgba(74, 255, 195, 0.92)",
+				"--beam-edge-soft": "rgba(48, 211, 157, 0.7)",
+				"--beam-core": "rgba(240, 255, 250, 0.98)",
+				"--beam-core-hot": "rgba(248, 255, 252, 1)",
+				"--beam-flow-start": "rgba(96, 255, 219, 0.3)",
+				"--beam-flow-mid-left": "rgba(228, 255, 248, 0.88)",
+				"--beam-flow-mid": "rgba(242, 255, 251, 1)",
+				"--beam-flow-mid-right": "rgba(196, 255, 236, 0.9)",
+				"--beam-flow-end": "rgba(58, 214, 165, 0.26)",
+				"--beam-shell-glow-start": "rgba(36, 180, 137, 0.18)",
+				"--beam-shell-glow-mid": "rgba(58, 214, 165, 0.5)",
+				"--beam-tip-mid": "rgba(214, 255, 244, 0.98)",
+				"--beam-tip-outer": "rgba(74, 255, 195, 0.82)",
+				"--beam-tip-fade": "rgba(74, 255, 195, 0.18)",
+				"--beam-glow-strong": "rgba(74, 255, 195, 0.92)",
+				"--beam-glow-medium": "rgba(48, 211, 157, 0.7)",
+				"--beam-glow-wide": "rgba(22, 126, 83, 0.45)",
+				"--beam-tip-shadow-strong": "rgba(96, 255, 219, 0.9)",
+				"--beam-tip-shadow-soft": "rgba(32, 180, 131, 0.48)",
+				"--beam-filter": "saturate(1.08) brightness(0.98)",
+			};
+		}
+		if (legacyTone === "pink") {
+			return {
+				"--beam-edge": "rgba(255, 112, 218, 0.95)",
+				"--beam-edge-soft": "rgba(255, 169, 232, 0.72)",
+				"--beam-core": "rgba(255, 246, 252, 0.98)",
+				"--beam-core-hot": "rgba(255, 250, 254, 1)",
+				"--beam-flow-start": "rgba(255, 140, 224, 0.3)",
+				"--beam-flow-mid-left": "rgba(255, 232, 247, 0.88)",
+				"--beam-flow-mid": "rgba(255, 244, 252, 1)",
+				"--beam-flow-mid-right": "rgba(255, 204, 238, 0.92)",
+				"--beam-flow-end": "rgba(255, 96, 214, 0.26)",
+				"--beam-shell-glow-start": "rgba(255, 145, 224, 0.18)",
+				"--beam-shell-glow-mid": "rgba(255, 132, 220, 0.56)",
+				"--beam-tip-mid": "rgba(255, 221, 244, 0.98)",
+				"--beam-tip-outer": "rgba(255, 96, 214, 0.84)",
+				"--beam-tip-fade": "rgba(255, 96, 214, 0.18)",
+				"--beam-glow-strong": "rgba(255, 96, 214, 0.95)",
+				"--beam-glow-medium": "rgba(255, 96, 214, 0.68)",
+				"--beam-glow-wide": "rgba(255, 96, 214, 0.42)",
+				"--beam-tip-shadow-strong": "rgba(255, 157, 232, 0.95)",
+				"--beam-tip-shadow-soft": "rgba(255, 96, 214, 0.54)",
+			};
+		}
+
+		const rgb = parseCssColor(beamTone);
+		if (!rgb) return null;
+
+		const edgeSoft = mixRgb(rgb, [255, 255, 255], 0.12);
+		const core = mixRgb(rgb, [255, 255, 255], 0.38);
+		const coreHot = mixRgb(rgb, [255, 255, 255], 0.16);
+		const flowStart = mixRgb(rgb, [255, 255, 255], 0.06);
+		const flowMidLeft = mixRgb(rgb, [255, 255, 255], 0.2);
+		const flowMid = mixRgb(rgb, [255, 255, 255], 0.14);
+		const flowMidRight = mixRgb(rgb, [255, 255, 255], 0.16);
+		const flowEnd = mixRgb(rgb, [0, 0, 0], 0.06);
+		const tipCore = mixRgb(rgb, [255, 255, 255], 0.24);
+		const shellGlowStart = mixRgb(rgb, [255, 255, 255], 0.03);
+		const shellGlowMid = mixRgb(rgb, [255, 255, 255], 0.09);
+		const tipMid = mixRgb(rgb, [255, 255, 255], 0.14);
+		const glowStrong = mixRgb(rgb, [255, 255, 255], 0.02);
+		const glowMedium = mixRgb(rgb, [255, 255, 255], 0.04);
+		const glowWide = mixRgb(rgb, [0, 0, 0], 0.18);
+		const tipShadowStrong = mixRgb(rgb, [255, 255, 255], 0.08);
+		const tipShadowSoft = mixRgb(rgb, [255, 255, 255], 0.03);
+
+		return {
+			"--beam-edge": rgba(rgb, 0.98),
+			"--beam-edge-soft": rgba(edgeSoft, 0.78),
+			"--beam-core": rgba(core, 0.98),
+			"--beam-core-hot": rgba(coreHot, 1),
+			"--beam-flow-start": rgba(flowStart, 0.28),
+			"--beam-flow-mid-left": rgba(flowMidLeft, 0.9),
+			"--beam-flow-mid": rgba(flowMid, 1),
+			"--beam-flow-mid-right": rgba(flowMidRight, 0.92),
+			"--beam-flow-end": rgba(flowEnd, 0.26),
+			"--beam-tip-core": rgba(tipCore, 1),
+			"--beam-shell-glow-start": rgba(shellGlowStart, 0.22),
+			"--beam-shell-glow-mid": rgba(shellGlowMid, 0.62),
+			"--beam-tip-mid": rgba(tipMid, 0.98),
+			"--beam-tip-outer": rgba(rgb, 0.9),
+			"--beam-tip-fade": rgba(rgb, 0.24),
+			"--beam-glow-strong": rgba(glowStrong, 0.98),
+			"--beam-glow-medium": rgba(glowMedium, 0.78),
+			"--beam-glow-wide": rgba(glowWide, 0.52),
+			"--beam-tip-shadow-strong": rgba(tipShadowStrong, 0.95),
+			"--beam-tip-shadow-soft": rgba(tipShadowSoft, 0.58),
+			"--beam-filter": "saturate(1.38) brightness(1.01)",
+		};
+	}
+
+	function applyBeamTone(el, beamTone) {
+		const palette = resolveBeamPalette(beamTone);
+		if (!palette) return;
+		for (const [property, value] of Object.entries(palette)) {
+			el.style.setProperty(property, value);
+		}
 	}
 
 	function mostrarSplashErroInsano(src, duracaoMs = 3000) {
@@ -588,8 +747,6 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 	function criarBeam(overlay, pos) {
 		const el = document.createElement("div");
 		el.className = "arena-energy-beam";
-		if (overlay.beamTone === "dark")       el.classList.add("arena-energy-beam-dark");
-		else if (overlay.beamTone === "pink")  el.classList.add("arena-energy-beam-pink");
 		el.setAttribute("aria-hidden", "true");
 		const arenaRect = els.arena?.getBoundingClientRect();
 		const arenaW = arenaRect?.width ?? pos.arenaW;
@@ -618,6 +775,7 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		const minBeamHeightForTipCoverage = arenaH > 0 ? (arenaH * targetEndCoverage) / 2 : baseBeamHeight;
 		const beamHeight = Math.max(baseBeamHeight, minBeamHeightForTipCoverage);
 		el.style.cssText = `left:${pos.origemX}px;top:${pos.origemY}px;height:${beamHeight}px;width:0px;transform:translate(0,-50%) rotate(${pos.anguloAuto}deg);transition:width ${overlay.durationMs}ms ease-out`;
+		applyBeamTone(el, overlay.beamTone);
 		els.arena.appendChild(el);
 		// force reflow — garante que width:0 está committed antes de aplicar width alvo para a transição CSS
 		void el.getBoundingClientRect();

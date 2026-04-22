@@ -9,8 +9,8 @@
  *   anim           — animation controller ({ wait, rodarTimeline })
  */
 export function createClashSystem() {
-    const BEAM_TOUCH_EARLY_MULTIPLIER = 1.35;
-    const BEAM_FRONT_REACH_RATIO = 0.82;
+    const BEAM_TOUCH_EARLY_MULTIPLIER = 0.7;
+    const BEAM_FRONT_REACH_RATIO = 1.8;
 
     return { runClash };
 
@@ -487,8 +487,8 @@ export function createClashSystem() {
     }
 
     function beamPairTouched(ref1, ref2) {
-        const seg1 = getBeamSegmentFromTip(ref1);
-        const seg2 = getBeamSegmentFromTip(ref2);
+        const seg1 = getBeamSegmentAtual(ref1);
+        const seg2 = getBeamSegmentAtual(ref2);
         if (!seg1 || !seg2) return false;
 
         const tolerance = (getBeamHalfThickness(ref1) + getBeamHalfThickness(ref2)) * BEAM_TOUCH_EARLY_MULTIPLIER;
@@ -496,8 +496,8 @@ export function createClashSystem() {
     }
 
     function beamFrontsReached(ref1, ref2) {
-        const seg1 = getBeamSegmentFromTip(ref1);
-        const seg2 = getBeamSegmentFromTip(ref2);
+        const seg1 = getBeamSegmentAtual(ref1);
+        const seg2 = getBeamSegmentAtual(ref2);
         if (!seg1 || !seg2) return false;
 
         const tipDist1 = Math.hypot(seg1.end.x - seg1.start.x, seg1.end.y - seg1.start.y);
@@ -511,17 +511,37 @@ export function createClashSystem() {
         return (tipDist1 + tipDist2) >= (originDist * BEAM_FRONT_REACH_RATIO);
     }
 
-    function getBeamSegmentFromTip(ref) {
+    function getBeamSegmentAtual(ref) {
         const pos = ref?.pos;
         if (!pos || !ref?.el?.isConnected) return null;
 
-        const tip = getCenterInArena(ref);
+        const beamFront = getBeamFrontInArena(ref) ?? getCenterInArena(ref);
         return {
             start: {
                 x: Number(pos.origemX ?? 0),
                 y: Number(pos.origemY ?? 0),
             },
-            end: tip,
+            end: beamFront,
+        };
+    }
+
+    function getBeamFrontInArena(ref) {
+        if (!ref?.beamEl?.isConnected) return null;
+
+        const originX = Number(ref?.pos?.origemX ?? 0);
+        const originY = Number(ref?.pos?.origemY ?? 0);
+        const deltaX = Number(ref?.pos?.alvoX ?? 0) - originX;
+        const deltaY = Number(ref?.pos?.alvoY ?? 0) - originY;
+        const magnitude = Math.hypot(deltaX, deltaY);
+        if (magnitude <= 1e-6) return null;
+
+        const dirX = deltaX / magnitude;
+        const dirY = deltaY / magnitude;
+        const currentWidth = parseFloat(getComputedStyle(ref.beamEl).width) || 0;
+
+        return {
+            x: originX + (dirX * currentWidth),
+            y: originY + (dirY * currentWidth),
         };
     }
 

@@ -179,7 +179,7 @@ class Miku extends Personagem {
                             'frontOffsetPx' => 90,
                             'startOffsetX' => -60,
                             'startOffsetY' => 10,
-                            'beamTone' => 'pink',
+                            'beamTone' => '#00f7ff',
                         ],
                     ],
                 ],
