@@ -1,16 +1,16 @@
+# Stage 1 — build Vue app
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY frontend/package*.json ./
+RUN npm ci
+COPY frontend/ .
+RUN npm run build
+
+# Stage 2 — PHP + Apache
 FROM php:8.4-apache
 
-WORKDIR /var/www/html
+COPY --from=builder /app/ /var/www/html/frontend/
+COPY backend/ /var/www/html/backend/
 
-# Define ServerName global para evitar aviso AH00558 no startup do Apache.
-RUN printf "ServerName localhost\n" > /etc/apache2/conf-available/servername.conf \
-	&& a2enconf servername
-
-COPY . /var/www/html
-
-# Garante permissões de leitura para o conteúdo e gravação de sessão no runtime.
 RUN chown -R www-data:www-data /var/www/html
-
 EXPOSE 80
-
-CMD ["apache2-foreground"]
