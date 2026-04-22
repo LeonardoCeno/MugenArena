@@ -4,7 +4,9 @@ import { createClashSystem } from '../libs/clash-system.js'
 import { createAudioController, AUDIO_DOMAIN_BREAK } from '../libs/audio-controller.js'
 import { startBlackHoleAnimation } from '../libs/black-hole-animation.js'
 
-const API_URL = '../backend/web_api.php'
+const API_URL = import.meta.env.DEV
+  ? '/backend/web_api.php'
+  : '../backend/web_api.php'
 
 export const FUNDOS_ARENA = [
   'BEACH 2.png','BEACH NIGHT.png','BEACH.png','CAVE 2.png','CAVE NIGHT.png','CAVE.png',

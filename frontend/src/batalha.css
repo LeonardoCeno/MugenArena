@@ -64,6 +64,8 @@ body {
 }
 
 /* ===== BATTLE APP CONTAINER ===== */
+#app { display: contents; }
+
 .battle-app {
   width: 100%;
   height: 100dvh;

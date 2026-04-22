@@ -5,6 +5,14 @@ export default defineConfig({
   root: '.',
   base: './',
   plugins: [vue()],
+  server: {
+    proxy: {
+      '/backend': {
+        target: 'http://127.0.0.1:8080',
+        changeOrigin: false,
+      },
+    },
+  },
   build: {
     outDir: '.',
     emptyOutDir: false,
