@@ -12,9 +12,5 @@ FROM php:8.4-apache
 COPY --from=builder /app/ /var/www/html/frontend/
 COPY backend/ /var/www/html/backend/
 
-RUN chown -R www-data:www-data /var/www/html && \
-    echo '<html><head><meta http-equiv="refresh" content="0;url=/frontend/"></head></html>' \
-    > /var/www/html/index.html && \
-    a2enmod rewrite
-
+RUN chown -R www-data:www-data /var/www/html
 EXPOSE 80

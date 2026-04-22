@@ -11,7 +11,7 @@
         >→</button>
 
         <button
-          v-else-if="slot && slot.type"
+          v-else-if="slot?.type"
           :disabled="resolving"
           :class="{ 'is-disabled-by-energy': slot.semEnergia }"
           :tabindex="(slot.semEnergia || resolving) ? -1 : 0"
@@ -57,9 +57,8 @@ const slots = computed(() => {
   const page = props.page % totalPaginas.value
   const start = page * ACOES_POR_PAGINA
   const pagina = acoes.value.slice(start, start + ACOES_POR_PAGINA)
-  while (pagina.length < ACOES_POR_PAGINA) pagina.push(null)
   // layout: slot0, slot1, ARROW(idx2), slot2
-  return [pagina[0], pagina[1], null, pagina[2]]
+  return [pagina[0] ?? null, pagina[1] ?? null, null, pagina[2] ?? null]
 })
 
 function nextPage() {

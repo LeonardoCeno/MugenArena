@@ -75,20 +75,22 @@ export async function carregarCatalogo() {
 export function atualizarEstado(novoEstado, mostrarDano = false) {
   const anterior = state.serverState
   state.serverState = novoEstado
+
+  if ((novoEstado?.domainTurnsRemaining ?? 0) === 0 && state.domainImage !== null) {
+    state.domainImage = null
+    state.domainImageVersion = 0
+  }
+
   if (!mostrarDano || !anterior?.started || !novoEstado?.started) return
   animations?.feedbackDano(anterior, novoEstado)
 }
 
 function limparPosePendente(chave = null) {
-  if (chave) {
-    state.pendingSprites[chave] = null
-    state.pendingFrameScale[chave] = null
-    return
+  const chaves = chave ? [chave] : ['p1', 'p2']
+  for (const k of chaves) {
+    state.pendingSprites[k] = null
+    state.pendingFrameScale[k] = null
   }
-  state.pendingSprites.p1 = null
-  state.pendingSprites.p2 = null
-  state.pendingFrameScale.p1 = null
-  state.pendingFrameScale.p2 = null
 }
 
 function aplicarPosePendenteDeDomain(chave, acao) {
@@ -198,6 +200,8 @@ async function executarTurnoDomainClash(acoesMap, clashMeta) {
     cleanupSplit()
     state.sprites.p1 = null; state.sprites.p2 = null
     state.frameScale.p1 = null; state.frameScale.p2 = null
+    state.domainImage = null
+    state.domainImageVersion = 0
     limparPosePendente()
     _atualizarHUDCallback?.()
     animations.textoFlutuante('p1', 'domain break')
@@ -348,6 +352,8 @@ export async function processarAcao(acao, { adicionarLog, esconderPreview, habil
 
     if (domainCancel?.playerKey) {
       animations.textoFlutuante(domainCancel.playerKey, String(domainCancel.text || 'domain failed'))
+      state.domainImage = null
+      state.domainImageVersion = 0
     }
     if (mensagem) adicionarLog(mensagem)
     if (resposta.state?.winner) await animations.animarMorte(oposto(resposta.state.winner))

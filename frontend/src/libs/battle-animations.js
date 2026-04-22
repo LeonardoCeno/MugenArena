@@ -292,8 +292,6 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		state.sprites.p2 = null;
 		state.frameScale.p1 = null;
 		state.frameScale.p2 = null;
-		state.domainImage = null;
-		state.domainImageVersion = 0;
 		els.arena
 			?.querySelectorAll(".arena-action-overlay, .arena-energy-beam, .fighter-action-overlay, .domain-clash-ring, .domain-clash-split, .domain-clash-blackout, .domain-break-background")
 			.forEach(el => el.remove());

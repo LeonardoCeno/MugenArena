@@ -67,7 +67,7 @@
         @action="onActionSelected"
         @page-change="onPageChange"
         @preview="onPreview"
-        @hide-preview="onHidePreview"
+        @hide-preview="esconderPreview"
       />
     </section>
   </section>
@@ -114,20 +114,26 @@ const currentPlayerEnergy = computed(() => {
 })
 
 const arenaStyle = computed(() => {
-  const domainImg = props.domainImage || props.arenaFundo
-  if (!domainImg) return {}
-  const overlay = props.domainImage
-    ? 'linear-gradient(rgba(20,22,32,0.25),rgba(20,22,32,0.25)), '
-    : ''
-  const versioned = props.domainImage
-    ? `${domainImg}${domainImg.includes('?') ? '&' : '?'}v=${props.domainImageVersion}`
-    : domainImg
-  return {
-    backgroundImage: `${overlay}url('${versioned}')`,
-    backgroundSize: 'cover',
-    backgroundPosition: 'center',
-    backgroundRepeat: 'no-repeat',
+  if (props.domainImage) {
+    const sep = props.domainImage.includes('?') ? '&' : '?'
+    const versioned = `${props.domainImage}${sep}v=${props.domainImageVersion}`
+    const overlay = 'linear-gradient(rgba(20,22,32,0.25),rgba(20,22,32,0.25))'
+    return {
+      backgroundImage: `${overlay}, url('${versioned}')`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      backgroundRepeat: 'no-repeat',
+    }
   }
+  if (props.arenaFundo) {
+    return {
+      backgroundImage: `url('${props.arenaFundo}')`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      backgroundRepeat: 'no-repeat',
+    }
+  }
+  return {}
 })
 
 function adicionarLog(texto) {
@@ -169,11 +175,9 @@ function onPageChange(newPage) { state.actionPage = newPage }
 function onPreview(slot) {
   if (!slot?.type) return
   previewTitle.value = slot.nomeSprite || slot.nome
-  previewText.value  = (slot.description?.trim()) || 'Ação de combate sem descrição detalhada.'
+  previewText.value  = slot.description?.trim() || 'Ação de combate sem descrição detalhada.'
   previewing.value   = true
 }
-
-function onHidePreview() { esconderPreview() }
 
 onMounted(() => {
   const els = {

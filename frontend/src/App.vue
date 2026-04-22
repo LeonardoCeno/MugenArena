@@ -54,14 +54,16 @@
     />
 
     <GameSetup
-      v-if="phase === 'setup' || transitioningToBattle"
-      :style="transitioningToBattle ? 'pointer-events:none' : ''"
+      v-if="phase === 'setup' || transitioningToBattle || transitioningToSetup"
+      :class="transitioningToSetup ? 'is-transition-ready' : ''"
+      :style="transitioningToBattle ? 'position:absolute;inset:0;pointer-events:none;z-index:5' : ''"
       :catalog="catalog"
       @start-game="onStartGame"
     />
 
     <BattleArena
       v-if="phase === 'battle'"
+      :style="transitioningToBattle ? 'visibility:hidden' : ''"
       :server-state="state.serverState"
       :action-page="state.actionPage"
       :resolving="state.resolvendoAcao"
@@ -70,7 +72,7 @@
       :domain-image-version="state.domainImageVersion"
       :pending-start-args="pendingStartArgs"
       @ready="pendingStartArgs = null"
-      @battle-setup="transitioningToBattle = false"
+      @battle-setup="onBattleSetup"
       @reset="onReset"
     />
   </main>
@@ -87,7 +89,9 @@ const phase = ref('intro')
 const appClass = ref('is-intro')
 const catalog = ref([])
 const pendingStartArgs = ref(null)
+const pendingArenaFundo = ref(null)
 const transitioningToBattle = ref(false)
+const transitioningToSetup = ref(false)
 const tutorialOpen = ref(false)
 const tutorialHtml = ref('')
 const tutorialLoaded = ref(false)
@@ -112,13 +116,14 @@ const turnInfo = computed(() => {
 function wait(ms) { return new Promise(r => setTimeout(r, ms)) }
 
 async function abrirSetup() {
-  requestAnimationFrame(() => {
-    appClass.value = 'is-entering-setup'
-    const introEl = document.querySelector('.intro-screen')
-    if (introEl) introEl.classList.add('is-leaving')
-  })
+  transitioningToSetup.value = true
+  await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
+  appClass.value = 'is-entering-setup'
+  const introEl = document.querySelector('.intro-screen')
+  if (introEl) introEl.classList.add('is-leaving')
   await wait(820)
   phase.value = 'setup'
+  transitioningToSetup.value = false
   appClass.value = ''
 }
 
@@ -148,18 +153,17 @@ function fecharTutorial() { tutorialOpen.value = false }
 
 function onToggleMute() {
   audioMuted.value = !audioMuted.value
-  const audioLib = window.__mugenAudio
-  if (audioLib) audioLib.toggleMute()
+  window.__mugenAudio?.toggleMute()
 }
 
 function onVolume(e) {
-  volume.value = e.target.value
-  const audioLib = window.__mugenAudio
-  if (audioLib) audioLib.setVolume(e.target.value)
+  const value = e.target.value
+  volume.value = value
+  window.__mugenAudio?.setVolume(value)
 }
 
 async function onStartGame({ p1Name, p2Name, p1Class, p2Class }) {
-  state.arenaFundo = `./assets/fundosdojogo/${encodeURIComponent(
+  pendingArenaFundo.value = `./assets/fundosdojogo/${encodeURIComponent(
     FUNDOS_ARENA[Math.floor(Math.random() * FUNDOS_ARENA.length)]
   )}`
   transitioningToBattle.value = true
@@ -168,9 +172,16 @@ async function onStartGame({ p1Name, p2Name, p1Class, p2Class }) {
   appClass.value = 'is-playing'
 }
 
+function onBattleSetup() {
+  transitioningToBattle.value = false
+  state.arenaFundo = pendingArenaFundo.value
+  pendingArenaFundo.value = null
+}
+
 function onReset() {
   resetarEstado()
   transitioningToBattle.value = false
+  pendingArenaFundo.value = null
   phase.value = 'setup'
   appClass.value = ''
 }

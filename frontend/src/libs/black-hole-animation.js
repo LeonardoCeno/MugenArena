@@ -187,7 +187,7 @@ export function startBlackHoleAnimation({ onBattleSetup } = {}) {
                 el.style.transition = '';
               }));
             });
-            if (onBattleSetup) onBattleSetup();
+            onBattleSetup?.();
           }
         }
 
