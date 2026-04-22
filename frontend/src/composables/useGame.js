@@ -6,7 +6,7 @@ import { startBlackHoleAnimation } from '../../black-hole-animation.js'
 
 const API_URL = '../backend/web_api.php'
 
-const FUNDOS_ARENA = [
+export const FUNDOS_ARENA = [
   'BEACH 2.png','BEACH NIGHT.png','BEACH.png','CAVE 2.png','CAVE NIGHT.png','CAVE.png',
   'DESERT NIGHT.png','DESERT.png','LAKE NIGHT.png','LAKE.png','MOUNTAIN 2.png',
   'MOUNTAIN NIGHT.png','MOUNTAIN.png','OCEAN NIGHT.png','OCEAN.png','PATH 2.png',
@@ -18,6 +18,7 @@ export const state = reactive({
   serverState: null,
   resolvendoAcao: false,
   actionPage: 0,
+  anim: null,
   sprites: { p1: null, p2: null },
   frameScale: { p1: null, p2: null },
   pendingSprites: { p1: null, p2: null },
@@ -33,6 +34,8 @@ let clashSystem = null
 let audio = null
 let _atualizarHUDCallback = null
 
+// Called once from BattleArena.vue onMounted. Safe to call again on remount
+// (resetarEstado cancels in-flight animations before re-init).
 export function initLibs({ els, atualizarHUD }) {
   _atualizarHUDCallback = atualizarHUD
   animations = createAnimationController({ state, els, atualizarHUD })
@@ -243,7 +246,7 @@ async function executarTurnoDomainClash(acoesMap, clashMeta) {
 }
 
 export async function processarAcao(acao, { adicionarLog, esconderPreview, habilitarBotoes, montarAcoes }) {
-  if (state.resolvendoAcao || !state.serverState?.started || state.serverState.winner) return
+  if (state.resolvendoAcao || !state.serverState?.started || state.serverState.winner) return {}
 
   esconderPreview()
   state.resolvendoAcao = true
@@ -252,6 +255,8 @@ export async function processarAcao(acao, { adicionarLog, esconderPreview, habil
   const atacanteKey = state.serverState.currentKey
   const errorSplash = state.serverState[atacanteKey]?.visual?.errorSplash ?? null
   animations.cancelarAnimacao()
+
+  let didReset = false
 
   try {
     const resposta = await chamarApi('action', {
@@ -263,6 +268,7 @@ export async function processarAcao(acao, { adicionarLog, esconderPreview, habil
     const mensagem = resposta.message || null
 
     if (resposta.state?.started === false) {
+      didReset = true
       limparPosePendente()
       if (errorSplash) await animations.mostrarSplashErroInsano(errorSplash, 3000)
       if (mensagem) adicionarLog(mensagem)
@@ -352,10 +358,12 @@ export async function processarAcao(acao, { adicionarLog, esconderPreview, habil
     _atualizarHUDCallback?.()
     adicionarLog(`Erro ao executar ação: ${erro.message || 'falha desconhecida.'}`)
   } finally {
-    state.actionPage = 0
-    montarAcoes()
-    state.resolvendoAcao = false
-    habilitarBotoes(true)
+    if (!didReset) {
+      state.actionPage = 0
+      montarAcoes()
+      state.resolvendoAcao = false
+      habilitarBotoes(true)
+    }
   }
   return {}
 }
