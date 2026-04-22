@@ -215,5 +215,5 @@ watch(() => props.pendingStartArgs, async (args) => {
     adicionarLog('Confirme se o servidor está rodando em http://127.0.0.1:8080')
     emit('reset')
   }
-})
+}, { immediate: true })
 </script>
