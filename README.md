@@ -6,9 +6,10 @@ Jogo de batalha por turnos com frontend Vue 3 e backend PHP 8.
 ## Rodar com Docker (recomendado)
 
 Requisito: [Docker](https://docs.docker.com/get-docker/) instalado.
+Se voce clonou em uma pasta vazia, usa "cd MugenArena", dai roda o comando, se voce clonou direto pode rodar direto.
 
 ```bash
-docker compose up -d --build
+docker compose up -d --build 
 ```
 
 Acessa em: `http://localhost:8080`
@@ -23,16 +24,16 @@ docker compose down
 
 Requisitos: PHP 8.2+ e Node.js 20+.
 
-**Terminal 1 — backend PHP:**
+**Terminal 1 — backend PHP** (rodar na raiz do projeto):
 
 ```bash
-php -S 127.0.0.1:8080 (dentro da pasta do projeto)
+php -S 127.0.0.1:8080
 ```
 
 **Terminal 2 — frontend Vue:**
 
 ```bash
-cd frontend (esse tem que ser na pasta do frontend)
+cd frontend
 npm install
 npm run dev
 ```
