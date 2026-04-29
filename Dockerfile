@@ -9,7 +9,7 @@ RUN npm run build
 # Stage 2 — PHP + Apache
 FROM php:8.4-apache
 
-COPY --from=builder /app/ /var/www/html/frontend/
+COPY --from=builder /app/ /var/www/html/
 COPY backend/ /var/www/html/backend/
 
 RUN chown -R www-data:www-data /var/www/html

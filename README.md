@@ -1,38 +1,45 @@
-<<<<<<< HEAD
-# Jogo de Combate por Turnos (PHP)
-=======
 
+# MugenArena
 
-Projeto de batalha por turnos com dois modos de execução:
-
-- **Web** via `frontend/batalha.html` + `backend/web_api.php`
-- **Terminal (CLI)** via `backend/index.php`
+Jogo de batalha por turnos com frontend Vue 3 e backend PHP 8.
 
 ## Rodar com Docker (recomendado)
 
-Requisitos: [Docker](https://docs.docker.com/get-docker/) instalado.
+Requisito: [Docker](https://docs.docker.com/get-docker/) instalado.
 
 ```bash
-docker compose up --build
+docker compose up -d --build
 ```
 
-Abra no navegador: `http://localhost:8080/frontend/batalha.html`
+Acessa em: `http://localhost:8080`
+
+Para parar:
+
+```bash
+docker compose down
+```
 
 ## Rodar sem Docker
 
-Requisitos: PHP 8.2+
+Requisitos: PHP 8.2+ e Node.js 20+.
+
+**Terminal 1 — backend PHP:**
 
 ```bash
-php -S 127.0.0.1:8080
+php -S 127.0.0.1:8080 (dentro da pasta do projeto)
 ```
 
-Abra no navegador: `http://127.0.0.1:8080/frontend/batalha.html`
-
-## Rodar no Terminal (CLI)
+**Terminal 2 — frontend Vue:**
 
 ```bash
-php backend/index.php
+cd frontend (esse tem que ser na pasta do frontend)
+npm install
+npm run dev
 ```
+
+Acessa em: `http://localhost:5173`
+
+> O frontend em dev usa proxy — o PHP **deve** rodar na porta 8080 com o root apontando para a raiz do projeto (não para `backend/`).
 
 ## Estrutura
 
@@ -46,15 +53,7 @@ backend/
   characters/          # Um subdiretório por personagem
 
 frontend/
-  batalha.html         # Interface web
-  batalha.css          # Estilos
-  app.js               # Orquestrador principal
-  ui-status.js         # HUD e ações
-  battle-animations.js # Engine de animações
-  assets/              # Sprites por personagem
+  index.html           # Entry point
+  src/                 # Código-fonte Vue
+  assets/              # Sprites, sons e fundos por personagem
 ```
-
-## Observações
-
-- As configurações visuais por personagem (sprites e animações) são declaradas nas classes PHP e enviadas pela API ao frontend.
-- Para o modo Web sem Docker, use servidor local (`http://`), não `file://`.
