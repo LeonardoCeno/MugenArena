@@ -9,6 +9,8 @@ class Escanor extends Personagem {
 	const DANO_SOL_CRUEL = 65;
 	const CUSTO_CURA_SOLAR = 100;
 	const CURA_SOLAR = 100;
+	const CUSTO_SUN_BARRAGE = 70;
+	const DANO_SUN_BARRAGE = 80;
 	const REGENERACAO_PROPRIA = 35;
 
 	public function __construct(string $nome) {
@@ -42,6 +44,12 @@ class Escanor extends Personagem {
 		return $mensagem;
 	}
 
+	public function sunBarrage(Personagem $alvo): string {
+		$this->consumirEnergia(self::CUSTO_SUN_BARRAGE);
+		$resultado = $this->executarAtaqueDireto($alvo, 'Sun Barrage', self::DANO_SUN_BARRAGE);
+		return $resultado['mensagem'];
+	}
+
 	public function usarHabilidadeEspecial(Personagem $alvo): string {
 		return $this->solCruel($alvo);
 	}
@@ -64,6 +72,13 @@ class Escanor extends Personagem {
                 "priority" => true,
 			],
 			[
+				'nome' => 'Sun Barrage',
+				'metodo' => 'sunBarrage',
+				'precisaAlvo' => true,
+				'energyCost' => self::CUSTO_SUN_BARRAGE,
+				"melee" => true
+			],
+			[
 				'nome' => 'Sun Heal',
 				'metodo' => 'curaSolar',
 				'precisaAlvo' => false,
@@ -75,6 +90,7 @@ class Escanor extends Personagem {
 	public function getDescricoesAcoes(): array {
 		return array_merge(parent::getDescricoesAcoes(), [
 			'Sol Cruel' => 'Você apagou o meu sol...? quem disse isso? queimadura por 2 turnos.' . "\n" . 'Dano: ' . self::DANO_SOL_CRUEL . ' Custo: ' . self::CUSTO_SOL_CRUEL,
+			'Sun Barrage' => 'Uma rajada de golpes imbuídos do calor do sol.' . "\n" . 'Dano: ' . self::DANO_SUN_BARRAGE . ' Custo: ' . self::CUSTO_SUN_BARRAGE,
 			'Sun Heal' => 'Você me deu dano? quem disse isso?.' . "\n" . 'Cura: ' . self::CURA_SOLAR . ' Custo: ' . self::CUSTO_CURA_SOLAR,
 		]);
 	}
@@ -157,6 +173,27 @@ class Escanor extends Personagem {
                             'scale' => 2.5,
                         ],
                     ],
+				],
+				'Sun Barrage' => [
+					'audio' => [
+						[
+							'file' => './assets/audiosgerais/punchs2.mp3',
+							'startMs' => 0,
+							'durationMs' => 1200,
+						],
+					],
+					'frames' => [
+						[
+							'sprite' => './assets/escanor/sprites/ESCANORHIT1.png',
+							'durationMs' => 200,
+						],
+						[
+							'sprite' => './assets/escanor/sprites/ESCANORHIT2.png',
+							'durationMs' => 200,
+							'scale' => 1.1,
+						],
+					],
+					'repeatFrames' => 5,
 				],
 				'Sun Heal' => [
 					'frames' => [

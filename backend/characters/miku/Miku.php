@@ -156,7 +156,7 @@ class Miku extends Personagem {
                         [
                             'file' => './assets/miku/audios/mikubeam.mp3',
                             'startMs' => 0,
-                            'durationMs' => 3000,
+                            'durationMs' => 3300,
                         ],
                     ],
                     'frames' => [
