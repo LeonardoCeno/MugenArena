@@ -15,6 +15,7 @@ trait GameSetup
             'ubuntu'       => Ubuntu::class,
             'ubuntukiller' => UbuntuKiller::class,
             'profe'        => Profe::class,
+            'escanor'      => Escanor::class,
         ];
     }
 

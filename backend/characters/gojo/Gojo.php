@@ -85,6 +85,7 @@ class Gojo extends Personagem {
                             'file' => './assets/audiosgerais/punchs2.mp3',
                             'startMs' => 0,
                             'durationMs' => 1300,
+                            'volumeLevel' => 0.7,
                         ],
                     ],
                     'frames' => [

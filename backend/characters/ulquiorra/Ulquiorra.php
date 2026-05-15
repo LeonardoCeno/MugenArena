@@ -107,6 +107,14 @@ class Ulquiorra extends Personagem {
                             'durationMs' => 500,
                         ],
                     ],
+                    'audio' => [
+                        [
+                            'file' => './assets/audiosgerais/corte.mp3',
+                            'startMs' => 400,
+                            'durationMs' => 1200,
+                            'volumeLevel' => 0.8,
+                        ],
+                    ],
                 ],
                 'Cero' => [
                     'frames' => [

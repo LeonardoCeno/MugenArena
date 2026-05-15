@@ -157,7 +157,7 @@ class Sukuna extends Personagem {
             'actions'    => [
                 'Ataque' => [
                     'audio' => [
-                        ['file' => './assets/audiosgerais/punchs2.mp3', 'startMs' => 0, 'durationMs' => 1300],
+                        ['file' => './assets/audiosgerais/punchs2.mp3', 'startMs' => 0, 'durationMs' => 1300, 'volumeLevel' => 0.9,],
                     ],
                     'frames' => [
                         ['sprite' => './assets/sukuna/sprites/sukuachute1.png',      'durationMs' => 450],
