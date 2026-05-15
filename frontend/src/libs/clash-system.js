@@ -12,7 +12,7 @@ export function createClashSystem() {
     const BEAM_TOUCH_EARLY_MULTIPLIER = 0.7;
     const BEAM_FRONT_REACH_RATIO = 1.8;
 
-    return { runClash };
+    return { runClash, runClashQTE };
 
     async function runClash(ref1, ref2, clashMeta, postEvents1, postEvents2, anim, refs1 = [], refs2 = []) {
         const overlapResult = await waitForOverlap(ref1, ref2, 0.45, calcularTimeoutDeClash(ref1, ref2));
@@ -21,6 +21,79 @@ export function createClashSystem() {
         if (overlapResult !== "overlap" && overlapResult !== "timeout") return;
 
         await executarClashSincronizado(ref1, ref2, clashMeta, postEvents1, postEvents2, anim, refs1, refs2);
+    }
+
+    /**
+     * QTE variant: waits for overlap, freezes projectiles, calls onQTEReady(arenaEl)
+     * which should run the QTE and return 'p1' or 'p2', then continues with the winner.
+     */
+    async function runClashQTE(ref1, ref2, postEvents1, postEvents2, anim, refs1, refs2, onQTEReady) {
+        const overlapResult = await waitForOverlap(ref1, ref2, 0.45, calcularTimeoutDeClash(ref1, ref2));
+
+        if (!ref1.el.isConnected || !ref2.el.isConnected) return null;
+        if (overlapResult !== "overlap" && overlapResult !== "timeout") return null;
+
+        if (ref1.el.isConnected) freezeAtCurrentPosition(ref1);
+        if (ref2.el.isConnected) freezeAtCurrentPosition(ref2);
+
+        const ref1Anchor = ref1.el.isConnected ? getCenterInArena(ref1) : null;
+        const ref2Anchor = ref2.el.isConnected ? getCenterInArena(ref2) : null;
+        const stopSync1  = monitorarProjeteisSecundarios(refs1, ref1, ref1Anchor, anim);
+        const stopSync2  = monitorarProjeteisSecundarios(refs2, ref2, ref2Anchor, anim);
+
+        const arena    = getArenaElement(ref1) ?? getArenaElement(ref2);
+        const midpoint = (ref1Anchor && ref2Anchor)
+            ? { x: (ref1Anchor.x + ref2Anchor.x) / 2, y: (ref1Anchor.y + ref2Anchor.y) / 2 }
+            : ref1Anchor ?? ref2Anchor;
+
+        // Keep light alive (very long duration) until QTE resolves
+        const cleanupLight      = criarLuzDeClash(ref1, ref2, 999_999);
+        const cleanupArenaShake = aplicarShakeArena(arena);
+
+        if (midpoint) {
+            criarFlashDeImpacto(arena, midpoint);
+            criarAnelDeChoque(arena, midpoint);
+            setTimeout(() => criarAnelDeChoque(arena, midpoint, true), 160);
+        }
+
+        if (ref1.el.isConnected) ref1.el.classList.add("clash-shaking");
+        if (ref2.el.isConnected) ref2.el.classList.add("clash-shaking");
+
+        // Hand off to the QTE callback — it shows the overlay and returns winner
+        const winner = await onQTEReady(arena);
+
+        await anim.wait(1000);
+
+        cleanupLight(true);
+        cleanupArenaShake();
+        stopSync1();
+        stopSync2();
+
+        const winnerRef  = winner === "p1" ? ref1 : ref2;
+        const loserRef   = winner === "p1" ? ref2 : ref1;
+        const winnerPost = winner === "p1" ? postEvents1 : postEvents2;
+        const winnerRefs = winner === "p1" ? refs1 : refs2;
+        const loserRefs  = winner === "p1" ? refs2 : refs1;
+
+        removerProjeteisSecundarios(loserRefs, loserRef);
+
+        if (loserRef.el.isConnected) {
+            loserRef.el.classList.remove("clash-shaking");
+            loserRef.el.remove();
+        }
+        loserRef.animation.cancel();
+        loserRef.beamEl?.remove();
+
+        if (winnerRef.el.isConnected) {
+            await continuarFormacaoAteAlvo(winnerRefs, winnerRef, anim);
+        }
+
+        if (winnerPost.length > 0) {
+            const handle = anim.rodarTimeline(winnerPost);
+            await anim.wait(handle.duration);
+        }
+
+        return winner;
     }
 
     async function executarClashSincronizado(ref1, ref2, clashMeta, postEvents1, postEvents2, anim, refs1, refs2) {

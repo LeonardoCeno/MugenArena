@@ -162,12 +162,12 @@ function onVolume(e) {
   window.__mugenAudio?.setVolume(value)
 }
 
-async function onStartGame({ p1Name, p2Name, p1Class, p2Class }) {
+async function onStartGame({ p1Name, p2Name, p1Class, p2Class, clashMode }) {
   pendingArenaFundo.value = `./assets/fundosdojogo/${encodeURIComponent(
     FUNDOS_ARENA[Math.floor(Math.random() * FUNDOS_ARENA.length)]
   )}`
   transitioningToBattle.value = true
-  pendingStartArgs.value = { p1Name, p2Name, p1Class, p2Class }
+  pendingStartArgs.value = { p1Name, p2Name, p1Class, p2Class, clashMode: clashMode ?? 'random' }
   phase.value = 'battle'
   appClass.value = 'is-playing'
 }

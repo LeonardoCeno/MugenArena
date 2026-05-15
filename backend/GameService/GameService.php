@@ -75,6 +75,18 @@ class GameService {
 
         if ($game['pendingActions']['p1'] !== null && $game['pendingActions']['p2'] !== null) {
             $resultado = self::resolverRodada($game);
+
+            // QTE pendente: informa o frontend para resolver via quick-time event
+            if (!empty($resultado['qtePending'])) {
+                return [
+                    'resolved'        => false,
+                    'mensagem'        => null,
+                    'resetJogo'       => false,
+                    'clashQtePending' => true,
+                    'clash'           => $resultado['clash'],
+                ];
+            }
+
             return [
                 'resolved'            => true,
                 'mensagem'            => $resultado['mensagem'],
@@ -88,6 +100,10 @@ class GameService {
         }
 
         return ['resolved' => false, 'mensagem' => null, 'resetJogo' => false];
+    }
+
+    public static function resolverClashQTE(array &$game, ?string $winnerKey): array {
+        return self::resolverClashPendente($game, $winnerKey);
     }
 
     public static function retornaAoSetup(array $game, string $playerKey, string $actionType, ?int $skillIndex = null): bool {

@@ -93,6 +93,19 @@ trait TurnExecution
         return $metodo !== null && $player->retornaAoSetup($metodo);
     }
 
+    private static function resultadoClashQtePendente(string $kind): array {
+        return [
+            'mensagem'            => '',
+            'resetJogo'           => false,
+            'resolucaoOrdem'      => [],
+            'mensagensResolucao'  => [],
+            'estadoIntermediario' => null,
+            'domainCancel'        => null,
+            'clash'               => ['occurred' => true, 'mode' => 'qte', 'kind' => $kind],
+            'qtePending'          => true,
+        ];
+    }
+
     private static function decidirVencedorDoClash(bool $p1HasPriority, bool $p2HasPriority, string $kind = 'projectile'): array {
         if ($kind === 'domain' && $p1HasPriority === $p2HasPriority) {
             $roll = random_int(1, 100);
@@ -139,12 +152,18 @@ trait TurnExecution
      * Apenas o vencedor executa sua ação; o perdedor é cancelado.
      * Retorna o array de resultado padrão + chave 'clash'.
      */
-    private static function resolverClash(array &$game, array $a1, array $a2, string $kind): array {
-        [$winnerKey, $durationMs, $bothFailed] = self::decidirVencedorDoClash(
-            self::acaoTemPrioridadeBruta($game['p1'], $a1),
-            self::acaoTemPrioridadeBruta($game['p2'], $a2),
-            $kind
-        );
+    private static function resolverClash(array &$game, array $a1, array $a2, string $kind, ?string $forcedWinner = null): array {
+        if ($forcedWinner !== null) {
+            $winnerKey  = in_array($forcedWinner, ['p1', 'p2'], true) ? $forcedWinner : null;
+            $bothFailed = ($winnerKey === null);
+            $durationMs = 1000;
+        } else {
+            [$winnerKey, $durationMs, $bothFailed] = self::decidirVencedorDoClash(
+                self::acaoTemPrioridadeBruta($game['p1'], $a1),
+                self::acaoTemPrioridadeBruta($game['p2'], $a2),
+                $kind
+            );
+        }
 
         if ($bothFailed) {
             $game['p1']->receberDano(20);
@@ -211,13 +230,31 @@ trait TurnExecution
         $a1 = $game['pendingActions']['p1'];
         $a2 = $game['pendingActions']['p2'];
 
-        // Domain clash: ambos ativaram domínio — apenas o vencedor age
+        // Domain clash: ambos ativaram domínio
         if (self::acaoPodeEntrarEmDomainClash($game['p1'], $a1) && self::acaoPodeEntrarEmDomainClash($game['p2'], $a2)) {
+            if (($game['clashMode'] ?? 'random') === 'qte') {
+                $p1Priority = self::acaoTemPrioridadeBruta($game['p1'], $a1);
+                $p2Priority = self::acaoTemPrioridadeBruta($game['p2'], $a2);
+                if ($p1Priority === $p2Priority) {
+                    $game['pendingClash'] = ['kind' => 'domain'];
+                    return self::resultadoClashQtePendente('domain');
+                }
+            }
             return self::resolverClash($game, $a1, $a2, 'domain');
         }
 
-        // Projectile clash: ambos usaram skills clashable — apenas o vencedor age
+        // Projectile clash: ambos usaram skills clashable
         if (self::acaoEhClashavel($game['p1'], $a1) && self::acaoEhClashavel($game['p2'], $a2)) {
+            // Modo QTE: só suspende quando nenhum tem priority; se um tem priority, resolve imediato
+            if (($game['clashMode'] ?? 'random') === 'qte') {
+                $p1Priority = self::acaoTemPrioridadeBruta($game['p1'], $a1);
+                $p2Priority = self::acaoTemPrioridadeBruta($game['p2'], $a2);
+                // QTE quando seria 50/50 (ambos com mesma priority). Um tem e outro não → priority ganha, sem QTE.
+                if ($p1Priority === $p2Priority) {
+                    $game['pendingClash'] = ['kind' => 'projectile'];
+                    return self::resultadoClashQtePendente('projectile');
+                }
+            }
             return self::resolverClash($game, $a1, $a2, 'projectile');
         }
 
@@ -286,11 +323,63 @@ trait TurnExecution
      * Resolve a rodada completa (incluindo turnos auto-skip encadeados).
      * Retorna ['mensagem' => string, 'resetJogo' => bool].
      */
+    public static function resolverClashPendente(array &$game, ?string $winnerKey): array {
+        $pendingClash = $game['pendingClash'] ?? null;
+        if ($pendingClash === null) {
+            throw new EntradaInvalidaException();
+        }
+
+        $kind = $pendingClash['kind'];
+        $a1   = $game['pendingActions']['p1'];
+        $a2   = $game['pendingActions']['p2'];
+
+        if ($a1 === null || $a2 === null) {
+            throw new EntradaInvalidaException();
+        }
+
+        $game['pendingClash'] = null;
+
+        $resultado = self::resolverClash($game, $a1, $a2, $kind, $winnerKey);
+
+        $mensagens = [$resultado['mensagem']];
+        $resetJogo = $resultado['resetJogo'] ?? false;
+
+        $seguranca = 0;
+        while (self::determinarVencedor($game) === null && $seguranca < 6) {
+            self::preencherAcoesSkip($game);
+            if ($game['pendingActions']['p1'] === null || $game['pendingActions']['p2'] === null) {
+                break;
+            }
+            $res2 = self::executarTurnoSimultaneo($game);
+            $mensagens[] = $res2['mensagem'];
+            if ($res2['resetJogo'] ?? false) {
+                $resetJogo = true;
+            }
+            $seguranca++;
+        }
+
+        return [
+            'mensagem'            => implode(' ', array_filter($mensagens)),
+            'resetJogo'           => $resetJogo,
+            'resolucaoOrdem'      => $resultado['resolucaoOrdem'],
+            'mensagensResolucao'  => $resultado['mensagensResolucao'] ?? [],
+            'estadoIntermediario' => $resultado['estadoIntermediario'],
+            'domainCancel'        => $resultado['domainCancel'] ?? null,
+            'clash'               => $resultado['clash'],
+        ];
+    }
+
     private static function resolverRodada(array &$game): array {
         $mensagens = [];
         $resetJogo = false;
 
         $resultado           = self::executarTurnoSimultaneo($game);
+
+        // Clash QTE detectado: suspende resolução e retorna para o frontend resolver
+        if (!empty($resultado['qtePending'])) {
+            return $resultado;
+        }
+
         $mensagens[]         = $resultado['mensagem'];
         $resolucaoOrdem      = $resultado['resolucaoOrdem'];
         $estadoIntermediario = $resultado['estadoIntermediario'];

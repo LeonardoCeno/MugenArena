@@ -1022,8 +1022,8 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		return cleanup;
 	}
 
-	function mostrarTransicaoPosClashDeDomain(fadeOutMs = 1000, fadeInMs = 1000) {
-		if (!els.arena) return wait(fadeOutMs + fadeInMs);
+	function mostrarTransicaoPosClashDeDomain(fadeOutMs = 1000, fadeInMs = 1000, holdMs = 0) {
+		if (!els.arena) return wait(fadeOutMs + holdMs + fadeInMs);
 
 		const overlay = document.createElement("div");
 		overlay.className = "domain-clash-blackout";
@@ -1033,11 +1033,11 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 
 		return new Promise(resolve => {
 			requestAnimationFrame(() => overlay.classList.add("is-dark"));
-			setTimeout(() => overlay.classList.remove("is-dark"), fadeOutMs);
+			setTimeout(() => overlay.classList.remove("is-dark"), fadeOutMs + holdMs);
 			setTimeout(() => {
 				overlay.remove();
 				resolve();
-			}, fadeOutMs + fadeInMs + 40);
+			}, fadeOutMs + holdMs + fadeInMs + 40);
 		});
 	}
 
@@ -1061,11 +1061,14 @@ export function createAnimationController({ state, els, atualizarHUD }) {
 		});
 	}
 
+	function getArenaEl() { return els.arena; }
+
 	return {
 		feedbackDano,
 		textoFlutuante,
 		obterPrimeiroFrameDaAcao,
 		wait,
+		getArenaEl,
 		mostrarSplashErroInsano,
 		mostrarAnelClashDeDomain,
 		mostrarPainelClashDeDomain,

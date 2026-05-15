@@ -4,7 +4,7 @@
 Este documento explica como o projeto funciona de ponta a ponta, com foco em:
 - Arquitetura real do codigo atual
 - Contratos de dados entre backend e frontend
-- Fluxo de turno, clash e domain
+- Fluxo de turno, clash (normal e QTE) e domain
 - Estrutura visual/audio
 - Regras que nao podem ser quebradas
 - Checklist pratico para outra IA editar com seguranca
@@ -15,356 +15,375 @@ Este documento explica como o projeto funciona de ponta a ponta, com foco em:
 
 ### Raiz
 - `compose.yaml`: sobe app PHP+Apache em `:8080`.
-- `Dockerfile`: imagem `php:8.4-apache`, copia projeto para `/var/www/html`.
-- `README.md`: instrucoes de execucao; atualmente contem marcador de conflito Git no topo (`<<<<<<< HEAD`).
-- `backend/`: regra de jogo e API.
-- `frontend/`: UI, animacao, clash visual, audio.
+- `Dockerfile`: imagem `php:8.4-apache`.
+- `backend/`: regra de jogo e API HTTP.
+- `frontend/`: SPA Vue 3 com Vite.
 
 ### Backend
 - `backend/ExcecaoJogo.php`: excecoes de dominio (`ExcecaoJogo`, `EnergiaInsuficienteException`, `EntradaInvalidaException`).
 - `backend/Personagem.php`: classe base com engine de combate e status.
 - `backend/GameService.php`: facade principal que agrega traits.
 - `backend/index.php`: modo CLI para testes manuais.
-- `backend/web_api.php`: endpoint HTTP JSON usado pelo frontend.
+- `backend/web_api.php`: endpoint HTTP JSON.
 - `backend/GameService/Helpers.php`: utilitarios de chave, domain e leitura de skill.
 - `backend/GameService/GameSetup.php`: catalogo de classes, criacao de personagens e estado inicial.
 - `backend/GameService/TurnOrder.php`: prioridade, velocidade, regras de order e cancel de domain.
-- `backend/GameService/TurnExecution.php`: submissao/execucao de acoes e resolucao de rodada.
+- `backend/GameService/TurnExecution.php`: submissao/execucao de acoes, resolucao de rodada e clash QTE.
 - `backend/GameService/StateExport.php`: serializacao do estado para o frontend.
 - `backend/characters/*/*.php`: implementacoes dos personagens e configuracao visual por acao.
 
-### Frontend
-- `frontend/batalha.html`: estrutura da tela (intro, setup, battle, tutorial, HUD, arena).
-- `frontend/batalha.css`: layout e efeitos visuais (inclui beam dinamico por cor via CSS vars).
-- `frontend/app.js`: orquestrador principal do jogo no cliente.
-- `frontend/ui-status.js`: HUD, cards de status, menu de acoes e preview.
-- `frontend/battle-animations.js`: timeline de animacoes, overlays, projeteis, beams, domain VFX.
-- `frontend/clash-system.js`: logica visual do clash (espera overlap, freeze, vencedor continua).
-- `frontend/audio-controller.js`: BGM, audio de domain clash, fade, volume/mute.
-- `frontend/black-hole-animation.js`: transicao de entrada para tela de batalha.
-- `frontend/tutorial-content.html`: conteudo textual do tutorial.
-- `frontend/assets/`: sprites, GIFs, SFX e fundos.
-
-Observacao:
-- Nao existe pasta `docs/` no estado atual do workspace (apesar de referencias antigas em conversa).
+### Frontend (Vue 3 + Vite)
+- `frontend/src/App.vue`: componente raiz — fases (`intro`, `setup`, `battle`), HUD de audio, tutorial.
+- `frontend/src/components/IntroScreen.vue`: tela de abertura.
+- `frontend/src/components/GameSetup.vue`: selecao de personagens + overlay de modo de clash.
+- `frontend/src/components/BattleArena.vue`: arena de batalha, monta HUD, repassa eventos.
+- `frontend/src/composables/useGame.js`: estado reativo global + toda logica de turno, clash e domain.
+- `frontend/src/libs/battle-animations.js`: timeline de animacoes, overlays, projeteis, beams, domain VFX.
+- `frontend/src/libs/clash-system.js`: logica visual do clash (overlap, freeze, vencedor continua, QTE hook).
+- `frontend/src/libs/qte-system.js`: sistema de Quick Time Event para clash modo QTE.
+- `frontend/src/libs/audio-controller.js`: BGM, audio de domain clash, fade, volume/mute.
+- `frontend/src/libs/black-hole-animation.js`: transicao de entrada para tela de batalha.
+- `frontend/src/batalha.css`: layout e todos os estilos (inclui `.clash-select-*`, `.qte-side-panel`, `.domain-clash-blackout`, etc).
 
 ---
 
 ## 2) Backend - modelo de estado e fluxo de API
 
-## 2.1 Endpoint HTTP (`backend/web_api.php`)
-A API e orientada por `action` no body JSON.
+### 2.1 Endpoint HTTP (`backend/web_api.php`)
+Acoes aceitas via campo `action` no body JSON:
 
-Acoes aceitas:
-- `start`: cria partida e salva em sessao.
-- `state`: retorna estado atual.
-- `action`: submete acao de um jogador.
-- `catalog`: retorna personagens disponiveis para selecao.
+| action | descricao |
+|---|---|
+| `start` | Cria partida, salva em sessao |
+| `state` | Retorna estado atual |
+| `action` | Submete acao de um jogador |
+| `resolve_clash` | Resolve clash QTE apos o frontend decidir o vencedor |
+| `catalog` | Retorna personagens disponíveis |
 
-Fluxo:
-1. Recebe JSON (`receberJson`).
-2. Roteia por `switch` de `action`.
-3. Em `action`, chama `GameService::submeterAcao`.
-4. Atualiza `$_SESSION['game']` se a partida nao foi resetada.
-5. Retorna payload com campos de resolucao e estado exportado.
+**Resposta de `action`:**
+```json
+{
+  "ok": true,
+  "resolved": true,
+  "clashQtePending": false,
+  "resolucaoOrdem": ["p1", "p2"],
+  "mensagensResolucao": ["..."],
+  "estadoIntermediario": null,
+  "domainCancel": null,
+  "clash": { "occurred": true, "kind": "domain", "winner": "p1", "bothFailed": false, "durationMs": 1000 },
+  "message": "...",
+  "state": { ... }
+}
+```
 
-Campos importantes de resposta em `action`:
-- `resolved` (bool)
-- `resolucaoOrdem` (array ou null)
-- `mensagensResolucao` (array)
-- `estadoIntermediario` (obj ou null)
-- `domainCancel` (obj ou null)
-- `clash` (obj ou null)
-- `state` (estado completo exportado)
+**Resposta de `resolve_clash`:** mesmos campos, sem `clashQtePending`.
+
+**Campo `clashQtePending`:** retornado como `true` quando ambos submeteram acoes que entrariam em clash e o `clashMode` e `qte`. Nesse caso `resolved` sera `false` e o frontend deve rodar o QTE antes de chamar `resolve_clash`.
 
 ---
 
-## 2.2 Estado de jogo em memoria (sessao)
+### 2.2 Estado de jogo em sessao (`$_SESSION['game']`)
 Criado por `GameSetup::criarEstadoDeJogo`:
 - `p1`, `p2`: instancias de `Personagem`
 - `turno`: inteiro
 - `skipTurns`: `{ p1, p2 }`
 - `pendingActions`: `{ p1, p2 }`
 - `domain`: `{ turnsRemaining, casterKey }`
+- `clashMode`: `'random'` ou `'qte'` — definido no `start` e preservado para a duracao da partida
+- `pendingClash`: `{ kind: 'projectile'|'domain' }` — preenchido quando QTE e necessario; `null` no restante do tempo
 
 Invariantes:
 - `pendingActions` deve existir sempre para os dois lados.
-- `domain` deve manter os campos `turnsRemaining` e `casterKey`.
-- `p1`/`p2` devem ser objetos validos de classes que extendem `Personagem`.
+- `clashMode` deve ser passado no `start` e nunca alterado depois.
+- `pendingClash` deve ser `null` fora do fluxo QTE.
 
 ---
 
-## 2.3 Classe base `Personagem`
-Regras centrais:
+### 2.3 Classe base `Personagem`
 - Desvio: `sorteouDesvio` = 10%
 - Critico: `sorteouCritico` = 7%
 - Defesa: reduz dano recebido em 50%
 - Regeneracao de energia base por turno: 10
-
-Campos de status:
-- `sangramentoTurnos`, `sangramentoDanoPorTurno`, atraso
-- `queimaduraTurnos`, `queimaduraDanoPorTurno`, atraso
-- `ultimoTipoDano` (consumido pelo frontend para cor dos floats)
-
-Ponto critico recente:
-- `forcarAcertoNoProximoAtaque()` seta `ignorarDesvioNoProximoAtaque`.
-- Isso e usado no vencedor de projectile clash para evitar o bug de "ganhou clash mas errou por desvio".
+- `forcarAcertoNoProximoAtaque()`: seta `ignorarDesvioNoProximoAtaque` — usado no vencedor de projectile clash para evitar o bug de "ganhou clash mas errou por desvio".
 
 ---
 
-## 2.4 Orquestracao de turno (`TurnExecution` + `TurnOrder`)
+### 2.4 Orquestracao de turno (`TurnExecution` + `TurnOrder`)
 
-### Submissao (`GameService::submeterAcao`)
-- Valida chave e estado
-- Impede dupla submissao do mesmo player no turno
-- Valida skillIndex/custo/energy/domain lock
-- Grava em `pendingActions`
-- Preenche auto-skip (`preencherAcoesSkip`)
-- Resolve rodada quando ambos preencheram
+**Submissao (`GameService::submeterAcao`):**
+1. Valida chave, estado, custo, energy, domain lock
+2. Grava em `pendingActions`
+3. Preenche auto-skip
+4. Quando ambos preenchidos, chama `resolverRodada`
 
-### Ordem (`TurnOrder::determinarOrdem`)
-Prioridade de execucao:
-1. Acao de domain marcada como "deve executar por ultimo" (regra especial)
-2. `priority` da acao
-3. `velocidade`
-4. desempate aleatorio
+**`resolverRodada`** detecta clash QTE antes de qualquer outra resolucao:
+- Se `clashMode === 'qte'` e ambas as acoes sao clashable com mesma prioridade → define `pendingClash` e retorna `qtePending: true`
+- Caso contrario, resolve normalmente
 
-### Clash
-- Domain clash quando os dois lados usam skill com `activatesDomain` + `domainClash`.
-- Projectile clash quando os dois lados usam skill `clashable`.
-- Em clash, apenas vencedor executa (exceto bothFailed em domain clash).
+**Gating de QTE por prioridade:**
+- Se `$p1Priority === $p2Priority` (ambos true ou ambos false) → QTE dispara
+- Se um tem prioridade e o outro nao → clash normal (ataque com priority ganha garantido, sem QTE)
 
-Decisao do clash (`decidirVencedorDoClash`):
-- Domain clash com ambos sem prioridade: 40% p1, 40% p2, 20% bothFailed.
-- Projectile clash usa combinacao de prioridade/aleatorio.
+**Clash normal (`resolverClash`):**
+- `$forcedWinner !== null` → usa valor forcado; `'tie'` ou qualquer valor que nao seja `'p1'`/`'p2'` → `bothFailed = true`
+- `$forcedWinner === null` → decide aleatoriamente via `decidirVencedorDoClash`
 
-### Domain cancel por interrupcao
-- Se defensor iria ativar domain
-- E atacante causa dano antes
-- Chance de cancel = 60%
-- Se cancelar, aplica penalidade de energia (50% do custo da skill de domain)
-
-### Avanco de turno
-- Processa bleed/burn no fim
-- Incrementa `turno`
-- Limpa pendencias
-- Chama `iniciarTurno` dos dois (reseta defesa e regenera energia)
+**Domain clash `bothFailed`:**
+- Ambos recebem 20 de dano
+- Avanca turno normalmente
+- Retorna `clash.bothFailed = true` + `effectGif`
 
 ---
 
-## 2.5 Exportacao para frontend (`StateExport`)
-Campos principais:
-- `started`, `turno`, `currentKey`, `winner`, `waitingFor`
-- `domainTurnsRemaining`, `domainCasterKey`
-- `p1`, `p2` com stats + `visual`
-- `availableActions` (flat para jogador atual)
-- `availableActionsPorJogador` (duas listas)
-
-`availableActions` inclui:
-- `type`, `label`, `skillName`, `description`
-- `skillIndex`, `targetsOpponent`, `energyCost`
-- `disabled`, `melee`, `priority`, `activatesDomain`, `domainClash`
+### 2.5 `resolverClashQTE` (web_api.php)
+```
+POST { action: 'resolve_clash', winnerKey: 'p1'|'p2'|'tie' }
+```
+- `'p1'` ou `'p2'` → vencedor forcado
+- `'tie'` (ou qualquer valor invalido) → `bothFailed = true` → domain break ou resolucao de empate
+- Chama `GameService::resolverClashQTE` → `resolverClashPendente` → `resolverClash` com o winner forcado
+- Apos resolver, executa turnos skip encadeados se necessario
 
 ---
 
 ## 3) Frontend - ciclo principal
 
-## 3.1 Estado global (`frontend/app.js`)
-Chaves importantes:
-- `serverState`
-- `resolvendoAcao` (trava antiduplo clique)
-- `anim`
-- `sprites`, `frameScale`
-- `pendingSprites`, `pendingFrameScale`
-- `domainImage`, `domainImageVersion`
-- `acaoPendente` (1o jogador aguardando 2o)
+### 3.1 Fases (App.vue)
+- `intro` → tela de abertura
+- `setup` → selecao de personagens (`GameSetup.vue`)
+- `battle` → arena (`BattleArena.vue`)
 
-### Ciclo de acao
-1. Jogador escolhe acao no menu.
-2. `processarAcao` chama API `action`.
-3. Se `resolved=false`, guarda acao pendente e espera outro jogador.
-4. Se `resolved=true`, executa:
-   - branch clash (projectile/domain)
-   - ou branch normal por ordem retornada
-5. Atualiza HUD e logs.
+Transicao intro→setup: animacao CSS de 820ms.
+Transicao setup→battle: anima buraco negro (`startBlackHoleAnimation`), depois monta `BattleArena`.
 
 ---
 
-## 3.2 HUD e menu (`ui-status.js`)
-Funcoes centrais:
-- `atualizarHUD`: cards, barras, status, turn text, vitoria.
-- `montarAcoes`: pagina menu em 3 slots + botao de pagina.
-- `setDomain`: aplica imagem de fundo de domain com overlay escuro.
-
-Dependencia critica:
-- Usa `serverState.availableActions` e `currentKey` para construir botoes.
+### 3.2 Selecao de modo de clash (`GameSetup.vue`)
+- Ao clicar "INICIAR BATALHA", um overlay aparece com dois cards:
+  - **SORTE** (`'random'`): vencedor do clash decidido por chance
+  - **QTE** (`'qte'`): jogadores competem em Quick Time Event
+- Ao escolher, emite `start-game` com `{ p1Name, p2Name, p1Class, p2Class, clashMode }`
+- O overlay pode ser fechado clicando fora (cancela e volta para selecao)
 
 ---
 
-## 3.3 Animacao de combate (`battle-animations.js`)
-
-### Timeline
-- `rodarTimeline(events)` com `setTimeout`.
-- `cancelarAnimacao` limpa overlays e estados visuais temporarios.
-
-### Overlays
-`overlaysDeConfig` normaliza campos como:
-- `mode` (`attached`, `projectile`, `beam`)
-- `startMs`, `durationMs`, offsets, `thicknessPx`, `beamTone`, etc.
-
-### Beam
-- `criarBeam` desenha elemento `.arena-energy-beam`.
-- Cor dinamica: `applyBeamTone` + `resolveBeamPalette`.
-- `beamTone` aceita `dark`, `pink` e cor CSS valida (hex/rgb/nome suportado pelo browser).
-
-### Clash prep
-- `montarAnimacaoClash` separa `preLaunchEvents`, `launchEvents`, `postEvents`.
-- Expondo:
-  - `getProjectileRef` / `getProjectileRefs`
-  - `setBeamAimOverride`
-  - `getPrimaryBeamSourcePoint`
-
-### Mira de beam contra beam
-- Em `app.js`, antes de sincronizar launch:
-  - pega origem do beam de cada lado
-  - aplica override para cada beam mirar na origem do outro
+### 3.3 Estado global (`useGame.js`)
+```js
+export const state = reactive({
+  serverState: null,
+  resolvendoAcao: false,
+  actionPage: 0,
+  anim: null,
+  sprites: { p1, p2 },
+  frameScale: { p1, p2 },
+  pendingSprites: { p1, p2 },
+  pendingFrameScale: { p1, p2 },
+  domainImage: null,
+  domainImageVersion: 0,
+  arenaFundo: null,
+  acaoPendente: null,
+})
+```
 
 ---
 
-## 3.4 Sistema de clash visual (`clash-system.js`)
-Fluxo:
-1. `runClash` espera overlap (ou timeout).
-2. Congela ambos (`freezeAtCurrentPosition`).
-3. Exibe efeitos visuais de clash.
-4. Remove perdedor.
-5. Vencedor continua ate alvo e dispara post-events.
+### 3.4 Ciclo de acao (`processarAcao` em useGame.js)
 
-Particularidades beam vs beam:
-- Detector usa segmentos de beam (`beamPairTouched` e `beamFrontsReached`).
-- Frente real do beam e calculada por largura atual do `beamEl` (`getBeamFrontInArena`).
-- Parametros de tuning atuais no topo:
-  - `BEAM_TOUCH_EARLY_MULTIPLIER = 0.7`
-  - `BEAM_FRONT_REACH_RATIO = 1.8`
+```
+jogador escolhe acao
+  → chamarApi('action', { playerKey, actionType, skillIndex })
+  → resposta.clashQtePending?
+      SIM → detectar kind ('projectile' ou 'domain')
+            → kind === 'domain'  → executarTurnoDomainClashQTE(acoesMap)
+            → kind === 'projectile' → executarTurnoClashQTE(acoesMap, null)
+      NAO, resolved = false → guardar em acaoPendente, aguardar outro jogador
+      NAO, resolved = true → clash.occurred?
+                              SIM → clash.kind === 'domain' → executarTurnoDomainClash
+                                  → clash.kind === 'projectile' → executarTurnoClash
+                              NAO → tocarAnimacao em ordem
+  → atualizarEstado + atualizarHUD + adicionarLog
+```
 
-Observacao importante:
-- Esses dois parametros estao sendo ajustados com frequencia recente para acertar ponto de colisao visual.
-
----
-
-## 3.5 Audio (`audio-controller.js`)
-- BGM aleatoria em loop por faixa (`playRandomBgm`).
-- Domain clash possui audio proprio em loop (`playClashDomain`).
-- Regra atual solicitada pelo usuario:
-  - Se musica de fundo esta ON, musica de domain clash fica mutada.
-  - Implementado com `audio.muted = !muted` no `playClashDomain`.
+BGM inicia com 2 segundos de atraso apos `iniciarPartida`:
+```js
+setTimeout(() => audio.playRandomBgm(), 2000)
+```
 
 ---
 
-## 4) Contratos de dados backend -> frontend
+### 3.5 Sistema de QTE (`qte-system.js`)
 
-## 4.1 Request action
-`POST backend/web_api.php`
+**Controles:**
+- P1: `W A S D`
+- P2: `← ↑ ↓ →`
 
-Body:
-- `action`: `start | state | action | catalog`
-- Para `action`: `playerKey`, `actionType`, `skillIndex`
+**Mecanica:**
+- 10 teclas por jogador, exibidas uma por vez
+- Tecla atual (grande, pulsante, dourada) + preview da proxima (menor, opaca, deslocada a direita)
+- Ao acertar: tecla atual sai para esquerda/some, proxima desliza para posicao central (Web Animations API, 160ms)
+- Ao errar: painel treme (shake animation CSS)
+- Nunca duas teclas consecutivas iguais na mesma sequencia
+- Timer: 7000ms para clash de domain (5000ms para projectile clash)
 
-## 4.2 Response action
-Campos esperados pelo frontend:
-- `ok`
-- `resolved`
-- `resolucaoOrdem`
-- `mensagensResolucao`
-- `estadoIntermediario`
-- `domainCancel`
-- `clash`
-- `message`
-- `state`
+**Resolucao:**
+- Primeiro a completar 10 teclas → chama `tryFinish(winner)`
+- Se outro completar dentro de 180ms → `finish('tie')` (empate)
+- Timeout: mais progresso ganha; empate no timeout → `finish('tie')`
+- `tie` → frontend envia `winnerKey: 'tie'` para o backend → `bothFailed = true`
 
-## 4.3 Objeto `visual` de personagem
+**UI:**
+- Dois paineis flutuantes laterais (`.qte-side-panel--p1` esquerda, `.qte-side-panel--p2` direita)
+- Barra de tempo centralizada no topo (`.qte-top-bar`)
+- Nao obstrui a colisao do centro
+
+---
+
+### 3.6 Clash de projetil QTE (`executarTurnoClashQTE`)
+
+1. Monta animacoes de clash dos dois lados, sincroniza lancamento
+2. Aguarda lancamento dos projeteis
+3. Chama `clashSystem.runClashQTE` — congela projeteis na colisao, chama callback `onQTEReady(arenaEl)`
+4. Dentro do callback: roda `qteSystem.runQTE(arenaEl, 5000)` → chama `resolve_clash`
+5. `runClashQTE` aguarda 1 segundo apos vencedor decidido (colisao visual continua) e depois limpa
+6. Projetil vencedor continua ao alvo com `postEvents`
+
+---
+
+### 3.7 Clash de domain QTE (`executarTurnoDomainClashQTE`)
+
+1. `prepararDomainClash(acoesMap)`: aneis de clash, animacoes de expansao, split-screen dos dois domains, audio de clash
+2. `qteSystem.runQTE(arenaEl, 7000)` — QTE sobre os paineis de domain
+3. `chamarApi('resolve_clash', { winnerKey: winner })`
+
+**Se `bothFailed` (empate):**
+- `cleanupSplit()` imediato
+- Audio faz fade em paralelo (nao bloqueia)
+- GIF de domain break aparece imediatamente
+- Texto flutuante "domain break" nos dois lados
+
+**Se ha vencedor:**
+- `mostrarTransicaoPosClashDeDomain(fadeOutMs=1200, fadeInMs=1200, holdMs=1000)`
+  - Tela escurece em 1200ms
+  - Fica escura por +1000ms (hold exclusivo do modo QTE)
+  - Clareia em 1200ms
+- Durante o escurecimento: troca estado (loser removido, `domainImage` do winner)
+- Apos o hold (quando tela comeca a clarear): `winnerDeferredEvents` disparados — domain do vencedor comeca do zero
+- Aguarda `blackoutPromise` + duracao dos eventos deferred
+- `cancelarAnimacao`
+
+**Comportamento garantido:** domain do vencedor nunca aparece antes da tela comecar a clarear. A tela fica 1 segundo mais escura que no modo normal para dramatismo.
+
+---
+
+### 3.8 Clash de domain normal (`executarTurnoDomainClash`)
+
+1. `prepararDomainClash(acoesMap)`
+2. Se `bothFailed`: aguarda 6s de confronto, fade do audio, cleanup, domain break
+3. Se ha vencedor: aguarda `7000 - fadeOutMs`, inicia blackout (`fadeOut=1400, fadeIn=1400`), troca estado, dispara `winnerDeferredEvents`, aguarda `restanteMs`
+
+---
+
+### 3.9 `mostrarTransicaoPosClashDeDomain(fadeOutMs, fadeInMs, holdMs=0)`
+- Cria overlay `.domain-clash-blackout`
+- Fade para preto em `fadeOutMs`
+- Permanece escuro por `holdMs` (novo parametro — usado apenas no modo QTE com holdMs=1000)
+- Clareia em `fadeInMs`
+- Promise resolve apos `fadeOutMs + holdMs + fadeInMs + 40ms`
+
+---
+
+### 3.10 Audio (`audio-controller.js`)
+- BGM aleatoria em loop (`playRandomBgm`); inicia 2s apos inicio de partida
+- Domain clash: audio proprio em loop (`playClashDomain`)
+- Se BGM ON → audio de domain clash mutado
+- `fadeOutClashDomain(ms)`: fade e stop do audio de clash
+- `AUDIO_DOMAIN_BREAK`: constante importada para o som de quebra de domain
+
+---
+
+## 4) Contratos de dados
+
+### 4.1 Request `start`
+```json
+{ "action": "start", "p1Class": "sukuna", "p1Name": "P1", "p2Class": "gojo", "p2Name": "P2", "clashMode": "qte" }
+```
+
+### 4.2 Request `action`
+```json
+{ "action": "action", "playerKey": "p1", "actionType": "skill", "skillIndex": 0 }
+```
+
+### 4.3 Request `resolve_clash`
+```json
+{ "action": "resolve_clash", "winnerKey": "p1" }
+```
+Valores validos de `winnerKey`: `"p1"`, `"p2"`, `"tie"` (qualquer outro → null → bothFailed)
+
+### 4.4 Objeto `clash` na resposta
+```json
+{
+  "occurred": true,
+  "kind": "domain",
+  "winner": "p1",
+  "durationMs": 1000,
+  "bothFailed": false,
+  "damageEach": 20,
+  "effectGif": "./assets/efeitos/domainbreak.gif"
+}
+```
+
+### 4.5 Objeto `visual` de personagem
 Vem de `getConfiguracaoVisual()` no PHP.
-Contem:
-- `baseSprite`, `winImage`, `winMessage`, opcional `dodgeSprite`, `errorSplash`
-- `actions` por nome de skill
+- `baseSprite`, `winImage`, `winMessage`, `dodgeSprite`, `errorSplash`
+- `actions` por nome de skill: `frames`, `overlays`, `audio`, `domainAudio`, `domainImage`, `domainDelayMs`
 - `reactions.defendingHit`
-
-Cada acao pode ter:
-- `frames` (sprite/duration/scale)
-- `overlays` (attached/projectile/beam)
-- `audio` e `domainAudio`
-- `domainDelayMs`, `domainImage`
-- `repeatFrames`, `repeatOverlays`
 
 ---
 
 ## 5) Personagens e regras (estado atual)
 
-## 5.1 Sukuna (`backend/characters/sukuna/Sukuna.php`)
-- Stats: HP 300, ATK 25, EN 4000, VEL 70, regen 70.
-- Skills:
-  - Desmantelar (dano + bleed)
-  - Kamino Fuga (projectile clashable priority + burn)
-  - Reverse Energy (cura)
-  - Domain (activatesDomain + domainClash + priority)
+### Sukuna
+- Stats: HP 300, ATK 25, EN 4000, VEL 70, regen 70
+- Skills: Desmantelar (bleed), Kamino Fuga (projectile clashable priority + burn), Reverse Energy (cura), Domain (activatesDomain + domainClash + priority)
 
-## 5.2 Gojo (`backend/characters/gojo/Gojo.php`)
-- Stats: HP 300, ATK 20, EN 1000, VEL 90, regen 50.
-- Skills:
-  - Azul
-  - Vazio Roxo (projectile clashable priority)
-  - Reverse Energy
-  - Domain (skipTurns 2, activatesDomain, domainClash, priority)
+### Gojo
+- Stats: HP 300, ATK 20, EN 1000, VEL 90, regen 50
+- Skills: Azul, Vazio Roxo (projectile clashable priority), Reverse Energy, Domain (skipTurns 2, activatesDomain + domainClash + priority)
 
-## 5.3 Sans (`backend/characters/sans/Sans.php`)
-- Stats: HP 1, ATK 1, EN 800, VEL 100, regen 0.
-- Mecanica especial:
-  - Recebe dano primeiro na energia; so toma HP quando energia zerar.
-- Skills: bluesoul, comecou, BADTIME (priority), eh eh (recupera energia).
+### Sans
+- Stats: HP 1, ATK 1, EN 800, VEL 100, regen 0
+- Mecanica especial: energia absorve dano antes do HP
+- Skills: bluesoul, comecou, BADTIME (priority), eh eh (recupera energia)
 
-## 5.4 Ulquiorra (`backend/characters/ulquiorra/Ulquiorra.php`)
-- Stats: HP 240, ATK 30, EN 400, VEL 80, regen 40.
-- Skills:
-  - Cero (beam)
-  - cero oscuras (beam clashable priority)
-  - Barrage (melee + bleed)
-  - Heal
-- Beam tone atual de `cero oscuras`: `#003424`.
+### Ulquiorra
+- Stats: HP 240, ATK 30, EN 400, VEL 80, regen 40
+- Skills: Cero (beam), cero oscuras (beam clashable priority, beamTone `#003424`), Barrage (melee + bleed), Heal
 
-## 5.5 Miku (`backend/characters/miku/Miku.php`)
-- Stats: HP 200, ATK 20, EN 500, VEL 75, regen 30.
-- Skills:
-  - MAGIC! (projectile clashable)
-  - Miku BEEAM (beam clashable priority)
-  - MY VOICE
-  - mikupower (cura)
-- Beam tone atual de Miku BEEAM: `#00f7ff`.
+### Miku
+- Stats: HP 200, ATK 20, EN 500, VEL 75, regen 30
+- Skills: MAGIC! (projectile clashable), Miku BEEAM (beam clashable priority, beamTone `#00f7ff`), MY VOICE, mikupower (cura)
 
-## 5.6 Labubu (`backend/characters/labubu/Labubu.php`)
-- Stats: HP 300, ATK 20, EN 2067, VEL 55.
-- Skills:
-  - MorangodoAmor (projectile clashable priority)
-  - labuaura (cura)
+### Labubu
+- Stats: HP 300, ATK 20, EN 2067, VEL 55
+- Skills: MorangodoAmor (projectile clashable priority), labuaura (cura)
 
-## 5.7 Profe (`backend/characters/profe/Profe.php`)
-- Stats: HP 267, ATK 24, EN 500, VEL 60, regen 35.
-- Skills:
-  - Red bill (cura)
-  - Apelacao
-  - VibeCode (projectile clashable)
-  - DOOCKER (domain com dano, skipTurns 1, activatesDomain/domainClash/priority)
+### Profe
+- Stats: HP 267, ATK 24, EN 500, VEL 60, regen 35
+- Skills: Red bill (cura), Apelacao, VibeCode (projectile clashable), DOOCKER (domain com dano, skipTurns 1, activatesDomain + domainClash + priority)
 
-## 5.8 Ubuntu (`backend/characters/ubuntu/Ubuntu.php`)
-- Stats: HP 999, ATK 10, EN 999, VEL 30.
-- `usaSomenteHabilidades = true`.
-- Fluxo de skill em 2 etapas:
-  - Primeiro turno: abrir terminal
-  - Segundo turno: ls (dano muito alto)
-- `retornaAoSetup('erro') = true`: encerra partida para setup.
+### Ubuntu
+- Stats: HP 999, ATK 10, EN 999, VEL 30
+- `usaSomenteHabilidades = true`; fluxo de skill em 2 etapas (abrir terminal → ls)
+- `retornaAoSetup('erro') = true`: encerra partida para setup
 
-## 5.9 UbuntuKiller (`backend/characters/ubuntukiller/UbuntuKiller.php`)
-- Stats: HP 500, ATK 100, EN 1000, VEL 45, regen 0.
-- Mecanica de dano semelhante a Sans: energia absorve dano primeiro.
-- Skill unica `ubuntubuxa` com prioridade.
+### UbuntuKiller
+- Stats: HP 500, ATK 100, EN 1000, VEL 45, regen 0
+- Energia absorve dano antes do HP
+- Skill unica `ubuntubuxa` com prioridade
+
+### Escanor
+- Personagem mais recente (commit "escanor beta")
+- Verificar arquivo em `backend/characters/escanor/` para stats e skills atuais
 
 ---
 
@@ -372,73 +391,107 @@ Cada acao pode ter:
 
 - Nao mudar nomes de chaves exportadas em `state` sem atualizar frontend.
 - Nao remover `ultimoTipoDano` (quebra feedback visual de dano).
-- Nao remover `availableActions` flat (menu depende disso).
-- Nao mudar contrato de `clash` (frontend usa `kind`, `winner`, `durationMs`, `bothFailed`).
-- Nao esquecer `consumirEnergia` nas skills de custo positivo.
-- Nao quebrar regra de domain interrompido (chance 60% + penalidade de 50% da energia).
-- Nao alterar comportamento de `forcarAcertoNoProximoAtaque` sem revisar projectile clash.
-- Em clash beam-vs-beam, cuidado extremo com:
-  - calculo da frente do beam por largura atual
-  - thresholds de proximidade no topo de `clash-system.js`
+- Nao remover `availableActions` flat (menu depende).
+- Nao mudar contrato de `clash` (frontend usa `kind`, `winner`, `durationMs`, `bothFailed`, `effectGif`).
+- Nao remover `clashQtePending` da resposta de `action` (quebra todo o fluxo QTE).
+- Nao mudar `pendingClash` sem atualizar `resolverClashPendente`.
+- Nao quebrar regra de domain interrompido (chance 60% + penalidade 50% da energia).
+- Nao alterar `forcarAcertoNoProximoAtaque` sem revisar projectile clash.
+- Em clash beam-vs-beam, cuidado extremo com `BEAM_TOUCH_EARLY_MULTIPLIER` e `BEAM_FRONT_REACH_RATIO` no topo de `clash-system.js`.
+- Em QTE, `tryFinish` com janela de 180ms e `finish('tie')` sao essenciais para detectar empate simultaneo.
+- `mostrarTransicaoPosClashDeDomain` tem parametro `holdMs` — nao remover sem verificar usos no domain QTE.
 
 ---
 
 ## 7) Checklist para outra IA editar com seguranca
 
-1. Ler primeiro:
-- `backend/web_api.php`
-- `backend/Personagem.php`
-- `backend/GameService/TurnExecution.php`
-- `backend/GameService/TurnOrder.php`
-- `backend/GameService/StateExport.php`
-- `frontend/app.js`
-- `frontend/battle-animations.js`
-- `frontend/clash-system.js`
+**Ler primeiro:**
+- `backend/web_api.php` (rotas e contratos)
+- `backend/GameService/TurnExecution.php` (clash, QTE gating, resolucao)
+- `backend/GameService/StateExport.php` (o que o frontend recebe)
+- `frontend/src/composables/useGame.js` (toda a logica do cliente)
+- `frontend/src/libs/clash-system.js` (visual do clash e hook QTE)
+- `frontend/src/libs/qte-system.js` (mecanica QTE)
+- `frontend/src/libs/battle-animations.js` (animacoes e domain transition)
 
-2. Antes de mudar regra de combate:
-- Conferir impacto em exportacao (`StateExport`)
-- Conferir impacto visual em `app.js` + `battle-animations.js`
+**Antes de mudar regra de combate:**
+- Conferir impacto em `StateExport`
+- Conferir impacto visual em `useGame.js` + `battle-animations.js`
 
-3. Antes de mudar clash:
-- Testar projectile vs projectile
-- Testar beam vs beam
-- Testar beam vs projectile
-- Testar domain clash (winner e bothFailed)
+**Antes de mudar clash:**
+- Testar: projectile vs projectile (modo random e modo QTE)
+- Testar: beam vs beam
+- Testar: beam vs projectile
+- Testar: domain clash winner (modo random e modo QTE)
+- Testar: domain clash bothFailed (modo random e modo QTE — empate no QTE)
+- Testar: clash com prioridades diferentes (um com priority, outro sem) → clash normal, sem QTE
 
-4. Antes de mudar audio:
-- Testar botao MUSICA ON/OFF
+**Antes de mudar audio:**
+- Testar BGM ON/OFF
 - Testar domain clash com fundo ON e OFF
 
-5. Sanity checks rapidos:
-- `node --check frontend/app.js`
-- `node --check frontend/battle-animations.js`
-- `node --check frontend/clash-system.js`
-- `php -l backend/web_api.php`
-- `php -l backend/Personagem.php`
-- `php -l backend/GameService/TurnExecution.php`
-
-6. Validacao funcional minima:
-- Partida normal sem clash
-- Projectile clash
-- Beam clash
-- Domain clash
-- Um personagem vencendo
-- Caso Ubuntu que retorna ao setup
+**Sanity checks:**
+```bash
+node --check frontend/src/composables/useGame.js
+node --check frontend/src/libs/battle-animations.js
+node --check frontend/src/libs/clash-system.js
+node --check frontend/src/libs/qte-system.js
+php -l backend/web_api.php
+php -l backend/GameService/TurnExecution.php
+```
 
 ---
 
-## 8) Observacoes de manutencao
+## 8) Fluxo QTE completo (resumo para referencia rapida)
 
-- O projeto usa configuracao visual em PHP e execucao visual em JS.
-- Isso significa que alteracoes em personagens (PHP) podem quebrar animacoes (JS) sem erro de compilacao.
-- Sempre validar em runtime no browser, nao apenas lint/syntax.
-- Existe historico de ajustes frequentes em beam/clash/audio; trate esses trechos como area de alta volatilidade.
+```
+[Usuario escolhe QTE no setup]
+    ↓ clashMode: 'qte' enviado no 'start'
+    ↓ backend salva clashMode no state da sessao
+
+[Turno com clash clashavel, mesma prioridade nos dois lados]
+    ↓ backend retorna: resolved=false, clashQtePending=true, clash.kind
+    ↓ frontend detecta clashQtePending
+
+    kind === 'projectile':
+        projeteis lancados e sincronizados
+        colisao detectada → projeteis congelados
+        QTE panels aparecem sobre os lutadores (5000ms)
+        vencedor/empate → resolve_clash({winnerKey})
+        1s de delay → projeteis desbloqueados → vencedor continua
+
+    kind === 'domain':
+        animacao de expansao de domain
+        split-screen dos dois domains
+        QTE panels aparecem sobre os lutadores (7000ms)
+        vencedor/empate → resolve_clash({winnerKey})
+
+        se bothFailed:
+            split cleanup → GIF de break imediatamente → audio fade paralelo
+
+        se winner:
+            blackout (1200ms escurecer + 1000ms hold + 1200ms clarear)
+            durante hold: troca estado (loser removido, domain do winner)
+            quando tela comeca a clarear: winnerDeferredEvents disparam
+            domain do vencedor comeca do zero, sincronizado com o fade-in
+```
 
 ---
 
-## 9) Resumo operacional
+## 9) Observacoes de manutencao
+
+- O projeto usa configuracao visual em PHP e execucao visual em JS — alteracoes em personagens podem quebrar animacoes sem erro de compilacao. Validar sempre em runtime no browser.
+- O frontend e Vue 3 com Vite. O arquivo de entrada e `frontend/index.html` (ou similar). Usar `npm run dev` para desenvolvimento.
+- `useGame.js` e o unico lugar onde logica de jogo existe no cliente. Nao duplicar estado ou logica nos componentes Vue.
+- Existe historico de ajustes frequentes em beam/clash/audio — trate esses trechos como area de alta volatilidade.
+- `domainImageVersion` e um contador que forca o Vue a re-renderizar a imagem de domain mesmo quando o src nao muda.
+
+---
+
+## 10) Resumo operacional
 
 - Backend decide regras, danos, ordem, clash e estado final.
 - Frontend interpreta o estado e reproduz animacoes sincronizadas.
-- Contratos JSON e campos `visual` sao o acoplamento principal.
+- No modo QTE, o frontend e co-responsavel pela decisao do clash: roda o mini-game e comunica o resultado via `resolve_clash`.
+- Contratos JSON, campos `visual` e flag `clashQtePending` sao o acoplamento principal.
 - Se preservar contratos e invariantes acima, outra IA consegue iterar sem quebrar o jogo.

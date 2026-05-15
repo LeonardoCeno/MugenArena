@@ -53,11 +53,43 @@ function iniciarPartida(array $input): void {
         (string)($input['p2Name'] ?? 'Jogador 2')
     );
 
-    $_SESSION['game'] = GameService::criarEstadoDeJogo($p1, $p2);
+    $clashMode = (string)($input['clashMode'] ?? 'random');
+    $_SESSION['game'] = GameService::criarEstadoDeJogo($p1, $p2, $clashMode);
 
     responder([
         'ok'    => true,
         'state' => exportarEstadoDaSessao('Partida iniciada.'),
+    ]);
+}
+
+function resolverClashQTE(array $input): void {
+    $game      = obterPartidaAtiva();
+    $winnerKey = isset($input['winnerKey']) ? (string)$input['winnerKey'] : null;
+
+    if ($winnerKey !== null && !in_array($winnerKey, ['p1', 'p2', 'tie'], true)) {
+        $winnerKey = null;
+    }
+
+    $resultado = GameService::resolverClashQTE($game, $winnerKey);
+
+    if ($resultado['resetJogo']) {
+        unset($_SESSION['game']);
+    } else {
+        $_SESSION['game'] = $game;
+    }
+
+    $mensagem = $resultado['mensagem'];
+
+    responder([
+        'ok'                  => true,
+        'resolved'            => true,
+        'resolucaoOrdem'      => $resultado['resolucaoOrdem'] ?? null,
+        'mensagensResolucao'  => $resultado['mensagensResolucao'] ?? [],
+        'estadoIntermediario' => $resultado['estadoIntermediario'] ?? null,
+        'domainCancel'        => $resultado['domainCancel'] ?? null,
+        'clash'               => $resultado['clash'] ?? null,
+        'message'             => $mensagem,
+        'state'               => exportarEstadoDaSessao($mensagem),
     ]);
 }
 
@@ -80,6 +112,7 @@ function executarAcao(array $input): void {
     responder([
         'ok'                  => true,
         'resolved'            => $resultado['resolved'],
+        'clashQtePending'     => !empty($resultado['clashQtePending']),
         'resolucaoOrdem'      => $resultado['resolucaoOrdem'] ?? null,
         'mensagensResolucao'  => $resultado['mensagensResolucao'] ?? [],
         'estadoIntermediario' => $resultado['estadoIntermediario'] ?? null,
@@ -108,6 +141,10 @@ try {
 
         case 'action':
             executarAcao($input);
+            break;
+
+        case 'resolve_clash':
+            resolverClashQTE($input);
             break;
 
         case 'catalog':

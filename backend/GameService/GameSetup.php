@@ -50,7 +50,7 @@ trait GameSetup
         return new $className($nome);
     }
 
-    public static function criarEstadoDeJogo(Personagem $p1, Personagem $p2): array {
+    public static function criarEstadoDeJogo(Personagem $p1, Personagem $p2, string $clashMode = 'random'): array {
         $game = [
             'p1'             => $p1,
             'p2'             => $p2,
@@ -58,6 +58,8 @@ trait GameSetup
             'skipTurns'      => ['p1' => 0, 'p2' => 0],
             'pendingActions' => ['p1' => null, 'p2' => null],
             'domain'         => self::domainVazio(),
+            'clashMode'      => in_array($clashMode, ['random', 'qte'], true) ? $clashMode : 'random',
+            'pendingClash'   => null,
         ];
 
         self::preencherAcoesSkip($game);

@@ -57,8 +57,43 @@
         </div>
       </div>
 
-      <button id="start-btn" class="start-btn" :disabled="starting || !p1Class || !p2Class" @click="onStart">INICIAR BATALHA</button>
+      <button id="start-btn" class="start-btn" :disabled="!p1Class || !p2Class" @click="onStart">INICIAR BATALHA</button>
     </div>
+
+    <!-- Clash mode selection overlay -->
+    <Transition name="clash-select">
+      <div v-if="showModeSelect" class="clash-select-overlay" @click.self="showModeSelect = false">
+        <div class="clash-select-shell">
+          <p class="clash-select-eyebrow">MODO DE CLASH</p>
+
+          <div class="clash-select-cards">
+            <!-- SORTE -->
+            <button class="clash-card clash-card--sorte" @click="confirmMode('random')">
+              <div class="clash-card__bg"></div>
+              <div class="clash-card__glow"></div>
+              <span class="clash-card__tag">ALEATORIO</span>
+              <h2 class="clash-card__title">SORTE</h2>
+              <p class="clash-card__desc">Vencedor do clash decidido por chance. Nenhum jogador controla o resultado.</p>
+              <span class="clash-card__cta">ESCOLHER</span>
+            </button>
+
+            <div class="clash-select-divider">
+              <span>VS</span>
+            </div>
+
+            <!-- QTE -->
+            <button class="clash-card clash-card--qte" @click="confirmMode('qte')">
+              <div class="clash-card__bg"></div>
+              <div class="clash-card__glow"></div>
+              <span class="clash-card__tag">HABILIDADE</span>
+              <h2 class="clash-card__title">QTE</h2>
+              <p class="clash-card__desc">Complete uma sequência de teclas antes do oponente. Quem for mais rápido vence o clash.</p>
+              <span class="clash-card__cta">ESCOLHER</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
   </section>
 </template>
 
@@ -70,11 +105,11 @@ const props = defineProps({
 })
 const emit = defineEmits(['start-game'])
 
-const p1Name  = ref('Jogador 1')
-const p2Name  = ref('Jogador 2')
-const p1Class = ref('')
-const p2Class = ref('')
-const starting = ref(false)
+const p1Name       = ref('Jogador 1')
+const p2Name       = ref('Jogador 2')
+const p1Class      = ref('')
+const p2Class      = ref('')
+const showModeSelect = ref(false)
 
 const p1Preview = ref({ sprite: '', label: '' })
 const p2Preview = ref({ sprite: '', label: '' })
@@ -102,18 +137,19 @@ function selectChar(side, char) {
   }
 }
 
-async function onStart() {
-  if (starting.value) return
-  starting.value = true
-  try {
-    emit('start-game', {
-      p1Name: p1Name.value.trim(),
-      p2Name: p2Name.value.trim(),
-      p1Class: p1Class.value,
-      p2Class: p2Class.value,
-    })
-  } finally {
-    starting.value = false
-  }
+function onStart() {
+  if (!p1Class.value || !p2Class.value) return
+  showModeSelect.value = true
+}
+
+function confirmMode(mode) {
+  showModeSelect.value = false
+  emit('start-game', {
+    p1Name:    p1Name.value.trim(),
+    p2Name:    p2Name.value.trim(),
+    p1Class:   p1Class.value,
+    p2Class:   p2Class.value,
+    clashMode: mode,
+  })
 }
 </script>

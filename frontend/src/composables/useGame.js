@@ -1,8 +1,9 @@
-import { reactive } from 'vue'
+import { reactive, ref } from 'vue'
 import { createAnimationController } from '../libs/battle-animations.js'
 import { createClashSystem } from '../libs/clash-system.js'
 import { createAudioController, AUDIO_DOMAIN_BREAK } from '../libs/audio-controller.js'
 import { startBlackHoleAnimation } from '../libs/black-hole-animation.js'
+import { createQTESystem } from '../libs/qte-system.js'
 
 const API_URL = '/backend/web_api.php'
 
@@ -32,7 +33,10 @@ export const state = reactive({
 let animations = null
 let clashSystem = null
 let audio = null
+let qteSystem = null
 let _atualizarHUDCallback = null
+
+export const clashMode = ref('random')
 
 // Called once from BattleArena.vue onMounted. Safe to call again on remount
 // (resetarEstado cancels in-flight animations before re-init).
@@ -40,6 +44,7 @@ export function initLibs({ els, atualizarHUD }) {
   _atualizarHUDCallback = atualizarHUD
   animations = createAnimationController({ state, els, atualizarHUD })
   clashSystem = createClashSystem()
+  qteSystem   = createQTESystem()
   audio = createAudioController({ els })
   audio.setVolume(1)
   audio.updateMuteButton()
@@ -176,6 +181,122 @@ async function executarTurnoClash(acoesMap, clashMeta) {
   animations.cancelarAnimacao()
 }
 
+async function executarTurnoDomainClashQTE(acoesMap) {
+  const { d1, d2, cleanupSplit } = await prepararDomainClash(acoesMap)
+
+  const arenaEl = animations.getArenaEl()
+  const winner  = await qteSystem.runQTE(arenaEl, 7000)
+
+  const resolvedResposta = await chamarApi('resolve_clash', { winnerKey: winner })
+  const clash = resolvedResposta?.clash
+
+  if (clash?.bothFailed) {
+    cleanupSplit()
+    audio.fadeOutClashDomain(500)
+    state.sprites.p1 = null; state.sprites.p2 = null
+    state.frameScale.p1 = null; state.frameScale.p2 = null
+    state.domainImage = null
+    state.domainImageVersion = 0
+    limparPosePendente()
+    _atualizarHUDCallback?.()
+    animations.textoFlutuante('p1', 'domain break')
+    animations.textoFlutuante('p2', 'domain break')
+    const breakAudio = new Audio(AUDIO_DOMAIN_BREAK)
+    breakAudio.volume = audio.getVolume()
+    breakAudio.play().catch(() => {})
+    try {
+      await animations.mostrarFundoDomainBreak(clash.effectGif || './assets/efeitos/domainbreak.gif', 2200)
+      await animations.wait(200)
+      await audio.fadeAudioOut(breakAudio, 800)
+    } finally {
+      breakAudio.pause(); breakAudio.currentTime = 0
+    }
+    animations.cancelarAnimacao()
+    return resolvedResposta
+  }
+
+  const winnerKey = clash?.winner ?? winner
+  const loserKey  = oposto(winnerKey)
+  const winnerD   = winnerKey === 'p1' ? d1 : d2
+
+  const fadeOutMs = 1200
+  const fadeInMs  = 1200
+  const holdMs    = 1000
+
+  const blackoutPromise  = animations.mostrarTransicaoPosClashDeDomain(fadeOutMs, fadeInMs, holdMs)
+  const fadeAudioPromise = audio.fadeOutClashDomain(fadeOutMs)
+
+  await animations.wait(fadeOutMs)
+  await fadeAudioPromise
+
+  cleanupSplit()
+  state.sprites[loserKey]   = null; state.frameScale[loserKey] = null
+  limparPosePendente(loserKey)
+  state.domainImageVersion += 1
+  state.domainImage         = winnerD.domainImage ?? null
+  _atualizarHUDCallback?.()
+
+  // Hold while dark, then fire domain animations as screen begins to clear
+  await animations.wait(holdMs)
+
+  const winnerPostHandle = winnerD.winnerDeferredEvents?.length > 0
+    ? animations.rodarTimeline(winnerD.winnerDeferredEvents)
+    : { duration: 0, cancel() {} }
+
+  await blackoutPromise
+  await animations.wait(winnerPostHandle.duration)
+  animations.cancelarAnimacao()
+  return resolvedResposta
+}
+
+/**
+ * QTE clash: projectiles fly → collide → QTE overlay → winner determined →
+ * backend resolved → winner projectile continues.
+ * onQTEResolve(winner) must call the API and return the server response.
+ */
+async function executarTurnoClashQTE(acoesMap, onQTEResolve) {
+  const raw1 = animations.montarAnimacaoClash('p1', acoesMap['p1'], 'p2')
+  const raw2 = animations.montarAnimacaoClash('p2', acoesMap['p2'], 'p1')
+  const src1 = raw1.getPrimaryBeamSourcePoint?.()
+  const src2 = raw2.getPrimaryBeamSourcePoint?.()
+  if (src1 && src2) { raw1.setBeamAimOverride?.(src2); raw2.setBeamAimOverride?.(src1) }
+
+  const [d1, d2] = sincronizarLancamentoDeProjeteis(raw1, raw2)
+  const allPre = [...d1.preEvents, ...d2.preEvents]
+  const handle = animations.rodarTimeline(allPre)
+  state.anim = handle
+
+  const bothLaunchedMs = Math.max(d1.projectileStartMs, d2.projectileStartMs) + 80
+  await animations.wait(bothLaunchedMs)
+
+  const ref1 = d1.getProjectileRef()
+  const ref2 = d2.getProjectileRef()
+  const refs1 = d1.getProjectileRefs?.() ?? (ref1 ? [ref1] : [])
+  const refs2 = d2.getProjectileRefs?.() ?? (ref2 ? [ref2] : [])
+
+  let resolvedResposta = null
+
+  if (ref1 && ref2) {
+    await clashSystem.runClashQTE(
+      ref1, ref2, d1.postEvents, d2.postEvents, animations, refs1, refs2,
+      async (arenaEl) => {
+        // QTE runs while projectiles are frozen
+        const winner = await qteSystem.runQTE(arenaEl, 5000)
+        // Immediately call backend with result (projectiles still frozen)
+        resolvedResposta = await chamarApi('resolve_clash', { winnerKey: winner })
+        return winner
+      }
+    )
+  } else {
+    // Fallback if no projectile refs (shouldn't happen for clashable skills)
+    const winner = Math.random() < 0.5 ? 'p1' : 'p2'
+    resolvedResposta = await chamarApi('resolve_clash', { winnerKey: winner })
+  }
+
+  animations.cancelarAnimacao()
+  return resolvedResposta
+}
+
 async function prepararDomainClash(acoesMap) {
   animations.mostrarAnelClashDeDomain()
   const raw1 = animations.montarAnimacaoDomainClash('p1', acoesMap['p1'], 'p2')
@@ -280,6 +401,34 @@ export async function processarAcao(acao, { adicionarLog, esconderPreview, habil
     }
 
     if (!resposta.resolved) {
+      // Clash QTE detectado: ambos submeteram, backend aguarda resultado do QTE
+      if (resposta.clashQtePending) {
+        const acoesMap = { [atacanteKey]: acao }
+        if (state.acaoPendente) acoesMap[state.acaoPendente.playerKey] = state.acaoPendente.acao
+        state.acaoPendente = null
+        limparPosePendente()
+        _atualizarHUDCallback?.()
+
+        const kind = resposta.clash?.kind ?? 'projectile'
+        const resolvedResposta = kind === 'domain'
+          ? await executarTurnoDomainClashQTE(acoesMap)
+          : await executarTurnoClashQTE(acoesMap, null)
+
+        if (resolvedResposta) {
+          const mensagem = resolvedResposta.message || null
+          limparPosePendente()
+          atualizarEstado(resolvedResposta.state, true)
+          _atualizarHUDCallback?.()
+          if (mensagem) adicionarLog(mensagem)
+          if (resolvedResposta.state?.winner) {
+            await animations.animarMorte(oposto(resolvedResposta.state.winner))
+          }
+          _atualizarHUDCallback?.()
+        }
+        return {}
+      }
+
+      // Normal: aguardando o outro jogador submeter
       state.acaoPendente = { playerKey: atacanteKey, acao }
       aplicarPosePendenteDeDomain(atacanteKey, acao)
       if (resposta.state) atualizarEstado(resposta.state, false)
@@ -374,12 +523,13 @@ export async function processarAcao(acao, { adicionarLog, esconderPreview, habil
   return {}
 }
 
-export async function iniciarPartida({ p1Name, p2Name, p1Class, p2Class, onBattleSetup }) {
+export async function iniciarPartida({ p1Name, p2Name, p1Class, p2Class, clashMode: cm, onBattleSetup }) {
   const resposta = await chamarApi('start', {
     p1Name: p1Name || 'Jogador 1',
     p1Class,
     p2Name: p2Name || 'Jogador 2',
     p2Class,
+    clashMode: cm || 'random',
   })
   if (!resposta.ok) throw new Error(resposta.message || 'Não foi possível iniciar a partida.')
 
@@ -388,7 +538,7 @@ export async function iniciarPartida({ p1Name, p2Name, p1Class, p2Class, onBattl
   state.actionPage = 0
   limparPosePendente()
   animations.cancelarAnimacao()
-  audio.playRandomBgm()
+  setTimeout(() => audio.playRandomBgm(), 2000)
 
   await startBlackHoleAnimation({ onBattleSetup })
 
