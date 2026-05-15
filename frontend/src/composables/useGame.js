@@ -136,7 +136,10 @@ function sincronizarLancamentoDeProjeteis(d1, d2) {
     const delay = Math.max(0, syncMs - d.projectileStartMs)
     return {
       ...d,
-      preEvents: [...d.preLaunchEvents, ...deslocarEventos(d.launchEvents, delay)],
+      preEvents: [
+        ...deslocarEventos(d.preLaunchEvents, delay),
+        ...deslocarEventos(d.launchEvents, delay),
+      ],
       projectileStartMs: syncMs,
     }
   }
@@ -281,8 +284,8 @@ async function executarTurnoClashQTE(acoesMap, onQTEResolve) {
       ref1, ref2, d1.postEvents, d2.postEvents, animations, refs1, refs2,
       async (arenaEl) => {
         // QTE runs while projectiles are frozen
-        const winner = await qteSystem.runQTE(arenaEl, 5000)
-        // Immediately call backend with result (projectiles still frozen)
+        const raw = await qteSystem.runQTE(arenaEl, 5000)
+        const winner = raw === 'tie' ? (Math.random() < 0.5 ? 'p1' : 'p2') : raw
         resolvedResposta = await chamarApi('resolve_clash', { winnerKey: winner })
         return winner
       }
