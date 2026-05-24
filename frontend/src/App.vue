@@ -11,12 +11,12 @@
           @click="onToggleMute"
         >{{ audioMuted ? 'MUSICA: OFF' : 'MUSICA: ON' }}</button>
         <label class="bgm-volume-wrap" for="bgm-volume-input">
-          VOL
+          <span class="bgm-volume-label">VOL</span>
           <input
             id="bgm-volume-input"
             class="bgm-volume-input"
-            type="number"
-            min="1" max="10" step="1"
+            type="range"
+            min="0" max="10" step="1"
             :value="volume"
             @input="onVolume"
             @change="onVolume"

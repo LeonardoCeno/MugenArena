@@ -136,7 +136,9 @@ export function createQTESystem() {
                             if (p1Progress >= seq1.length) tryFinish('p1')
                         })
                     } else {
+                        p1Progress = Math.max(0, p1Progress - 1)
                         flashError(p1Panel)
+                        renderPanel(p1Panel, 'p1', seq1, p1Progress)
                     }
                 }
 
@@ -149,7 +151,9 @@ export function createQTESystem() {
                             if (p2Progress >= seq2.length) tryFinish('p2')
                         })
                     } else {
+                        p2Progress = Math.max(0, p2Progress - 1)
                         flashError(p2Panel)
+                        renderPanel(p2Panel, 'p2', seq2, p2Progress)
                     }
                 }
             }

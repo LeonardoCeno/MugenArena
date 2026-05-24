@@ -13,6 +13,7 @@ require_once __DIR__ . '/../characters/ubuntukiller/UbuntuKiller.php';
 require_once __DIR__ . '/../characters/labubu/Labubu.php';
 require_once __DIR__ . '/../characters/profe/Profe.php';
 require_once __DIR__ . '/../characters/escanor/escanor.php';
+require_once __DIR__ . '/../characters/grimmjow/grimmjow.php';
 
 require_once __DIR__ . '/Helpers.php';
 require_once __DIR__ . '/TurnOrder.php';

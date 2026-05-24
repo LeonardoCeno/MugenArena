@@ -180,19 +180,61 @@ body {
 .bgm-volume-wrap {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   color: var(--muted);
-  font-size: 0.8cqw;
+  font-size: 0.78cqw;
   letter-spacing: 0.08em;
-}
-.bgm-volume-input {
-  width: 46px;
   border: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.06);
-  color: var(--text);
-  border-radius: 6px;
-  padding: 4px 6px;
-  text-align: center;
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+.bgm-volume-label {
+  font-size: 0.72cqw;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  user-select: none;
+}
+.bgm-volume-input {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 80px;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+  border: none;
+  padding: 0;
+}
+.bgm-volume-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+.bgm-volume-input::-moz-range-thumb {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.4);
+  border: none;
+  cursor: pointer;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+.bgm-volume-input:hover::-webkit-slider-thumb {
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.65);
+  transform: scale(1.2);
+}
+.bgm-volume-input:hover::-moz-range-thumb {
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.65);
+  transform: scale(1.2);
 }
 
 .tutorial-modal {
@@ -757,7 +799,7 @@ body {
   align-content: start;
 }
 .char-option {
-background: linear-gradient(180deg, rgba(57, 64, 95, 0.7), rgba(0, 0, 0, 1));
+background: linear-gradient(180deg, rgba(57, 64, 95, 0.45), rgba(0, 0, 0, 0.5));
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 8px;
   cursor: pointer;
@@ -1138,11 +1180,12 @@ justify-content: center;
   width: 19cqw;
   height: 10.5cqh;
   align-self: center;
-  background: rgba(14, 18, 34, 0.88);
-  border: 1px solid rgba(255, 255, 255, 0.536);
+  background: linear-gradient(180deg, rgba(18, 20, 26, 0.95), rgba(10, 12, 18, 0.95));
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.22), inset 0 0 6px rgba(255, 255, 255, 0.05);
   border-radius: 3px;
   padding: 6px 8px 6px 8px;
-  backdrop-filter: blur(6px);
+  backdrop-filter: blur(4px);
   pointer-events: none;
 }
 
@@ -1189,8 +1232,9 @@ justify-content: center;
 .grid-actions button {
   width: 10.5cqw;
   height: 4.7cqh;
-  background: rgba(20, 25, 45, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: linear-gradient(180deg, rgba(18, 20, 26, 0.95), rgba(10, 12, 18, 0.95));
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.22), inset 0 0 6px rgba(255, 255, 255, 0.05);
   color: #f0f0f0;
   font-size: 0.95cqw;
   font-weight: 600;
@@ -1204,8 +1248,9 @@ justify-content: center;
 }
 
 .grid-actions button:hover {
-  background: rgba(40, 46, 69, 0.85);
-  border-color: rgba(255, 255, 255, 0.8);
+  background: linear-gradient(180deg, rgba(28, 32, 42, 0.97), rgba(16, 18, 28, 0.97));
+  border-color: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.38), inset 0 0 8px rgba(255, 255, 255, 0.08);
   transform: scale(1.02);
 }
 
@@ -1221,7 +1266,9 @@ justify-content: center;
 
 .grid-actions button.pagination-btn {
   font-weight: bold;
-  background: rgba(15, 20, 35, 0.9);
+  background: linear-gradient(180deg, rgba(18, 20, 26, 0.95), rgba(10, 12, 18, 0.95));
+  border-color: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.22), inset 0 0 6px rgba(255, 255, 255, 0.05);
 }
 
 /* ===== CARDS DE STATUS (HP/ENERGIA) – INALTERADOS ===== */
@@ -1229,18 +1276,28 @@ justify-content: center;
   position: absolute;
   width: var(--card-width);
   height: var(--card-height);
-  padding: clamp(8px, 1.1cqw, 14px) clamp(10px, 1.4cqw, 14px);
+  padding: clamp(8px, 1.1cqw, 14px) clamp(10px, 1.4cqw, 18px);
   border: 1px solid var(--line-soft);
-  border-radius: 12px;
-  background: linear-gradient(180deg, rgba(66, 72, 82, 0.87), rgba(44, 49, 58, 0.87));
-  backdrop-filter: blur(2px);
+  border-radius: 9px;
+  background: linear-gradient(180deg, rgb(18, 20, 26), rgb(10, 12, 18));
+  backdrop-filter: none;
   z-index: 3;
   display: flex;
   flex-direction: column;
   justify-content: space-around;
 }
-.card-enemy { top: 24px; left: 26px; }
-.card-player { right: 26px; bottom: 20px; }
+.card-enemy {
+  top: 24px;
+  left: 26px;
+  border-color: rgba(255, 70, 70, 0.65);
+  box-shadow: 0 0 10px rgba(255, 70, 70, 0.35), 0 0 24px rgba(255, 70, 70, 0.12);
+}
+.card-player {
+  right: 26px;
+  bottom: 20px;
+  border-color: rgba(70, 150, 255, 0.65);
+  box-shadow: 0 0 10px rgba(70, 150, 255, 0.35), 0 0 24px rgba(70, 150, 255, 0.12);
+}
 .status-icons {
   display: flex;
   gap: 4px;
