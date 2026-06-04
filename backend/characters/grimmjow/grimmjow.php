@@ -4,10 +4,10 @@ require_once __DIR__ . '/../../Personagem.php';
 
 class Grimmjow extends Personagem {
 
-	private const VELOCIDADE    = 75;
-	private const CUSTO_ATAQUE1 = 80;
-	private const DANO_ATAQUE1  = 55;
-	private const REGENERACAO_PROPRIA = 40;
+	public const VELOCIDADE    = 75;
+	public const CUSTO_ATAQUE1 = 80;
+	public const DANO_ATAQUE1  = 55;
+	public const REGENERACAO_PROPRIA = 40;
 
 	public function __construct(string $nome) {
 		parent::__construct($nome, 300, 35, 600);
